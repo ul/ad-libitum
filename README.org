@@ -1,0 +1,307 @@
+* AD LIBITUM
+
+  The Scheme Live Coding Environment. Built on Chez Scheme and libsoundio.
+
+* Kernel
+
+** Sound I/O
+
+   Ad Libitum relies on =chez-soundio= bindings and high-level wrapper. We are
+   going to create and open default i/o (only 'o' at the moment) stream and
+   provide it globally.
+
+#+NAME: sound
+#+BEGIN_SRC scheme
+  (define (silence time channel) 0.0)
+  (define *sound-out* (soundio:open-default-out-stream silence))
+  (define (set-dsp! f) (soundio:sound-out-write-callback-set! *sound-out* f))
+  (define (hush!) (set-dsp! silence))
+  (define (start) (soundio:start-out-stream *sound-out*))
+#+END_SRC
+
+*** TODO provide recover features
+
+    - [ ] handle exceptions thrown by dsp
+    - [ ] provide means for stream restart/recreate without re-running Ad Libitum
+
+** Scheduler
+
+  Much of music is about time. Before we produce any single sample of wave, we
+  want to control when to start and when to stop doing it. Much of live coding
+  is about decoupling our commands from their execution. We want to say "play
+  note a second later" now, but play it a second later. It's where scheduler
+  comes to play. Essentially, scheduler's API is simple and allows to get
+  current time mark (whatever it means: system clock, time elapsed from
+  scheduler start or number of rendered samples) and to callback procedure at
+  some point of time with more or less guaranteed skew limit.
+
+  To have scheduler in sync with audiostream it probably worth to couple it with
+  write callback.
+
+  Let's start with scheduler interface. As has been said there are two basic
+  functions it must provide:
+
+#+NAME: scheduler-interface
+#+BEGIN_SRC scheme
+  <<now>>
+  <<schedule>>
+#+END_SRC
+
+  As far as scheduler is stateful and even involves thread creation, it must
+  have two other basic methods:
+
+#+NAME: scheduler-interface
+#+BEGIN_SRC scheme
+  <<start-scheduler>>
+  <<stop-scheduler>>
+#+END_SRC
+
+  Let's shape scheduler's data. Obviously, =now= appears here, in form of either
+  scheduler's own counter or function (which will get system time or related
+  write thread sample number). Another thing is =queue=, where =schedule= will
+  store callbacks. And =thread= id or flag or whatever used to control thread
+  exit. And the last one which comes to the mind at the moment is =resolution=
+  as a time duration of the longest sleep of scheduler thread before checking
+  events ready to be fired.
+
+#+NAME: scheduler-record
+#+BEGIN_SRC scheme
+  (define-record-type scheduler
+    (fields now (mutable queue) resolution (mutable thread) mutex))
+
+  (define (simple-scheduler)
+    (make-scheduler
+     current-time                         ; now
+     heap/empty                           ; queue
+     (make-time 'time-duration 1000000 0) ; resolution
+     #f                                   ; thread
+     (make-mutex)                         ; mutex
+     ))
+#+END_SRC
+
+  =now= then would just called =now= field:
+
+#+NAME: now
+#+BEGIN_SRC scheme
+  (define (now scheduler) ((scheduler-now scheduler)))
+#+END_SRC
+
+  Event queue accepts events which must have =f= with its
+  =args= to execute at =time=:
+
+#+NAME: event-record
+#+BEGIN_SRC scheme
+  (define-record-type event
+    (fields time f args))
+
+  (define (event-comparator e1 e2)
+    (let ([t1 (event-time e1)]
+          [t2 (event-time e2)])
+      (cond
+       [(time<? t1 t2) 1]
+       [(time>? t1 t2) -1]
+       [else 0])))
+#+END_SRC
+
+  For =queue= we need some heap implementation, I'm going to jump into [[Pairing
+  Heap]]!
+
+#+NAME: schedule
+#+BEGIN_SRC scheme
+  (define (schedule scheduler event)
+    (with-mutex (scheduler-mutex scheduler)
+                (scheduler-queue-set! scheduler (heap/insert event-comparator event (scheduler-queue scheduler)))))
+#+END_SRC
+
+  Now it's a time for start/stop thread. Stopping thread would be just setting a
+  flag which I used to call "poison pill".
+
+#+NAME: stop-scheduler
+#+BEGIN_SRC scheme
+  (define (stop-scheduler scheduler)
+    (scheduler-thread-set! scheduler #f))
+#+END_SRC
+
+  Starting thread will fork and loop calling expired events.
+*** TODO make process-events safe (try/catch?)
+*** TODO consider treating event-f as a symbol and resolve it via eval
+
+#+NAME: start-scheduler
+#+BEGIN_SRC scheme
+  (define (process-events scheduler t)
+    (with-mutex
+     (scheduler-mutex scheduler)
+     (let next-event ()
+       (let ([event (heap/find-min (scheduler-queue scheduler))])
+         (when (and event (time<=? (event-time event) t))
+           (scheduler-queue-set! scheduler (heap/delete-min event-comparator (scheduler-queue scheduler)))
+           (apply (event-f event) (event-args event))
+           (next-event))))))
+
+  (define (start-scheduler scheduler)
+    (fork-thread
+     (lambda ()
+       (scheduler-thread-set! scheduler (get-thread-id))
+       (let ([zero-duration (make-time 'time-duration 0 0)]
+             [resolution (scheduler-resolution scheduler)])
+         (let loop ()
+           (when (scheduler-thread scheduler)
+             (let ([clock (current-time)]
+                   [t (add-duration (now scheduler) resolution)])
+               (process-events scheduler t)
+               (let* ([day (time-difference (current-time) clock)]
+                      [night (time-difference resolution day)])
+                 (when (time<? zero-duration night)
+                   (sleep night))
+                 (loop)))))))))
+#+END_SRC
+
+#+NAME: scheduler
+#+BEGIN_SRC scheme
+  <<scheduler-record>>
+  <<event-record>>
+  <<scheduler-interface>>
+#+END_SRC
+
+*** Pairing Heap
+
+   Wikipedia's type definition for pairing heap structure looks like Scheme's
+   pairs (surprise =) ). Using them implementation is quite straightforward.
+
+#+NAME: pairing-heap
+#+BEGIN_SRC scheme
+  ;; we do some #f-punning and don't throw on empty heaps
+
+  (define heap/empty '())
+
+  (define (heap/find-min heap)
+    (if (null? heap)
+        #f
+        (car heap)))
+
+  (define (heap/merge comparator h1 h2)
+    (cond
+     [(null? h1) h2]
+     [(null? h2) h1]
+     [(positive? (comparator (car h1) (car h2)))
+      (cons (car h1) (cons h2 (cdr h1)))]
+     [else
+      (cons (car h2) (cons h1 (cdr h2)))]))
+
+  (define (heap/insert comparator elem heap)
+    (heap/merge comparator (cons elem '()) heap))
+
+  (define (heap/merge-pairs comparator subheaps)
+    (cond
+     [(null? subheaps) heap/empty]
+     [(null? (cdr subheaps)) (car subheaps)]
+     [else (heap/merge comparator
+            (heap/merge comparator (car subheaps) (cadr subheaps))
+            (heap/merge-pairs comparator (cddr subheaps)))]))
+
+  (define (heap/delete-min comparator heap)
+    (if (null? heap)
+        heap/empty
+        (heap/merge-pairs comparator (cdr heap))))
+#+END_SRC
+
+** Remote REPL
+
+   We need own repl server because music doesn't work in geiser repl for
+   somewhat reason. The most universal solution would be to have REPL over either UDP or
+   TCP with the simplest possible protocol. We want it to be just a carrier,
+   everything else should happen inside editor and engine. Sadly Chez Scheme has
+   no sockets in its std lib. We are gonna try Aaron W. Hsu's [[https://github.com/arcfide/chez-sockets][chez-sockets]] library.
+
+#+BEGIN_SRC scheme
+  ;; (with-input-from-string "(+ 1 1)" (lambda () (eval (read))))
+  ;; or
+  ;; (call-with-port (open-input-string "(+ 1 2) (+ 3 4)")
+  ;;                 (lambda (p)
+  ;;                   (do ([x (read p) (read p)])
+  ;;                       ((eof-object? x) )
+  ;;                     (display (eval x)) (newline))))
+#+END_SRC
+
+* Core
+
+** Generators
+** Envelopes
+** Samples & Wavetables
+** Metronome
+
+* Std
+
+** FFT
+** Filters
+** Instruments
+** Scales
+** Rhythm
+
+* Files :noexport:
+
+#+BEGIN_SRC scheme :tangle ad-libitum.ss :noweb yes :mkdirp yes :paddle no
+  (define (add-library-directory dir)
+    (library-directories
+     (cons dir (library-directories))))
+
+  (define (add-library-directories . dirs)
+    (unless (null? dirs)
+      (add-library-directory (car dirs))
+      (apply add-library-directories (cdr dirs))))
+
+  (add-library-directories
+   "./chez-soundio"
+   "./chez-sockets")
+
+  (import (chezscheme)
+          (prefix (sound) sound:)
+          (prefix (scheduler) scheduler:))
+
+  (define pi (* (asin 1.0) 2))
+  (define +pi   3.14159265358979323846264)
+  (define +pi/2 1.57079632679489661923132)
+  (define +pi/4  .78539816339744830961566)
+  (define -pi (- +pi))
+  (define -pi/2 (- +pi/2))
+  (define -pi/4 (- +pi/4))
+  (define two-pi (* 2 pi))
+
+  (define (sine time freq)
+    (sin (* two-pi freq time)))
+
+  (define (tuner time channel)
+    ;; inexact because otherwise exact 0 would crash soundio
+    (inexact (sine time 440.0)))
+
+  (sound:start)
+  (scheduler:start)
+
+  (sound:set-dsp! tuner)
+
+  (define schedule scheduler:schedule)
+  (define callback schedule)
+#+END_SRC
+
+#+BEGIN_SRC scheme :tangle sound.ss :noweb yes :mkdirp yes :paddle no
+  (library (sound (1))
+    (export start set-dsp! hush!)
+    (import (chezscheme) (prefix (soundio) soundio:))
+    <<sound>>
+    )
+#+END_SRC
+
+#+BEGIN_SRC scheme :tangle scheduler.ss :noweb yes :mkdirp yes :paddle no
+  (library (scheduler)
+    (export start stop
+            (rename (*schedule* schedule) (*now* now)))
+    (import (chezscheme))
+    <<pairing-heap>>
+    <<scheduler>>
+    (define *scheduler* (simple-scheduler))
+    (define (start) (start-scheduler *scheduler*))
+    (define (stop) (stop-scheduler *scheduler*))
+    (define (*schedule* t f . args) (schedule *scheduler* (make-event t f args)))
+    (define (*now*) (now *scheduler*))
+    )
+#+END_SRC

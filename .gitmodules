@@ -1,0 +1,6 @@
+[submodule "chez-soundio"]
+	path = chez-soundio
+	url = https://github.com/ul/chez-soundio
+[submodule "chez-sockets"]
+	path = chez-sockets
+	url = https://github.com/ul/chez-sockets
