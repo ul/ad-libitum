@@ -1,2 +1,4 @@
 /README.org\[*
 libbridge.so
+socket-ffi-values.so
+sockets-stub.so

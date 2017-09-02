@@ -213,14 +213,101 @@
    everything else should happen inside editor and engine. Sadly Chez Scheme has
    no sockets in its std lib. We are gonna try Aaron W. Hsu's [[https://github.com/arcfide/chez-sockets][chez-sockets]] library.
 
+   Actually, we are still able to use Geiser with our REPL server because it
+   supports remote REPL. See "Connecting to an external Scheme" at [[http://www.nongnu.org/geiser/geiser_3.html#The-REPL][docs]]. The
+   only thing required for it is to load =scheme/chez/geiser/geiser.ss= into the
+   REPL thread.
+
+   First, let's create a TCP socket. Here we rely on assumption, that default
+   protocol is TCP. TODO fix it!
+
+  Though Aaron doesn't recommend using blocking sockets, they are so much easier
+  for out case! No need to implement polling when waiting for connection or
+  receiving value.
+
+#+NAME: open-socket
+  #+BEGIN_SRC scheme
+    (define (open-socket)
+      (let ([socket (sock:create-socket
+                     sock:socket-domain/internet
+                     sock:socket-type/stream
+                     sock:socket-protocol/auto)])
+        (sock:set-socket-nonblocking! socket #f)
+        <<bind-socket>>
+        <<listen-socket>>
+        socket
+        ))
+  #+END_SRC
+
+  Then we are going to listen address and port for input. We'll make it
+  configurable later, let's provide some sensible hardcoded defaults for now.
+  /localhost/ is for security reasons, and /37146/ is default Geiser port.
+
+#+NAME: bind-socket
 #+BEGIN_SRC scheme
-  ;; (with-input-from-string "(+ 1 1)" (lambda () (eval (read))))
-  ;; or
-  ;; (call-with-port (open-input-string "(+ 1 2) (+ 3 4)")
-  ;;                 (lambda (p)
-  ;;                   (do ([x (read p) (read p)])
-  ;;                       ((eof-object? x) )
-  ;;                     (display (eval x)) (newline))))
+  (sock:bind-socket socket (sock:string->internet-address "127.0.0.1:37146"))
+#+END_SRC
+
+  And then let's listen for new connections!
+
+#+NAME: listen-socket
+#+BEGIN_SRC scheme
+  (sock:listen-socket socket 1024)
+#+END_SRC
+
+To actually accept new connections we are going to create new thread and just
+run infinite look with =accept-socket= inside. Remember, our socket is blocking
+so it would just wait for the next connection, not eat all CPU by eager calls.
+After accepting new connection we'll proceed it in new thread.
+
+#+NAME: accept-connections
+#+BEGIN_SRC scheme
+  (define (accept-connections repl-server-socket)
+    (fork-thread
+     (lambda ()
+       (let loop ()
+         (let-values ([(socket address) (sock:accept-socket repl-server-socket)])
+           (printf "New REPL @ ~s\r\n" (sock:internet-address->string address))
+           (spawn-remote-repl socket)
+           (loop))))))
+#+END_SRC
+
+#+NAME: spawn-remote-repl
+#+BEGIN_SRC scheme
+  (define max-code-length 65536)
+  (define code-tx (make-transcoder (utf-8-codec) (eol-style lf)
+                                   (error-handling-mode replace)))
+  (define (spawn-remote-repl socket)
+    (fork-thread
+     (lambda ()
+       (let loop ()
+         (with-exception-handler
+             ;; TODO report to client
+             ;; TODO stop loop on severe errors (which?)
+             (lambda (x) (loop))
+           (lambda ()
+             (let-values ([(request address)
+                           (sock:receive-from-socket socket max-code-length)])
+               (unless (zero? (bytevector-length request))
+                 (call-with-port
+                  (open-bytevector-input-port request code-tx)
+                  (lambda (p)
+                    (do ([x (read p) (read p)])
+                        ((eof-object? x))
+                      (let ([response (call-with-bytevector-output-port
+                                       (lambda (p)
+                                         ;; TODO `display` ???
+                                         (write (eval x) p)
+                                         (newline p))
+                                       code-tx)])
+                        (sock:send-to-socket socket response address)))
+                    (loop)))))))))))
+#+END_SRC
+
+#+NAME: start-repl-server
+#+BEGIN_SRC scheme
+  (define (start-repl-server)
+    (accept-connections (open-socket)))
 #+END_SRC
 
 * Core
@@ -256,7 +343,8 @@
 
   (import (chezscheme)
           (prefix (sound) sound:)
-          (prefix (scheduler) scheduler:))
+          (prefix (scheduler) scheduler:)
+          (prefix (repl) repl:))
 
   (define pi (* (asin 1.0) 2))
   (define +pi   3.14159265358979323846264)
@@ -277,10 +365,13 @@
   (sound:start)
   (scheduler:start)
 
-  (sound:set-dsp! tuner)
-
   (define schedule scheduler:schedule)
   (define callback schedule)
+
+  (repl:start-repl-server)
+
+  ;; try in remote repl
+  ;; (sound:set-dsp! tuner)
 #+END_SRC
 
 #+BEGIN_SRC scheme :tangle sound.ss :noweb yes :mkdirp yes :paddle no
@@ -303,5 +394,17 @@
     (define (stop) (stop-scheduler *scheduler*))
     (define (*schedule* t f . args) (schedule *scheduler* (make-event t f args)))
     (define (*now*) (now *scheduler*))
+    )
+#+END_SRC
+
+#+BEGIN_SRC scheme :tangle repl.ss :noweb yes :mkdirp yes :paddle no
+  (library (repl (1))
+    (export start-repl-server)
+    (import (chezscheme)
+            (prefix (bsd-sockets) sock:))
+    <<open-socket>>
+    <<spawn-remote-repl>>
+    <<accept-connections>>
+    <<start-repl-server>>
     )
 #+END_SRC

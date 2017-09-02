@@ -13,7 +13,8 @@
 
 (import (chezscheme)
         (prefix (sound) sound:)
-        (prefix (scheduler) scheduler:))
+        (prefix (scheduler) scheduler:)
+        (prefix (repl) repl:))
 
 (define pi (* (asin 1.0) 2))
 (define +pi   3.14159265358979323846264)
@@ -34,7 +35,10 @@
 (sound:start)
 (scheduler:start)
 
-(sound:set-dsp! tuner)
-
 (define schedule scheduler:schedule)
 (define callback schedule)
+
+(repl:start-repl-server)
+
+;; try in remote repl
+;; (sound:set-dsp! tuner)
