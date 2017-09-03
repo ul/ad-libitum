@@ -207,23 +207,29 @@
 
 ** Remote REPL
 
-   We need own repl server because music doesn't work in geiser repl for
-   somewhat reason. The most universal solution would be to have REPL over either UDP or
-   TCP with the simplest possible protocol. We want it to be just a carrier,
-   everything else should happen inside editor and engine. Sadly Chez Scheme has
-   no sockets in its std lib. We are gonna try Aaron W. Hsu's [[https://github.com/arcfide/chez-sockets][chez-sockets]] library.
+  We need own repl server because music doesn't work in geiser repl for somewhat
+  reason. The most universal solution would be to have REPL over either UDP or
+  TCP with the simplest possible protocol. We want it to be just a carrier,
+  everything else should happen inside editor and engine. Sadly Chez Scheme has
+  no sockets in its std lib. We are gonna try Aaron W. Hsu's [[https://github.com/arcfide/chez-sockets][chez-sockets]]
+  library.
 
-   Actually, we are still able to use Geiser with our REPL server because it
-   supports remote REPL. See "Connecting to an external Scheme" at [[http://www.nongnu.org/geiser/geiser_3.html#The-REPL][docs]]. The
-   only thing required for it is to load =scheme/chez/geiser/geiser.ss= into the
-   REPL thread.
+  Actually, we are still able to use Geiser with our REPL server because it
+  supports remote REPL. See "Connecting to an external Scheme" at [[http://www.nongnu.org/geiser/geiser_3.html#The-REPL][docs]]. The only
+  thing required for it is to load =scheme/chez/geiser/geiser.ss= into the REPL
+  thread.
 
-   First, let's create a TCP socket. Here we rely on assumption, that default
-   protocol is TCP. TODO fix it!
+  First, let's create a TCP socket. Here we rely on assumption, that default
+  protocol is TCP. TODO fix it!
 
   Though Aaron doesn't recommend using blocking sockets, they are so much easier
   for out case! No need to implement polling when waiting for connection or
   receiving value.
+
+  Tried blocking sockets. They work fine by themselves, but play bad with
+  =sleep= called from other threads! Falling back to asyc sockets and polling then.
+
+  TODO proper socket closing
 
 #+NAME: open-socket
   #+BEGIN_SRC scheme
@@ -232,7 +238,6 @@
                      sock:socket-domain/internet
                      sock:socket-type/stream
                      sock:socket-protocol/auto)])
-        (sock:set-socket-nonblocking! socket #f)
         <<bind-socket>>
         <<listen-socket>>
         socket
@@ -266,10 +271,12 @@ After accepting new connection we'll proceed it in new thread.
     (fork-thread
      (lambda ()
        (let loop ()
+         (sleep polling-cycle)
          (let-values ([(socket address) (sock:accept-socket repl-server-socket)])
-           (printf "New REPL @ ~s\r\n" (sock:internet-address->string address))
-           (spawn-remote-repl socket)
-           (loop))))))
+           (when socket
+             (printf "New REPL @ ~s\r\n" (sock:internet-address->string address))
+             (spawn-remote-repl socket address)))
+         (loop)))))
 #+END_SRC
 
 #+NAME: spawn-remote-repl
@@ -277,23 +284,30 @@ After accepting new connection we'll proceed it in new thread.
   (define max-code-length 65536)
   (define code-tx (make-transcoder (utf-8-codec) (eol-style lf)
                                    (error-handling-mode replace)))
-  (define (spawn-remote-repl socket)
+  (define polling-cycle (make-time 'time-duration 200000000 0))
+  (define (spawn-remote-repl socket address)
     (fork-thread
      (lambda ()
        (let loop ()
+         (sleep polling-cycle)
          (with-exception-handler
              ;; TODO report to client
              ;; TODO stop loop on severe errors (which?)
-             (lambda (x) (loop))
+             (lambda (x)
+               (display-condition x)
+               (let ([response (call-with-bytevector-output-port newline code-tx)])
+                 (sock:send-to-socket socket response address))
+               (loop))
            (lambda ()
              (let-values ([(request address)
                            (sock:receive-from-socket socket max-code-length)])
-               (unless (zero? (bytevector-length request))
+               (if (and request (positive? (bytevector-length request)))
                  (call-with-port
                   (open-bytevector-input-port request code-tx)
                   (lambda (p)
                     (do ([x (read p) (read p)])
                         ((eof-object? x))
+                        (printf "~s\r\n" x)
                       (let ([response (call-with-bytevector-output-port
                                        (lambda (p)
                                          ;; TODO `display` ???
@@ -301,7 +315,8 @@ After accepting new connection we'll proceed it in new thread.
                                          (newline p))
                                        code-tx)])
                         (sock:send-to-socket socket response address)))
-                    (loop)))))))))))
+                    (loop)))
+                 (loop)))))))))
 #+END_SRC
 
 #+NAME: start-repl-server
