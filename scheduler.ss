@@ -56,10 +56,6 @@
        [(time<? t1 t2) 1]
        [(time>? t1 t2) -1]
        [else 0])))
-  (define (now scheduler) ((scheduler-now scheduler)))
-  (define (schedule scheduler event)
-    (with-mutex (scheduler-mutex scheduler)
-                (scheduler-queue-set! scheduler (heap/insert event-comparator event (scheduler-queue scheduler)))))
   (define (process-events scheduler t)
     (with-mutex
      (scheduler-mutex scheduler)
@@ -72,7 +68,10 @@
              (lambda ()
                (apply (eval (event-f event)) (event-args event))))
            (next-event))))))
-  
+  (define (now scheduler) ((scheduler-now scheduler)))
+  (define (schedule scheduler event)
+    (with-mutex (scheduler-mutex scheduler)
+                (scheduler-queue-set! scheduler (heap/insert event-comparator event (scheduler-queue scheduler)))))
   (define (start-scheduler scheduler)
     (fork-thread
      (lambda ()

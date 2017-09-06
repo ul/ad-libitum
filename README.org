@@ -79,7 +79,7 @@
      ))
 #+END_SRC
 
-  =now= then would just called =now= field:
+  =now= then would just call =now= field:
 
 #+NAME: now
 #+BEGIN_SRC scheme
@@ -106,6 +106,9 @@
   For =queue= we need some heap implementation, I'm going to jump into [[Pairing
   Heap]]!
 
+  Mutex is used to prevent data race on insert and remove from queue happening
+  in different threads.
+
 #+NAME: schedule
 #+BEGIN_SRC scheme
   (define (schedule scheduler event)
@@ -113,18 +116,22 @@
                 (scheduler-queue-set! scheduler (heap/insert event-comparator event (scheduler-queue scheduler)))))
 #+END_SRC
 
-  Now it's a time for start/stop thread. Stopping thread would be just setting a
-  flag which I used to call "poison pill".
+  Processing events is just executing any expired events' functions and removing
+  them from the queue. Note, that our current implementation is built on the
+  assumption that scheduler's clock is based on =current-time=.
 
-#+NAME: stop-scheduler
-#+BEGIN_SRC scheme
-  (define (stop-scheduler scheduler)
-    (scheduler-thread-set! scheduler #f))
-#+END_SRC
+  To enable dynamic temporal recursion we evaluate event's =f= as a symbol to be
+  resolved in a function, not as an immediate function value.
 
-  Starting thread will fork and loop calling expired events.
+  Of course, live events are error prone, but we don't want flawed event to blow
+  entire thread. Thus =f= execution is secured with =with-exception-handler=.
 
-#+NAME: start-scheduler
+*** TODO investigate why CPU usage go to sky after exception cathed and displayed
+*** TODO make process-events scheduler clock type independent
+
+*** CODE
+
+#+NAME: process-events
 #+BEGIN_SRC scheme
   (define (process-events scheduler t)
     (with-mutex
@@ -138,7 +145,25 @@
              (lambda ()
                (apply (eval (event-f event)) (event-args event))))
            (next-event))))))
+#+END_SRC
 
+  Now it's a time for start/stop thread. Stopping thread would be just setting a
+  flag which I used to call "poison pill".
+
+#+NAME: stop-scheduler
+#+BEGIN_SRC scheme
+  (define (stop-scheduler scheduler)
+    (scheduler-thread-set! scheduler #f))
+#+END_SRC
+
+  Starting thread will fork and loop calling expired events.
+
+*** TODO make sleeping scheduler clock type independent
+
+*** CODE
+
+#+NAME: start-scheduler
+#+BEGIN_SRC scheme
   (define (start-scheduler scheduler)
     (fork-thread
      (lambda ()
@@ -161,10 +186,11 @@
 #+BEGIN_SRC scheme
   <<scheduler-record>>
   <<event-record>>
+  <<process-events>>
   <<scheduler-interface>>
 #+END_SRC
 
-  We need just a simple-scheduler at hand for Ad Libitum needs:
+  We need just a simple default scheduler at hand for Ad Libitum needs:
 
 #+NAME: easy-scheduler
 #+BEGIN_SRC scheme
@@ -378,7 +404,7 @@ After accepting new connection we'll proceed it in new thread.
    Technically, the simplest generator is just a constant value, no motion,
    silence. But which stands next in simplicity?
 
-   It's the signal, which is on position half of a time and on another position
+   It's the signal, which is in one position half of a time and in another position
    in another half. By "time" here I mean one cycle, one period of signal.
 
 #+NAME: simplest-oscillator
