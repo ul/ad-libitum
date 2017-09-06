@@ -390,6 +390,23 @@ After accepting new connection we'll proceed it in new thread.
   instruments for live coding. In the book we are going to use those instruments
   to experiment with sound.
 
+** Math
+
+   Before diving into the abyss of digital music let's define several useful
+   basic math constants and functions.
+
+#+NAME: basic-math
+#+BEGIN_SRC scheme
+  (define pi (* (asin 1.0) 2))
+  (define +pi   3.14159265358979323846264)
+  (define +pi/2 1.57079632679489661923132)
+  (define +pi/4  .78539816339744830961566)
+  (define -pi (- +pi))
+  (define -pi/2 (- +pi/2))
+  (define -pi/4 (- +pi/4))
+  (define two-pi (* 2 pi))
+#+END_SRC
+
 ** Generators
 
    Sound is about motion. About our mean of sensing somewhat periodic motion
@@ -407,13 +424,20 @@ After accepting new connection we'll proceed it in new thread.
    It's the signal, which is in one position half of a time and in another position
    in another half. By "time" here I mean one cycle, one period of signal.
 
+   But first let define a couple of constants to start with. It's a frequency we
+   want to hear and its derivatives.
+
+#+NAME: tuner-constants
+#+BEGIN_SRC scheme
+  (define tuner-frequency 440.0)
+  (define tuner-period (/ 1.0 tuner-frequency))
+  (define tuner-half-period (/ tuner-period 2.0))
+#+END_SRC
+
 #+NAME: simplest-oscillator
 #+BEGIN_SRC scheme
-  (define base-frequency 440.0)
-  (define base-period (/ 1.0 440.0))
-  (define half-period (/ base-period 2.0))
   (define (simplest-oscillator time channel)
-    (if (> (mod time base-period) half-period)
+    (if (> (mod time tuner-period) tuner-half-period)
         1.0
         -1.0))
 #+END_SRC
@@ -433,9 +457,13 @@ After accepting new connection we'll proceed it in new thread.
 ** Scales
 ** Rhythm
 
-* Files :noexport:
+* Misc
 
-#+BEGIN_SRC scheme :tangle ad-libitum.ss :noweb yes :mkdirp yes :paddle no
+  To import =chez-soundio= and =chez-sockets= we must add respective folders to =library-directories=
+  To do that let's create a couple of helpers:
+
+#+NAME: add-library-directories
+#+BEGIN_SRC scheme
   (define (add-library-directory dir)
     (library-directories
      (cons dir (library-directories))))
@@ -448,41 +476,49 @@ After accepting new connection we'll proceed it in new thread.
   (add-library-directories
    "./chez-soundio"
    "./chez-sockets")
+#+END_SRC
 
-  (import (chezscheme)
-          (prefix (sound) sound:)
-          (prefix (scheduler) scheduler:)
-          (prefix (repl) repl:))
 
-  (define pi (* (asin 1.0) 2))
-  (define +pi   3.14159265358979323846264)
-  (define +pi/2 1.57079632679489661923132)
-  (define +pi/4  .78539816339744830961566)
-  (define -pi (- +pi))
-  (define -pi/2 (- +pi/2))
-  (define -pi/4 (- +pi/4))
-  (define two-pi (* 2 pi))
+  Also let's define several useful aliases and finally start our services:
 
+#+NAME: ad-libitum-init
+#+BEGIN_SRC scheme
+  (define now scheduler:now)
+  (define schedule scheduler:schedule)
+  (define callback schedule)
+
+  (sound:start)
+  (scheduler:start)
+  (repl:start-repl-server)
+#+END_SRC
+
+  Tuner stuff to test everything is working:
+
+#+NAME: test-tuner
+#+BEGIN_SRC scheme
   (define (sine time freq)
     (sin (* two-pi freq time)))
 
   (define (tuner time channel)
     ;; inexact because otherwise exact 0 would crash soundio
-    (inexact (sine time 440.0)))
+    (inexact (sine time tuner-frequency)))
 
-  (sound:start)
-  (scheduler:start)
-
-  (define now scheduler:now)
-  (define schedule scheduler:schedule)
-  (define callback schedule)
-
-  (repl:start-repl-server)
-
-  <<simplest-oscillator>>
-
-  ;; try in remote repl
   ;; (sound:set-dsp! tuner)
+#+END_SRC
+
+* Files :noexport:
+
+#+BEGIN_SRC scheme :tangle ad-libitum.ss :noweb yes :mkdirp yes :paddle no
+  <<add-library-directories>>
+  (import (chezscheme)
+          (prefix (sound) sound:)
+          (prefix (scheduler) scheduler:)
+          (prefix (repl) repl:))
+  <<ad-libitum-init>>
+  <<basic-math>>
+  <<tuner-constants>>
+  <<test-tuner>>
+  <<simplest-oscillator>>
 #+END_SRC
 
 #+BEGIN_SRC scheme :tangle sound.ss :noweb yes :mkdirp yes :paddle no
@@ -515,5 +551,3 @@ After accepting new connection we'll proceed it in new thread.
     <<start-repl-server>>
     )
 #+END_SRC
-
-*** TODO move code from =ad-libitum.ss= to own blocks
