@@ -11,42 +11,53 @@
       (sock:listen-socket socket 1024)
       socket
       ))
-  (define max-code-length 65536)
-  (define code-tx (make-transcoder (utf-8-codec) (eol-style lf)
-                                   (error-handling-mode replace)))
-  (define polling-cycle (make-time 'time-duration 200000000 0))
+  (define max-chunk-length 65536)
+  (define code-tx (make-transcoder (utf-8-codec) (eol-style lf) (error-handling-mode replace)))
+  (define polling-cycle (make-time 'time-duration 50000000 0))
   (define (spawn-remote-repl socket address)
     (fork-thread
      (lambda ()
-       (let loop ()
-         (sleep polling-cycle)
-         (with-exception-handler
-             ;; TODO report to client
-             ;; TODO stop loop on severe errors (which?)
-             (lambda (x)
-               (display-condition x)
-               (let ([response (call-with-bytevector-output-port newline code-tx)])
-                 (sock:send-to-socket socket response address))
-               (loop))
-           (lambda ()
-             (let-values ([(request address)
-                           (sock:receive-from-socket socket max-code-length)])
-               (if (and request (positive? (bytevector-length request)))
-                 (call-with-port
-                  (open-bytevector-input-port request code-tx)
-                  (lambda (p)
-                    (do ([x (read p) (read p)])
-                        ((eof-object? x))
-                        (printf "~s\r\n" x)
-                      (let ([response (call-with-bytevector-output-port
-                                       (lambda (p)
-                                         ;; TODO `display` ???
-                                         (write (eval x) p)
-                                         (newline p))
-                                       code-tx)])
-                        (sock:send-to-socket socket response address)))
-                    (loop)))
-                 (loop)))))))))
+       (let* ([call-with-send-port
+               (lambda (f)
+                 (let ([response (call-with-bytevector-output-port f code-tx)])
+                   (sock:send-to-socket socket response address)))]
+              [send-prompt
+               (lambda ()
+                 (call-with-send-port (lambda (p) (display "> " p))))])
+         (send-prompt)
+         (let loop ()
+           (sleep polling-cycle)
+           (with-exception-handler
+               ;; TODO report to client
+               ;; TODO stop loop on severe errors (which?)
+               (lambda (x)
+                 (display-condition x)
+                 (call-with-send-port newline)
+                 (send-prompt)
+                 (loop))
+             (lambda ()
+               (let-values ([(request address)
+                             (sock:receive-from-socket socket max-chunk-length)])
+                 ;; TODO stop loop and close socket on disconnect
+                 (if (and request (positive? (bytevector-length request)))
+                     (call-with-port
+                      (open-bytevector-input-port request code-tx)
+                      (lambda (p)
+                        (do ([x (read p) (read p)])
+                            ((eof-object? x))
+                          (printf "> ~s\r\n" x)
+                          (call-with-send-port
+                           (lambda (p)
+                             (let* ([result #f]
+                                    [output (with-output-to-string (lambda () (set! result (eval x))))])
+                               (printf "< ~s\r\n" result)
+                               (display output p)
+                               (display result p)
+                               (newline p))
+                             )))
+                        (send-prompt)
+                        (loop)))
+                     (loop))))))))))
   (define (accept-connections repl-server-socket)
     (fork-thread
      (lambda ()
