@@ -19,7 +19,7 @@
   (define (start) (soundio:start-out-stream *sound-out*))
 #+END_SRC
 
-*** TODO provide recover features
+*** TODO provide recover features [0/2]
 
     - [ ] handle exceptions thrown by dsp
     - [ ] provide means for stream restart/recreate without re-running Ad Libitum
@@ -123,8 +123,6 @@
 #+END_SRC
 
   Starting thread will fork and loop calling expired events.
-*** TODO make process-events safe (try/catch?)
-*** TODO consider treating event-f as a symbol and resolve it via eval
 
 #+NAME: start-scheduler
 #+BEGIN_SRC scheme
@@ -135,7 +133,10 @@
        (let ([event (heap/find-min (scheduler-queue scheduler))])
          (when (and event (time<=? (event-time event) t))
            (scheduler-queue-set! scheduler (heap/delete-min event-comparator (scheduler-queue scheduler)))
-           (apply (event-f event) (event-args event))
+           (with-exception-handler
+               display-condition
+             (lambda ()
+               (apply (eval (event-f event)) (event-args event))))
            (next-event))))))
 
   (define (start-scheduler scheduler)
@@ -161,6 +162,17 @@
   <<scheduler-record>>
   <<event-record>>
   <<scheduler-interface>>
+#+END_SRC
+
+  We need just a simple-scheduler at hand for Ad Libitum needs:
+
+#+NAME: easy-scheduler
+#+BEGIN_SRC scheme
+  (define *scheduler* (simple-scheduler))
+  (define (start) (start-scheduler *scheduler*))
+  (define (stop) (stop-scheduler *scheduler*))
+  (define (*schedule* t f . args) (schedule *scheduler* (make-event t f args)))
+  (define (*now*) (now *scheduler*))
 #+END_SRC
 
 *** Pairing Heap
@@ -220,7 +232,9 @@
   thread.
 
   First, let's create a TCP socket. Here we rely on assumption, that default
-  protocol is TCP. TODO fix it!
+  protocol is TCP.
+
+*** TODO ensure that protocol is TCP
 
   Though Aaron doesn't recommend using blocking sockets, they are so much easier
   for out case! No need to implement polling when waiting for connection or
@@ -229,7 +243,9 @@
   Tried blocking sockets. They work fine by themselves, but play bad with
   =sleep= called from other threads! Falling back to asyc sockets and polling then.
 
-  TODO proper socket closing
+*** TODO proper socket closing
+
+*** CODE
 
 #+NAME: open-socket
   #+BEGIN_SRC scheme
@@ -279,6 +295,13 @@ After accepting new connection we'll proceed it in new thread.
          (loop)))))
 #+END_SRC
 
+*** TODO breakdown code, it's too large for one bite
+*** TODO report exceptions to client
+*** TODO stop loop on severe errors (which?)
+*** TODO stop loop and close socket on disconnect
+
+*** CODE
+
 #+NAME: spawn-remote-repl
 #+BEGIN_SRC scheme
   (define max-chunk-length 65536)
@@ -298,8 +321,6 @@ After accepting new connection we'll proceed it in new thread.
          (let loop ()
            (sleep polling-cycle)
            (with-exception-handler
-               ;; TODO report to client
-               ;; TODO stop loop on severe errors (which?)
                (lambda (x)
                  (display-condition x)
                  (call-with-send-port newline)
@@ -308,7 +329,6 @@ After accepting new connection we'll proceed it in new thread.
              (lambda ()
                (let-values ([(request address)
                              (sock:receive-from-socket socket max-chunk-length)])
-                 ;; TODO stop loop and close socket on disconnect
                  (if (and request (positive? (bytevector-length request)))
                      (call-with-port
                       (open-bytevector-input-port request code-tx)
@@ -338,7 +358,43 @@ After accepting new connection we'll proceed it in new thread.
 
 * Core
 
+  Woohoo! Naive [[Kernel]] draft is here and we could start to explore Core basics
+  of Sound. At this point Ad Libitum splits into into interwinded parts: the
+  framework and the book. In the framework we are going to grow all necessary
+  instruments for live coding. In the book we are going to use those instruments
+  to experiment with sound.
+
 ** Generators
+
+   Sound is about motion. About our mean of sensing somewhat periodic motion
+   a.k.a waves. The higher is period, the higher is signal pitch. Waveform
+   determines character of signal. And irregularities determine... Something.
+   Noise? Personality? We'll try to discover.
+
+   Though signal demonstration usually started with sine waveform as the most
+   recognizable and surprisingly pleasant one, we are going to start with
+   computationally simplest one (though potentially not the fastest to calculate).
+
+   Technically, the simplest generator is just a constant value, no motion,
+   silence. But which stands next in simplicity?
+
+   It's the signal, which is on position half of a time and on another position
+   in another half. By "time" here I mean one cycle, one period of signal.
+
+#+NAME: simplest-oscillator
+#+BEGIN_SRC scheme
+  (define base-frequency 440.0)
+  (define base-period (/ 1.0 440.0))
+  (define half-period (/ base-period 2.0))
+  (define (simplest-oscillator time channel)
+    (if (> (mod time base-period) half-period)
+        1.0
+        -1.0))
+#+END_SRC
+
+*** TODO add references section
+*** TODO add to references link to interactive FFT tutorial
+
 ** Envelopes
 ** Samples & Wavetables
 ** Metronome
@@ -391,10 +447,13 @@ After accepting new connection we'll proceed it in new thread.
   (sound:start)
   (scheduler:start)
 
+  (define now scheduler:now)
   (define schedule scheduler:schedule)
   (define callback schedule)
 
   (repl:start-repl-server)
+
+  <<simplest-oscillator>>
 
   ;; try in remote repl
   ;; (sound:set-dsp! tuner)
@@ -415,11 +474,7 @@ After accepting new connection we'll proceed it in new thread.
     (import (chezscheme))
     <<pairing-heap>>
     <<scheduler>>
-    (define *scheduler* (simple-scheduler))
-    (define (start) (start-scheduler *scheduler*))
-    (define (stop) (stop-scheduler *scheduler*))
-    (define (*schedule* t f . args) (schedule *scheduler* (make-event t f args)))
-    (define (*now*) (now *scheduler*))
+    <<easy-scheduler>>
     )
 #+END_SRC
 
@@ -434,3 +489,5 @@ After accepting new connection we'll proceed it in new thread.
     <<start-repl-server>>
     )
 #+END_SRC
+
+*** TODO move code from =ad-libitum.ss= to own blocks

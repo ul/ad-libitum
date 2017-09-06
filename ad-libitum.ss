@@ -35,10 +35,19 @@
 (sound:start)
 (scheduler:start)
 
+(define now scheduler:now)
 (define schedule scheduler:schedule)
 (define callback schedule)
 
 (repl:start-repl-server)
+
+(define base-frequency 440.0)
+(define base-period (/ 1.0 440.0))
+(define half-period (/ base-period 2.0))
+(define (simplest-oscillator time channel)
+  (if (> (mod time base-period) half-period)
+      1.0
+      -1.0))
 
 ;; try in remote repl
 ;; (sound:set-dsp! tuner)

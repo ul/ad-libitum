@@ -67,7 +67,10 @@
        (let ([event (heap/find-min (scheduler-queue scheduler))])
          (when (and event (time<=? (event-time event) t))
            (scheduler-queue-set! scheduler (heap/delete-min event-comparator (scheduler-queue scheduler)))
-           (apply (event-f event) (event-args event))
+           (with-exception-handler
+               display-condition
+             (lambda ()
+               (apply (eval (event-f event)) (event-args event))))
            (next-event))))))
   
   (define (start-scheduler scheduler)

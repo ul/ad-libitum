@@ -28,8 +28,6 @@
          (let loop ()
            (sleep polling-cycle)
            (with-exception-handler
-               ;; TODO report to client
-               ;; TODO stop loop on severe errors (which?)
                (lambda (x)
                  (display-condition x)
                  (call-with-send-port newline)
@@ -38,7 +36,6 @@
              (lambda ()
                (let-values ([(request address)
                              (sock:receive-from-socket socket max-chunk-length)])
-                 ;; TODO stop loop and close socket on disconnect
                  (if (and request (positive? (bytevector-length request)))
                      (call-with-port
                       (open-bytevector-input-port request code-tx)
