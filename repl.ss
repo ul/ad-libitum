@@ -15,7 +15,9 @@
     (call/cc
      (lambda (k)
        (with-exception-handler
-           (lambda (x) (k #f))
+           (lambda (x)
+             (display-condition x)
+             (k #f))
          thunk))))
   
   (define max-chunk-length 65536)
