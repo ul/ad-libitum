@@ -18,16 +18,9 @@
 
 #+NAME: sound
 #+BEGIN_SRC scheme
-  (define (try thunk)
-    (call/cc
-     (lambda (k)
-       (with-exception-handler
-           (lambda (x) (k 0.0))
-         thunk))))
-
   (define (safe-function f)
     (lambda args
-      (try (lambda () (apply f args)))))
+      (try (lambda () (apply f args)) 0.0)))
 
   (define (silence time channel) 0.0)
 
@@ -149,13 +142,6 @@
 
 #+NAME: process-events
 #+BEGIN_SRC scheme
-  (define (try thunk)
-    (call/cc
-     (lambda (k)
-       (with-exception-handler
-           (lambda (x) (k #f))
-         thunk))))
-
   (define (process-events scheduler t)
     (with-mutex
      (scheduler-mutex scheduler)
@@ -165,7 +151,8 @@
            (scheduler-queue-set! scheduler (heap/delete-min event-comparator (scheduler-queue scheduler)))
            (try
             (lambda ()
-              (apply (eval (event-f event)) (event-args event))))
+              (apply (eval (event-f event)) (event-args event)))
+            #f)
            (next-event))))))
 #+END_SRC
 
@@ -343,67 +330,132 @@ After accepting new connection we'll proceed it in new thread.
          (loop)))))
 #+END_SRC
 
-*** TODO breakdown code, it's too large for one bite
-*** TODO report exceptions to client
-*** TODO stop loop on severe errors (which?)
-*** TODO stop loop and close socket on disconnect
+  Every new connection accepted would spawn new thread with a REPL loop inside
+  it. Because we are using async sockets, we are forced to run actual loop and
+  poll socket for values. /50ms/ should be a reasonable polling delay to keep it
+  responsive and not resource greedy at the same time. Also
+  =receive-from-socket= require to limit maximum message length. Here /65k/ is
+  also is a kind of a guess. Chez Scheme operates UTF-8 strings and messages are
+  read as bytevectors from sockets, thus we need a transcoder to convert them
+  back and forth. Let's put all these requirements to values:
 
-*** CODE
+#+NAME: spawn-remote-repl-options
+#+BEGIN_SRC scheme
+  (define polling-cycle (make-time 'time-duration 50000000 0))
+  (define max-chunk-length 65536)
+  (define code-tx (make-transcoder (utf-8-codec) (eol-style lf) (error-handling-mode replace)))
+#+END_SRC
+
+  Preparations are straightforward: define some helpers, send initial prompt,
+  and start loop.
 
 #+NAME: spawn-remote-repl
 #+BEGIN_SRC scheme
-  (define (try thunk)
-    (call/cc
-     (lambda (k)
-       (with-exception-handler
-           (lambda (x)
-             (display-condition x)
-             (k #f))
-         thunk))))
-
-  (define max-chunk-length 65536)
-  (define code-tx (make-transcoder (utf-8-codec) (eol-style lf) (error-handling-mode replace)))
-  (define polling-cycle (make-time 'time-duration 50000000 0))
-
+  <<spawn-remote-repl-options>>
   (define (spawn-remote-repl socket address)
     (fork-thread
      (lambda ()
-       (let* ([call-with-send-port
-               (lambda (f)
-                 (let ([response (call-with-bytevector-output-port f code-tx)])
-                   (sock:send-to-socket socket response address)))]
-              [send-prompt
-               (lambda ()
-                 (call-with-send-port (lambda (p) (display "> " p))))])
+       (let* (
+              <<repl-send-helpers>>
+              )
          (send-prompt)
-         (let loop ()
-           (sleep polling-cycle)
-           (let-values ([(request address)
-                         (sock:receive-from-socket socket max-chunk-length)])
-             (if (and request (positive? (bytevector-length request)))
-                 (call-with-port
-                  (open-bytevector-input-port request code-tx)
-                  (lambda (p)
-                    (do ([x (read p) (read p)])
-                        ((eof-object? x))
-                      (printf "> ~s\r\n" x)
-                      (call-with-send-port
-                       (lambda (p)
-                         (let* ([result #f]
-                                [output (with-output-to-string
-                                          (lambda ()
-                                            (set! result
-                                                  (try (lambda ()
-                                                         (eval x))))))])
-                           (printf "< ~s\r\n" result)
-                           (display output p)
-                           (display result p)
-                           (newline p))
-                         )))
-                    (send-prompt)
-                    (loop)))
-                 (loop))))))))
+         <<repl-loop>>
+         ))))
 #+END_SRC
+
+  Converting messages to bytevectors and sending to proper port is quite
+  tedious, let's write a couple of helpers:
+
+#+NAME: repl-send-helpers
+#+BEGIN_SRC scheme
+  [call-with-send-port
+   (lambda (f)
+     (let ([response (call-with-bytevector-output-port f code-tx)])
+       (sock:send-to-socket socket response address)))]
+  [send-prompt
+   (lambda ()
+     (call-with-send-port (lambda (p) (display "> " p))))]
+#+END_SRC
+
+  Loop start with polling delay. For simplicity it's constant and unconditional
+  in the beginning of every cycle. If socket is ready and contains non-empty
+  message then we do evaluation and send result back. Reading from socket is
+  implemented via ports, look at =chez-socket= documentation for more info.
+
+#+NAME: repl-loop
+#+BEGIN_SRC scheme
+  (let loop ()
+    (sleep polling-cycle)
+    (let-values ([(request address)
+                  (sock:receive-from-socket socket max-chunk-length)])
+      (if (and request (positive? (bytevector-length request)))
+          (call-with-port
+           (open-bytevector-input-port request code-tx)
+           <<repl-read-eval-print>>
+           )
+          (loop))))
+#+END_SRC
+
+  Our remote REPL supports multi-form messages, therefore we need inner loop to
+  read and process them one by one.
+
+#+NAME: repl-read-eval-print
+#+BEGIN_SRC scheme
+  (lambda (p)
+    (do ([x (read p) (read p)])
+        ((eof-object? x))
+      (printf "> ~s\r\n" x)
+      (call-with-send-port
+       <<repl-eval-print>>
+       ))
+    (send-prompt)
+    (loop))
+#+END_SRC
+
+  Eval and send result back, easy, huh?
+
+#+NAME: repl-eval-print
+#+BEGIN_SRC scheme
+  (lambda (p)
+    (let* (
+           <<repl-eval>>
+           )
+      <<repl-print>>
+      )
+    )
+#+END_SRC
+
+  Tricky part is that we want to:
+
+    - capture output performed by evaluated form
+    - capture result of form evaluated
+    - don't blow up on exception and capture it's message
+
+  That's why we can't just call =eval=
+
+#+NAME: repl-eval
+#+BEGIN_SRC scheme
+  [result #f]
+  [output
+   (with-output-to-string
+     (lambda ()
+       (set! result (try-display (lambda () (eval x)) #f))))]
+#+END_SRC
+
+  On the other hand, sending is quite straightforward, because we need just to
+  write to port provided by =call-with-send-port=
+
+#+NAME: repl-print
+#+BEGIN_SRC scheme
+  (printf "< ~s\r\n" result)
+  (display output p)
+  (display result p)
+  (newline p)
+#+END_SRC
+
+*** TODO stop loop and close socket on disconnect
+
+*** Start REPL server
 
 #+NAME: start-repl-server
 #+BEGIN_SRC scheme
@@ -488,6 +540,31 @@ After accepting new connection we'll proceed it in new thread.
 
 * Misc
 
+  =try= is a little helper to guard function calls in vital loops: dsp,
+  scheduler, remote repl.
+
+#+NAME: try
+#+BEGIN_SRC scheme
+  (define (try thunk default)
+    (call/cc
+     (lambda (k)
+       (with-exception-handler
+           (lambda (x) (k default))
+         thunk))))
+#+END_SRC
+
+#+NAME: try-display
+#+BEGIN_SRC scheme
+  (define (try-display thunk default)
+    (call/cc
+     (lambda (k)
+       (with-exception-handler
+           (lambda (x)
+             (display-condition x)
+             (k default))
+         thunk))))
+#+END_SRC
+
   To import =chez-soundio= and =chez-sockets= we must add respective folders to =library-directories=
   To do that let's create a couple of helpers:
 
@@ -554,6 +631,7 @@ After accepting new connection we'll proceed it in new thread.
   (library (sound (1))
     (export start set-dsp! hush!)
     (import (chezscheme) (prefix (soundio) soundio:))
+    <<try>>
     <<sound>>
     )
 #+END_SRC
@@ -563,6 +641,7 @@ After accepting new connection we'll proceed it in new thread.
     (export start stop
             (rename (*schedule* schedule) (*now* now)))
     (import (chezscheme))
+    <<try>>
     <<pairing-heap>>
     <<scheduler>>
     <<easy-scheduler>>
@@ -574,6 +653,7 @@ After accepting new connection we'll proceed it in new thread.
     (export start-repl-server)
     (import (chezscheme)
             (prefix (bsd-sockets) sock:))
+    <<try-display>>
     <<open-socket>>
     <<spawn-remote-repl>>
     <<accept-connections>>

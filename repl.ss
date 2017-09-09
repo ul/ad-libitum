@@ -2,6 +2,14 @@
   (export start-repl-server)
   (import (chezscheme)
           (prefix (bsd-sockets) sock:))
+  (define (try-display thunk default)
+    (call/cc
+     (lambda (k)
+       (with-exception-handler
+           (lambda (x)
+             (display-condition x)
+             (k default))
+         thunk))))
   (define (open-socket)
     (let ([socket (sock:create-socket
                    sock:socket-domain/internet
@@ -11,29 +19,21 @@
       (sock:listen-socket socket 1024)
       socket
       ))
-  (define (try thunk)
-    (call/cc
-     (lambda (k)
-       (with-exception-handler
-           (lambda (x)
-             (display-condition x)
-             (k #f))
-         thunk))))
-  
+  (define polling-cycle (make-time 'time-duration 50000000 0))
   (define max-chunk-length 65536)
   (define code-tx (make-transcoder (utf-8-codec) (eol-style lf) (error-handling-mode replace)))
-  (define polling-cycle (make-time 'time-duration 50000000 0))
-  
   (define (spawn-remote-repl socket address)
     (fork-thread
      (lambda ()
-       (let* ([call-with-send-port
+       (let* (
+              [call-with-send-port
                (lambda (f)
                  (let ([response (call-with-bytevector-output-port f code-tx)])
                    (sock:send-to-socket socket response address)))]
               [send-prompt
                (lambda ()
-                 (call-with-send-port (lambda (p) (display "> " p))))])
+                 (call-with-send-port (lambda (p) (display "> " p))))]
+              )
          (send-prompt)
          (let loop ()
            (sleep polling-cycle)
@@ -48,20 +48,25 @@
                       (printf "> ~s\r\n" x)
                       (call-with-send-port
                        (lambda (p)
-                         (let* ([result #f]
-                                [output (with-output-to-string
-                                          (lambda ()
-                                            (set! result
-                                                  (try (lambda ()
-                                                         (eval x))))))])
+                         (let* (
+                                [result #f]
+                                [output
+                                 (with-output-to-string
+                                   (lambda ()
+                                     (set! result (try-display (lambda () (eval x)) #f))))]
+                                )
                            (printf "< ~s\r\n" result)
                            (display output p)
                            (display result p)
-                           (newline p))
-                         )))
+                           (newline p)
+                           )
+                         )
+                       ))
                     (send-prompt)
-                    (loop)))
-                 (loop))))))))
+                    (loop))
+                  )
+                 (loop))))
+         ))))
   (define (accept-connections repl-server-socket)
     (fork-thread
      (lambda ()

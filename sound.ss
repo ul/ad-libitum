@@ -1,16 +1,15 @@
 (library (sound (1))
   (export start set-dsp! hush!)
   (import (chezscheme) (prefix (soundio) soundio:))
-  (define (try thunk)
+  (define (try thunk default)
     (call/cc
      (lambda (k)
        (with-exception-handler
-           (lambda (x) (k 0.0))
+           (lambda (x) (k default))
          thunk))))
-  
   (define (safe-function f)
     (lambda args
-      (try (lambda () (apply f args)))))
+      (try (lambda () (apply f args)) 0.0)))
   
   (define (silence time channel) 0.0)
   

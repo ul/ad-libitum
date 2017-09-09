@@ -2,6 +2,12 @@
   (export start stop
           (rename (*schedule* schedule) (*now* now)))
   (import (chezscheme))
+  (define (try thunk default)
+    (call/cc
+     (lambda (k)
+       (with-exception-handler
+           (lambda (x) (k default))
+         thunk))))
   ;; we do some #f-punning and don't throw on empty heaps
   
   (define heap/empty '())
@@ -56,13 +62,6 @@
        [(time<? t1 t2) 1]
        [(time>? t1 t2) -1]
        [else 0])))
-  (define (try thunk)
-    (call/cc
-     (lambda (k)
-       (with-exception-handler
-           (lambda (x) (k #f))
-         thunk))))
-  
   (define (process-events scheduler t)
     (with-mutex
      (scheduler-mutex scheduler)
@@ -72,7 +71,8 @@
            (scheduler-queue-set! scheduler (heap/delete-min event-comparator (scheduler-queue scheduler)))
            (try
             (lambda ()
-              (apply (eval (event-f event)) (event-args event))))
+              (apply (eval (event-f event)) (event-args event)))
+            #f)
            (next-event))))))
   (define (now scheduler) ((scheduler-now scheduler)))
   (define (schedule scheduler event)
