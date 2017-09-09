@@ -276,7 +276,7 @@
   receiving value.
 
   Tried blocking sockets. They work fine by themselves, but play bad with
-  =sleep= called from other threads! Falling back to asyc sockets and polling then.
+  =sleep= called from other threads! Falling back to async sockets and polling then.
 
 *** TODO proper socket closing
 
@@ -312,9 +312,9 @@
 #+END_SRC
 
 To actually accept new connections we are going to create new thread and just
-run infinite look with =accept-socket= inside. Remember, our socket is blocking
-so it would just wait for the next connection, not eat all CPU by eager calls.
-After accepting new connection we'll proceed it in new thread.
+run infinite look with =accept-socket= inside. Remember, our socket is
+non-blocking so we are to make polling to not eat all CPU by eager calls. After
+accepting new connection we'll proceed it in new thread.
 
 #+NAME: accept-connections
 #+BEGIN_SRC scheme
