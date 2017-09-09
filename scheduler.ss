@@ -56,6 +56,13 @@
        [(time<? t1 t2) 1]
        [(time>? t1 t2) -1]
        [else 0])))
+  (define (try thunk)
+    (call/cc
+     (lambda (k)
+       (with-exception-handler
+           (lambda (x) (k #f))
+         thunk))))
+  
   (define (process-events scheduler t)
     (with-mutex
      (scheduler-mutex scheduler)
@@ -63,10 +70,9 @@
        (let ([event (heap/find-min (scheduler-queue scheduler))])
          (when (and event (time<=? (event-time event) t))
            (scheduler-queue-set! scheduler (heap/delete-min event-comparator (scheduler-queue scheduler)))
-           (with-exception-handler
-               display-condition
-             (lambda ()
-               (apply (eval (event-f event)) (event-args event))))
+           (try
+            (lambda ()
+              (apply (eval (event-f event)) (event-args event))))
            (next-event))))))
   (define (now scheduler) ((scheduler-now scheduler)))
   (define (schedule scheduler event)

@@ -10,19 +10,36 @@
    going to create and open default i/o (only 'o' at the moment) stream and
    provide it globally.
 
+   For performance reasons =chez-sound= itself doesn't provide any protection
+   against broken =write-callback=. But in livecoding performance mistakes are
+   the part of exploration and arguably we want to sacrifice some performance to
+   be able to not restart entire sound subsystem for fixing our
+   =write-callback=.
+
 #+NAME: sound
 #+BEGIN_SRC scheme
+  (define (try thunk)
+    (call/cc
+     (lambda (k)
+       (with-exception-handler
+           (lambda (x) (k 0.0))
+         thunk))))
+
+  (define (safe-function f)
+    (lambda args
+      (try (lambda () (apply f args)))))
+
   (define (silence time channel) 0.0)
+
   (define *sound-out* (soundio:open-default-out-stream silence))
-  (define (set-dsp! f) (soundio:sound-out-write-callback-set! *sound-out* f))
+
+  (define (set-dsp! f)
+    (soundio:sound-out-write-callback-set! *sound-out* (safe-function f)))
+
   (define (hush!) (set-dsp! silence))
+
   (define (start) (soundio:start-out-stream *sound-out*))
 #+END_SRC
-
-*** TODO provide recover features [0/2]
-
-    - [ ] handle exceptions thrown by dsp
-    - [ ] provide means for stream restart/recreate without re-running Ad Libitum
 
 ** Scheduler
 
@@ -126,13 +143,19 @@
   Of course, live events are error prone, but we don't want flawed event to blow
   entire thread. Thus =f= execution is secured with =with-exception-handler=.
 
-*** TODO investigate why CPU usage go to sky after exception cathed and displayed
 *** TODO make process-events scheduler clock type independent
 
 *** CODE
 
 #+NAME: process-events
 #+BEGIN_SRC scheme
+  (define (try thunk)
+    (call/cc
+     (lambda (k)
+       (with-exception-handler
+           (lambda (x) (k #f))
+         thunk))))
+
   (define (process-events scheduler t)
     (with-mutex
      (scheduler-mutex scheduler)
@@ -140,10 +163,9 @@
        (let ([event (heap/find-min (scheduler-queue scheduler))])
          (when (and event (time<=? (event-time event) t))
            (scheduler-queue-set! scheduler (heap/delete-min event-comparator (scheduler-queue scheduler)))
-           (with-exception-handler
-               display-condition
-             (lambda ()
-               (apply (eval (event-f event)) (event-args event))))
+           (try
+            (lambda ()
+              (apply (eval (event-f event)) (event-args event))))
            (next-event))))))
 #+END_SRC
 
