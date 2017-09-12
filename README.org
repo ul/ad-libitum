@@ -2,6 +2,113 @@
 
   The Scheme Live Coding Environment. Built on Chez Scheme and libsoundio.
 
+* Getting Started
+
+  This guide describes initial setup required to produce your first piece of
+  digital noise with Ad Libitum. At the moment Ad Libitum is tested only on
+  MacOS therefore following instructions are MacOS-specific. Any feedback and
+  improvement for other platforms is more than welcome! Current state of Ad
+  Libitum dependencies is that it should be easy to port it to Linux and
+  moderately (but possible) to Windows.
+
+** Chez Scheme
+
+   First, you need Chez Scheme itself. Ad Libitum requires threaded version and
+   you probably don't want to install x11 dependency, that's why better to do it
+   from source, not brew.
+
+*** Clone Chez Scheme repository
+
+#+BEGIN_SRC shell
+git clone https://github.com/cisco/ChezScheme.git
+cd ChezScheme
+#+END_SRC
+
+*** Exclude X11 from dependencies
+
+   Open =c/version.h= file in your favorite text editor and comment out line
+   containing =libX11.dylib= reference:
+
+#+BEGIN_SRC diff
+modified   c/version.h
+@@ -280,7 +280,7 @@ typedef char *memcpy_t;
+ typedef int tputsputcchar;
+ #define LOCKF
+ #define DIRMARKERP(c) ((c) == '/')
+-#define LIBX11 "/usr/X11R6/lib/libX11.dylib"
++/* #define LIBX11 "/usr/X11R6/lib/libX11.dylib" */
+ #define _DARWIN_USE_64_BIT_INODE
+ #define SECATIME(sb) (sb).st_atimespec.tv_sec
+ #define SECCTIME(sb) (sb).st_ctimespec.tv_sec
+#+END_SRC
+
+*** Configure, build and install Chez Scheme
+
+#+BEGIN_SRC shell
+./configure --threads
+make
+sudo make install
+#+END_SRC
+
+*** Test it's working
+
+    Run =scheme= from terminal and try to evaluate simple expression:
+
+#+BEGIN_SRC shell
+~/ChezScheme> scheme
+
+Chez Scheme Version 9.4.1
+Copyright 1984-2017 Cisco Systems, Inc.
+
+> (+ 1 2 3)
+6
+>
+#+END_SRC
+
+** libsoundio
+
+   This is library used by Ad Libitum for communication with your computer's
+   sound system.
+
+#+BEGIN_SRC shell
+brew install libsoundio
+#+END_SRC
+
+** Ad Libitum itself
+
+*** Install
+
+   You need to clone repository and build several helping libraries.
+
+#+BEGIN_SRC shell
+git clone https://github.com/ul/ad-libitum.git
+cd ad-libitum
+git submodule update --init --recursive --remote
+make
+#+END_SRC
+
+*** Test
+
+    Fire up =scheme ad-libitum.ss= and play 440Hz tuner (beware of loud sound!
+    reduce speakers/headphones volume before running). Congratulations, you
+    livecoded your first Ad Libitum piece!
+
+#+BEGIN_SRC scheme
+~/ad-libitum> scheme ad-libitum.ss
+
+Chez Scheme Version 9.4.1
+Copyright 1984-2017 Cisco Systems, Inc.
+
+> (sound:set-dsp! tuner)
+>
+#+END_SRC
+
+* Contribution
+
+Contribution is more than welcome and highly appreciated! Any small or non-code
+fix is valuable as well, including spelling and grammar and setting proper
+licensing.
+
 * Kernel
 
 ** Sound I/O
@@ -429,7 +536,7 @@ accepting new connection we'll proceed it in new thread.
 
     - capture output performed by evaluated form
     - capture result of form evaluated
-    - don't blow up on exception and capture it's message
+    - don't blow up on exception and capture its message
 
   That's why we can't just call =eval=
 
@@ -521,6 +628,13 @@ accepting new connection we'll proceed it in new thread.
     (if (> (mod time tuner-period) tuner-half-period)
         1.0
         -1.0))
+#+END_SRC
+
+  Actually, this waveform is called square, because of shape. Once we'll add
+  visualisation library to Ad Libitum, before that try to draw function plot by hands.
+
+#+BEGIN_SRC scheme
+  (define (square-wave ))
 #+END_SRC
 
 *** TODO add references section
