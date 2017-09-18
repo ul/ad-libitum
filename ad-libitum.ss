@@ -96,3 +96,25 @@
 (define (live-signal symbol)
   (lambda (time channel)
     ((top-level-value symbol) time channel)))
+(define (signal-sum . xs)
+  (lambda (time channel)
+    (fold-left (lambda (a x) (+ a (@ x))) 0.0 xs)))
+
+(define (signal-mult . xs)
+  (lambda (time channel)
+    (fold-left (lambda (a x) (* a (@ x))) 1.0 xs)))
+
+(define (signal-diff x . xs)
+  (let ([y (apply signal-sum xs)])
+    (lambda (time channel)
+      (- (@ x) (@ y)))))
+
+(define (signal-div x . xs)
+  (let ([y (apply signal-mult xs)])
+    (lambda (time channel)
+      (/ (@ x) (@ y)))))
+
+(define +~ signal-sum)
+(define *~ signal-mult)
+(define -~ signal-diff)
+(define /~ signal-div)
