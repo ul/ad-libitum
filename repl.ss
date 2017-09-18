@@ -55,6 +55,7 @@
                                    (lambda ()
                                      (set! result (try-display (lambda () (eval x)) #f))))]
                                 )
+                           (printf "| ~s\r\n" output)
                            (printf "< ~s\r\n" result)
                            (display output p)
                            (display result p)

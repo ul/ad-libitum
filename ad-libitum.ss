@@ -40,7 +40,59 @@
   (inexact (sine time tuner-frequency)))
 
 ;; (sound:set-dsp! tuner)
-(define (simplest-oscillator time channel)
-  (if (> (mod time tuner-period) tuner-half-period)
-      1.0
-      -1.0))
+(define (constant amplitude)
+  (lambda (time channel)
+    amplitude))
+(define silence (constant 0.0))
+(extend-syntax (@) [(@ signal) (signal time channel)])
+(define (phase frequency phase0)
+  (let ([previous-time 0.0]
+        [previous-phase 0.0])
+    (lambda (time channel)
+      (let* ([time-delta (- time previous-time)]
+             [phase-delta (* time-delta (@ frequency))]
+             [next-phase (mod (+ previous-phase phase-delta (@ phase0)) 1.0)])
+        (set! previous-time time)
+        (set! previous-phase next-phase)
+        next-phase))))
+
+(define (phase* frequency)
+  (phase frequency (constant 0.0)))
+(define (sine-wave phase)
+  (lambda (time channel)
+    (inexact (sin (* two-pi (@ phase))))))
+
+(define (cosine-wave phase)
+  (lambda (time channel)
+    (inexact (cos (* two-pi (@ phase))))))
+
+(define (square-wave phase)
+  (lambda (time channel)
+    (if (< (@ phase) 0.5)
+        1.0
+        -1.0)))
+
+(define (tri-wave phase)
+  (lambda (time channel)
+    (let ([phase (@ phase)])
+      (if (< phase 0.5)
+          (- (* 4.0 phase) 1.0)
+          (+ (* -4.0 phase) 3.0)))))
+
+(define (saw-wave phase)
+  (lambda (time channel)
+    (- (* 2.0 (@ phase)) 1.0)))
+
+(define (table-wave table phase)
+  (let ([n (vector-length table)])
+    (lambda (time channel)
+      (vector-ref table (exact (truncate (* (@ phase) n)))))))
+
+(define (random-amplitude)
+  (- (random 2.0) 1.0))
+
+(define (random-wave time channel)
+  (random-amplitude))
+(define (live-signal symbol)
+  (lambda (time channel)
+    ((top-level-value symbol) time channel)))

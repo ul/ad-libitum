@@ -258,7 +258,7 @@ licensing.
            (scheduler-queue-set! scheduler (heap/delete-min event-comparator (scheduler-queue scheduler)))
            (try
             (lambda ()
-              (apply (eval (event-f event)) (event-args event)))
+              (apply (top-level-value (event-f event)) (event-args event)))
             #f)
            (next-event))))))
 #+END_SRC
@@ -554,6 +554,7 @@ accepting new connection we'll proceed it in new thread.
 
 #+NAME: repl-print
 #+BEGIN_SRC scheme
+  (printf "| ~s\r\n" output)
   (printf "< ~s\r\n" result)
   (display output p)
   (display result p)
@@ -633,8 +634,156 @@ accepting new connection we'll proceed it in new thread.
   Actually, this waveform is called square, because of shape. Once we'll add
   visualisation library to Ad Libitum, before that try to draw function plot by hands.
 
+  Feel free to experiment with different waveforms, we will do it together
+  later. Let's step back and look at our example and try to come up with useful
+  abstraction. Our DSP callback has signature =f(time, channel) -> amplitude=,
+  which is the basis for any audio signal. But what prevents us using audio
+  signals as the main medium for building sound? Nothing! It's even very handy.
+  Audio signals then are capable of control parameters of other signal,
+  naturally forming audio graph. And Chez Scheme should optimize that CSP-like
+  style well. But we need to think carefully ahead of time about signature
+  itself. What if later we want add additional information flowing every sample?
+  What if returning just float is not enough to express all we want? Because
+  it's very beautiful, that every signal could be either interpreted as a DSP
+  callback alone, and could be passed to other signals. But in the latter case
+  sometimes it's not enough to communicate between signals with a single float.
+  Perhaps something like =f(time, channel, data) -> (amplitude, data)= could do
+  the job? Where structure of =data= is determined by your application, and
+  parent signal is responsible for using or discarding the =data= returned by
+  child signal. OTOH, =data= in parameters plays like a container for some
+  global state to survive between samples, and we could replace it with actual
+  global or closured state in our application. The same thing for returned data.
+
+  Let's start with =f(time, channel) -> amplitude= then and pray that we didn't
+  overlook something important.
+
+  The most basic signal is just a constant one:
+
+#+NAME: constant
 #+BEGIN_SRC scheme
-  (define (square-wave ))
+  (define (constant amplitude)
+    (lambda (time channel)
+      amplitude))
+#+END_SRC
+
+  Then we are able to define =silence= as follows:
+
+#+NAME: silence
+#+BEGIN_SRC scheme
+  (define silence (constant 0.0))
+#+END_SRC
+
+  Quick question for self-test: what sound would =(constant 1.0)= produce?
+
+  For unifying oscillators we are going to define signal which will care about
+  converting time to proper phase. When you deal with periodic signals it's
+  important to distinguish time from phase, because at different frequencies
+  phase would be different at the given point of time. Which is okay when
+  frequency of you oscillator is constant. When it's variable as in FM
+  synthesis, you need to track phase for your oscillator to make it behave
+  properly. Let's create special signal =phase= for that purpose. It will take
+  =frequency= signal and =phase0= signal and return signal of phase in =[0, 1)=
+  half-interval.
+
+#+BEGIN_SRC scheme
+  (define (phase frequency phase0)
+    (let ([previous-time 0.0]
+          [previous-phase 0.0])
+      (lambda (time channel)
+        (let* ([frequency (frequency time channel)]
+               [time-delta (- time previous-time)]
+               [phase-delta (* time-delta frequency)]
+               [next-phase (mod (+ previous-phase phase-delta (phase0 time channel)) 1.0)])
+          (set! previous-time time)
+          (set! previous-phase next-phase)
+          next-phase))))
+
+  (define (phase* frequency)
+    (phase frequency (constant 0.0)))
+#+END_SRC
+
+  Here we have an opportunity for a small syntactic improvement. The use-case
+  when signal is applied to parameters named exactly time and channel in current
+  scope is very common. Let's create a special syntax for it. =@= is chosen as
+  resembling =deref= from Clojure:
+
+#+NAME: deref-signal
+#+BEGIN_SRC scheme
+  (extend-syntax (@) [(@ signal) (signal time channel)])
+#+END_SRC
+
+  Let's use it in our phase signal:
+
+#+NAME: phase
+#+BEGIN_SRC scheme
+  (define (phase frequency phase0)
+    (let ([previous-time 0.0]
+          [previous-phase 0.0])
+      (lambda (time channel)
+        (let* ([time-delta (- time previous-time)]
+               [phase-delta (* time-delta (@ frequency))]
+               [next-phase (mod (+ previous-phase phase-delta (@ phase0)) 1.0)])
+          (set! previous-time time)
+          (set! previous-phase next-phase)
+          next-phase))))
+
+  (define (phase* frequency)
+    (phase frequency (constant 0.0)))
+#+END_SRC
+
+  Then basic waveforms are defined in very clean way:
+
+#+NAME: waveforms
+#+BEGIN_SRC scheme
+  (define (sine-wave phase)
+    (lambda (time channel)
+      (inexact (sin (* two-pi (@ phase))))))
+
+  (define (cosine-wave phase)
+    (lambda (time channel)
+      (inexact (cos (* two-pi (@ phase))))))
+
+  (define (square-wave phase)
+    (lambda (time channel)
+      (if (< (@ phase) 0.5)
+          1.0
+          -1.0)))
+
+  (define (tri-wave phase)
+    (lambda (time channel)
+      (let ([phase (@ phase)])
+        (if (< phase 0.5)
+            (- (* 4.0 phase) 1.0)
+            (+ (* -4.0 phase) 3.0)))))
+
+  (define (saw-wave phase)
+    (lambda (time channel)
+      (- (* 2.0 (@ phase)) 1.0)))
+
+  (define (table-wave table phase)
+    (let ([n (vector-length table)])
+      (lambda (time channel)
+        (vector-ref table (exact (truncate (* (@ phase) n)))))))
+
+  (define (random-amplitude)
+    (- (random 2.0) 1.0))
+
+  (define (random-wave time channel)
+    (random-amplitude))
+#+END_SRC
+
+  Before we play something interesting with stuff we already defined we need one
+  more helper. Drawback of our way of composition of signals is that we can't
+  change code of one of them in live and make changed reloaded live, even if
+  signal is not anonymous and was defined as a top-level variable. For signal
+  which we plan to reload dynamically we are going to introduce wrapper which
+  will look for given signal's symbol on every invocation:
+
+#+NAME: live-signal
+#+BEGIN_SRC scheme
+  (define (live-signal symbol)
+    (lambda (time channel)
+      ((top-level-value symbol) time channel)))
 #+END_SRC
 
 *** TODO add references section
@@ -738,6 +887,17 @@ accepting new connection we'll proceed it in new thread.
   <<basic-math>>
   <<tuner-constants>>
   <<test-tuner>>
+  <<constant>>
+  <<silence>>
+  <<deref-signal>>
+  <<phase>>
+  <<waveforms>>
+  <<live-signal>>
+#+END_SRC
+
+#+BEGIN_SRC scheme :tangle violet.ss :noweb yes :mkdirp yes :paddle no
+  (load "ad-libitum.ss")
+
   <<simplest-oscillator>>
 #+END_SRC
 

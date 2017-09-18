@@ -71,7 +71,7 @@
            (scheduler-queue-set! scheduler (heap/delete-min event-comparator (scheduler-queue scheduler)))
            (try
             (lambda ()
-              (apply (eval (event-f event)) (event-args event)))
+              (apply (top-level-value (event-f event)) (event-args event)))
             #f)
            (next-event))))))
   (define (now scheduler) ((scheduler-now scheduler)))
