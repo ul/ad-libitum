@@ -248,7 +248,7 @@ licensing.
   resolved in a function, not as an immediate function value.
 
   Of course, live events are error prone, but we don't want flawed event to blow
-  entire thread. Thus =f= execution is secured with =with-exception-handler=.
+  entire thread. Thus =f= execution is secured with =try=.
 
 *** TODO make process-events scheduler clock type independent
 
