@@ -1,46 +1,23 @@
 (define my-freq (constant tuner-frequency))
 
-(define (modulator freq) (sine-wave (phase* freq)))
+(alias ■ constant)
 
-(define (make-overtone wave frequency phase0)
-  (+~ (*~ (wave (phase frequency phase0)) (constant 0.4))
-      (*~ (wave (phase (*~ (constant 2.0) frequency) phase0)) (constant 0.2))
-      (*~ (wave (phase (*~ (constant 3.0) frequency) phase0)) (constant 0.1))
-      (*~ (wave (phase (*~ (constant 4.0) frequency) phase0)) (constant 0.1))
-      (*~ (wave (phase (*~ (constant 0.5) frequency) phase0)) (constant 0.2))
-      ))
-
-(define my-overtone (make-overtone sine-wave (live-signal 'my-freq) silence))
-(define my-overtone-2 (make-overtone tri-wave (live-signal 'my-freq) silence))
-(define my-overtone-3 (make-overtone square-wave (live-signal 'my-freq) silence))
+(define my-freq* (live-signal 'my-freq))
 
 (define my-dsp
-  (sine-wave (phase*
-              (live-signal 'my-freq)
-              ;; (modulator (constant 432.0))
-              )))
-
-;; TODO add normalizing version of +~
-;; TODO sin is heavy, add table unroller
-
-(define osc220 (sine-wave (phase* (constant 220.0))))
-(define osc440 (sine-wave (phase* (constant 440.0))))
-(define osc110 (sine-wave (phase* (constant 110.0))))
-(define osc0.25 (sine-wave (phase* (constant 0.25))))
-
-(define my-dsp
-  (/~
-   (*~ osc220 osc440)
-   (*~ (+~ osc110 (constant 2.0))
-       (+~ osc0.25 (constant 1.0)))))
-
-(define my-dsp
-  (*~ (constant 0.3)
-      (+~ #;my-overtone my-overtone-2 #;my-overtone-3)))
+  (let ([〜 (λ (m)
+              (make-overtone
+               (random-choice (list sine-wave square-wave tri-wave saw-wave))
+               (∏ (■ m) my-freq*)
+               silence))]
+        [// (λ (x) (/ x 22.0))])
+    (-~
+     (∏ (〜 (// 220.0)) (〜 (// 440.0)))
+     (∏ (〜 (// 222.0)) (〜 (// 110.0)))
+     (∏ (∑ (〜 (// 110.0)) (■ 2.0))
+        (∑ (〜 (// 0.05))  (■ 1.0))))))
 
 (sound:set-dsp! (live-signal 'my-dsp))
-(sound:set-dsp! tuner)
-(sound:hush!)
 
 ;;;
 
@@ -73,3 +50,6 @@
    'be-playful-with-frequency))
 
 (be-playful-with-frequency)
+
+;; (sound:set-dsp! tuner)
+;; (h!)

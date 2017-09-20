@@ -11,16 +11,37 @@
  "./chez-soundio"
  "./chez-sockets")
 (import (chezscheme)
+        (srfi s1 lists)
         (prefix (sound) sound:)
         (prefix (scheduler) scheduler:)
         (prefix (repl) repl:))
-(define now scheduler:now)
-(define schedule scheduler:schedule)
-(define callback schedule)
+;; voodoo
+(collect-maximum-generation 254)
+(collect-generation-radix 2)
+(optimize-level 3)
+
+(alias λ lambda)
+
+(alias now scheduler:now)
+(alias schedule scheduler:schedule)
+(alias callback schedule)
+
+;; in case of emergency ☺
+(alias h! sound:hush!)
+
+;; TODO make actual
+(define *channels* 2)
 
 (sound:start)
 (scheduler:start)
 (repl:start-repl-server)
+(define (compose . fns)
+  (define (make-chain fn chain)
+    (lambda args
+      (call-with-values (lambda () (apply fn args)) chain)))
+  (reduce make-chain values fns))
+
+(define ∘ compose)
 (define pi (* (asin 1.0) 2))
 (define +pi   3.14159265358979323846264)
 (define +pi/2 1.57079632679489661923132)
@@ -57,7 +78,7 @@
         next-phase))))
 
 (define (phase* frequency)
-  (phase frequency (constant 0.0)))
+  (phase frequency silence))
 (define (sine-wave phase)
   (lambda (time channel)
     (inexact (sin (* two-pi (@ phase))))))
@@ -83,10 +104,15 @@
   (lambda (time channel)
     (- (* 2.0 (@ phase)) 1.0)))
 
+;; (define (table-wave table phase)
+;;   (let ([n (vector-length table)])
+;;     (lambda (time channel)
+;;       (vector-ref table (exact (truncate (* (@ phase) n)))))))
+
 (define (table-wave table phase)
-  (let ([n (vector-length table)])
+  (let ([n (fixnum->flonum (vector-length table))])
     (lambda (time channel)
-      (vector-ref table (exact (truncate (* (@ phase) n)))))))
+      (vector-ref table (flonum->fixnum (fltruncate (fl* (@ phase) n)))))))
 
 (define (random-amplitude)
   (- (random 2.0) 1.0))
@@ -96,13 +122,19 @@
 (define (live-signal symbol)
   (lambda (time channel)
     ((top-level-value symbol) time channel)))
-(define (signal-sum . xs)
+(define (signal-sum* x y)
   (lambda (time channel)
-    (fold-left (lambda (a x) (+ a (@ x))) 0.0 xs)))
+    (+ (@ x) (@ y))))
 
-(define (signal-mult . xs)
+(define (signal-sum x . xs)
+  (fold-left signal-sum* x xs))
+
+(define (signal-prod* x y)
   (lambda (time channel)
-    (fold-left (lambda (a x) (* a (@ x))) 1.0 xs)))
+    (* (@ x) (@ y))))
+
+(define (signal-prod x . xs)
+  (fold-left signal-prod* x xs))
 
 (define (signal-diff x . xs)
   (let ([y (apply signal-sum xs)])
@@ -110,11 +142,15 @@
       (- (@ x) (@ y)))))
 
 (define (signal-div x . xs)
-  (let ([y (apply signal-mult xs)])
+  (let ([y (apply signal-prod xs)])
     (lambda (time channel)
       (/ (@ x) (@ y)))))
 
-(define +~ signal-sum)
-(define *~ signal-mult)
-(define -~ signal-diff)
-(define /~ signal-div)
+(alias +~ signal-sum)
+(alias *~ signal-prod)
+(alias -~ signal-diff)
+(alias /~ signal-div)
+
+(alias ∑ signal-sum)
+(alias ∏ signal-prod)
+(define simple-osc (∘ sine-wave phase* constant))

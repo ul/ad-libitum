@@ -4,6 +4,13 @@
   (if (> (mod time tuner-period) tuner-half-period)
       1.0
       -1.0))
+(define (make-overtone wave frequency phase0)
+  (+~ (*~ (wave (phase frequency phase0)) (constant 0.4))
+      (*~ (wave (phase (*~ (constant 2.0) frequency) phase0)) (constant 0.2))
+      (*~ (wave (phase (*~ (constant 3.0) frequency) phase0)) (constant 0.1))
+      (*~ (wave (phase (*~ (constant 4.0) frequency) phase0)) (constant 0.1))
+      (*~ (wave (phase (*~ (constant 0.5) frequency) phase0)) (constant 0.2))
+      ))
 (define second (make-time 'time-duration 0 1))
 (define half-second (make-time 'time-duration 500000000 0))
 (define quarter-second (make-time 'time-duration 250000000 0))
@@ -39,3 +46,16 @@
 
 (define (make-scale base-frequency scale)
   (map (lambda (x) (* base-frequency (expt chromatic-scale-half-step (- x 1)))) scale))
+
+;;
+
+(define (unroll signal period sample-rate)
+  (let* ([n (exact (truncate (* period sample-rate)))]
+         [table (make-vector n)])
+    (do ([i 0 (+ i 1)])
+        ((= i n))
+      (vector-set! table i (inexact (signal (/ i sample-rate) 0))))
+    (λ (phase)
+      (table-wave table phase))))
+
+;; (define table-sine-wave (unroll (simple-osc 0.1) 10 96000))

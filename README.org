@@ -103,6 +103,13 @@ Copyright 1984-2017 Cisco Systems, Inc.
 >
 #+END_SRC
 
+*** Play
+
+    Run & =geiser-connect=
+
+#+BEGIN_SRC shell
+scheme --optimize-level 3 violet.ss
+#+END_SRC
 * Contribution
 
 Contribution is more than welcome and highly appreciated! Any small or non-code
@@ -728,7 +735,7 @@ accepting new connection we'll proceed it in new thread.
           next-phase))))
 
   (define (phase* frequency)
-    (phase frequency (constant 0.0)))
+    (phase frequency silence))
 #+END_SRC
 
   Then basic waveforms are defined in very clean way:
@@ -760,10 +767,15 @@ accepting new connection we'll proceed it in new thread.
     (lambda (time channel)
       (- (* 2.0 (@ phase)) 1.0)))
 
+  ;; (define (table-wave table phase)
+  ;;   (let ([n (vector-length table)])
+  ;;     (lambda (time channel)
+  ;;       (vector-ref table (exact (truncate (* (@ phase) n)))))))
+
   (define (table-wave table phase)
-    (let ([n (vector-length table)])
+    (let ([n (fixnum->flonum (vector-length table))])
       (lambda (time channel)
-        (vector-ref table (exact (truncate (* (@ phase) n)))))))
+        (vector-ref table (flonum->fixnum (fltruncate (fl* (@ phase) n)))))))
 
   (define (random-amplitude)
     (- (random 2.0) 1.0))
@@ -791,13 +803,19 @@ accepting new connection we'll proceed it in new thread.
 
 #+NAME: signal-operators
 #+BEGIN_SRC scheme
-  (define (signal-sum . xs)
+  (define (signal-sum* x y)
     (lambda (time channel)
-      (fold-left (lambda (a x) (+ a (@ x))) 0.0 xs)))
+      (+ (@ x) (@ y))))
 
-  (define (signal-mult . xs)
+  (define (signal-sum x . xs)
+    (fold-left signal-sum* x xs))
+
+  (define (signal-prod* x y)
     (lambda (time channel)
-      (fold-left (lambda (a x) (* a (@ x))) 1.0 xs)))
+      (* (@ x) (@ y))))
+
+  (define (signal-prod x . xs)
+    (fold-left signal-prod* x xs))
 
   (define (signal-diff x . xs)
     (let ([y (apply signal-sum xs)])
@@ -805,22 +823,69 @@ accepting new connection we'll proceed it in new thread.
         (- (@ x) (@ y)))))
 
   (define (signal-div x . xs)
-    (let ([y (apply signal-mult xs)])
+    (let ([y (apply signal-prod xs)])
       (lambda (time channel)
         (/ (@ x) (@ y)))))
 
-  (define +~ signal-sum)
-  (define *~ signal-mult)
-  (define -~ signal-diff)
-  (define /~ signal-div)
+  (alias +~ signal-sum)
+  (alias *~ signal-prod)
+  (alias -~ signal-diff)
+  (alias /~ signal-div)
+
+  (alias ∑ signal-sum)
+  (alias ∏ signal-prod)
 #+END_SRC
+
+
+  For composing signals we could define a helper:
+
+#+NAME: compose
+#+BEGIN_SRC scheme
+  (define (compose . fns)
+    (define (make-chain fn chain)
+      (lambda args
+        (call-with-values (lambda () (apply fn args)) chain)))
+    (reduce make-chain values fns))
+
+  (define ∘ compose)
+#+END_SRC
+
+  And use it to define simple osc factory:
+
+#+NAME: oscillator
+#+BEGIN_SRC scheme
+  (define simple-osc (∘ sine-wave phase* constant))
+#+END_SRC
+
+
+  If you tried to make some composite wave like
+
+#+NAME: make-overtone
+#+BEGIN_SRC scheme
+  (define (make-overtone wave frequency phase0)
+    (+~ (*~ (wave (phase frequency phase0)) (constant 0.4))
+        (*~ (wave (phase (*~ (constant 2.0) frequency) phase0)) (constant 0.2))
+        (*~ (wave (phase (*~ (constant 3.0) frequency) phase0)) (constant 0.1))
+        (*~ (wave (phase (*~ (constant 4.0) frequency) phase0)) (constant 0.1))
+        (*~ (wave (phase (*~ (constant 0.5) frequency) phase0)) (constant 0.2))
+        ))
+#+END_SRC
+
+  And applied it to =sine-wave=:
+
+#+BEGIN_SRC scheme
+
+#+END_SRC
+
+  You might noticed that it's CPU hungry and profiler shows that tons of time is
+  spent in system sin function. Let's write a function which will unroll sine
+  wave (and any other wave) into a table.
 
 
 *** TODO add references section
 *** TODO add to references link to interactive FFT tutorial
 
 ** Envelopes
-** Samples & Wavetables
 ** Metronome
 
 * Std
@@ -881,9 +946,22 @@ accepting new connection we'll proceed it in new thread.
 
 #+NAME: ad-libitum-init
 #+BEGIN_SRC scheme
-  (define now scheduler:now)
-  (define schedule scheduler:schedule)
-  (define callback schedule)
+  ;; voodoo
+  (collect-maximum-generation 254)
+  (collect-generation-radix 2)
+  (optimize-level 3)
+
+  (alias λ lambda)
+
+  (alias now scheduler:now)
+  (alias schedule scheduler:schedule)
+  (alias callback schedule)
+
+  ;; in case of emergency ☺
+  (alias h! sound:hush!)
+
+  ;; TODO make actual
+  (define *channels* 2)
 
   (sound:start)
   (scheduler:start)
@@ -944,6 +1022,19 @@ accepting new connection we'll proceed it in new thread.
 
   (define (make-scale base-frequency scale)
     (map (lambda (x) (* base-frequency (expt chromatic-scale-half-step (- x 1)))) scale))
+
+  ;;
+
+  (define (unroll signal period sample-rate)
+    (let* ([n (exact (truncate (* period sample-rate)))]
+           [table (make-vector n)])
+      (do ([i 0 (+ i 1)])
+          ((= i n))
+        (vector-set! table i (inexact (signal (/ i sample-rate) 0))))
+      (λ (phase)
+        (table-wave table phase))))
+
+  ;; (define table-sine-wave (unroll (simple-osc 0.1) 10 96000))
 #+END_SRC
 
 * Files :noexport:
@@ -951,10 +1042,12 @@ accepting new connection we'll proceed it in new thread.
 #+BEGIN_SRC scheme :tangle ad-libitum.ss :noweb yes :mkdirp yes :paddle no
   <<add-library-directories>>
   (import (chezscheme)
+          (srfi s1 lists)
           (prefix (sound) sound:)
           (prefix (scheduler) scheduler:)
           (prefix (repl) repl:))
   <<ad-libitum-init>>
+  <<compose>>
   <<basic-math>>
   <<tuner-constants>>
   <<test-tuner>>
@@ -965,12 +1058,14 @@ accepting new connection we'll proceed it in new thread.
   <<waveforms>>
   <<live-signal>>
   <<signal-operators>>
+  <<oscillator>>
 #+END_SRC
 
 #+BEGIN_SRC scheme :tangle violet.ss :noweb yes :mkdirp yes :paddle no
   (load "ad-libitum.ss")
 
   <<simplest-oscillator>>
+  <<make-overtone>>
   <<sandbox>>
 #+END_SRC
 
