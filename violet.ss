@@ -84,13 +84,20 @@
 
 ;; (define table-sine-wave (unroll (simple-osc 0.1) 10 96000))
 
-(define (make-overtone wave frequency phase0)
-  (+~ (*~ (wave (phase frequency phase0)) (constant 0.4))
-      (*~ (wave (phase (*~ (constant 2.0) frequency) phase0)) (constant 0.2))
-      (*~ (wave (phase (*~ (constant 3.0) frequency) phase0)) (constant 0.1))
-      (*~ (wave (phase (*~ (constant 4.0) frequency) phase0)) (constant 0.1))
-      (*~ (wave (phase (*~ (constant 0.5) frequency) phase0)) (constant 0.2))
-      ))
+(define (range n)
+  (unfold (λ (x) (<= n x))
+          (λ (x) x)
+          (λ (x) (+ x 1))
+          0))
+
+(define (make-overtone amplitudes wave frequency phase0)
+  (apply ∑
+   (map
+    (λ (amplitude factor)
+      (*~ amplitude
+          (wave (phase (*~ (constant factor) frequency) phase0))))
+    amplitudes
+    (range (length amplitudes)))))
 (define (simple-instrument start end freq a d s r)
   (let* ([start (live-constant start)]
          [end (live-constant end)]

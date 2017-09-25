@@ -171,3 +171,12 @@
                     (simple-osc 432.0)
                     ;; (simple-osc 441.0)
                     ))
+
+
+(define my-dsp (make-overtone (map constant '(0.4 0.2 0.1 0.1))
+                              sine-wave
+                              (constant 440.0)
+                              silence))
+
+(sound:set-dsp! (live-signal 'my-dsp))
+(h!)
