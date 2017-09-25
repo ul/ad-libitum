@@ -1,5 +1,5 @@
 (library (scheduler)
-  (export start stop
+  (export start stop init
           (rename (*schedule* schedule) (*now* now)))
   (import (chezscheme))
   (define (try thunk default)
@@ -21,7 +21,7 @@
     (cond
      [(null? h1) h2]
      [(null? h2) h1]
-     [(positive? (comparator (car h1) (car h2)))
+     [(< (comparator (car h1)) (comparator (car h2)))
       (cons (car h1) (cons h2 (cdr h1)))]
      [else
       (cons (car h2) (cons h1 (cdr h2)))]))
@@ -44,9 +44,9 @@
   (define-record-type scheduler
     (fields now (mutable queue) resolution (mutable thread) mutex))
   
-  (define (simple-scheduler)
+  (define (simple-scheduler now)
     (make-scheduler
-     current-time                         ; now
+     now                                  ; now
      heap/empty                           ; queue
      (make-time 'time-duration 1000000 0) ; resolution
      #f                                   ; thread
@@ -54,21 +54,13 @@
      ))
   (define-record-type event
     (fields time f args))
-  
-  (define (event-comparator e1 e2)
-    (let ([t1 (event-time e1)]
-          [t2 (event-time e2)])
-      (cond
-       [(time<? t1 t2) 1]
-       [(time>? t1 t2) -1]
-       [else 0])))
   (define (process-events scheduler t)
     (with-mutex
      (scheduler-mutex scheduler)
      (let next-event ()
        (let ([event (heap/find-min (scheduler-queue scheduler))])
-         (when (and event (time<=? (event-time event) t))
-           (scheduler-queue-set! scheduler (heap/delete-min event-comparator (scheduler-queue scheduler)))
+         (when (and event (<= (event-time event) t))
+           (scheduler-queue-set! scheduler (heap/delete-min event-time (scheduler-queue scheduler)))
            (try
             (lambda ()
               (apply (top-level-value (event-f event)) (event-args event)))
@@ -77,17 +69,19 @@
   (define (now scheduler) ((scheduler-now scheduler)))
   (define (schedule scheduler event)
     (with-mutex (scheduler-mutex scheduler)
-                (scheduler-queue-set! scheduler (heap/insert event-comparator event (scheduler-queue scheduler)))))
+                (scheduler-queue-set! scheduler (heap/insert event-time event (scheduler-queue scheduler)))))
   (define (start-scheduler scheduler)
     (fork-thread
      (lambda ()
        (scheduler-thread-set! scheduler (get-thread-id))
-       (let ([zero-duration (make-time 'time-duration 0 0)]
-             [resolution (scheduler-resolution scheduler)])
+       (let* ([zero-duration (make-time 'time-duration 0 0)]
+              [resolution (scheduler-resolution scheduler)]
+              [fl-resolution (inexact (+ (time-second resolution)
+                                         (* 1e-9 (time-nanosecond resolution))))])
          (let loop ()
            (when (scheduler-thread scheduler)
              (let ([clock (current-time)]
-                   [t (add-duration (now scheduler) resolution)])
+                   [t (+ (now scheduler) fl-resolution)])
                (process-events scheduler t)
                (let* ([day (time-difference (current-time) clock)]
                       [night (time-difference resolution day)])
@@ -96,7 +90,8 @@
                  (loop)))))))))
   (define (stop-scheduler scheduler)
     (scheduler-thread-set! scheduler #f))
-  (define *scheduler* (simple-scheduler))
+  (define *scheduler* #f)
+  (define (init now) (set! *scheduler* (simple-scheduler now)))
   (define (start) (start-scheduler *scheduler*))
   (define (stop) (stop-scheduler *scheduler*))
   (define (*schedule* t f . args) (schedule *scheduler* (make-event t f args)))

@@ -22,7 +22,7 @@
 
 (alias λ lambda)
 
-(alias now scheduler:now)
+(alias now sound:now)
 (alias schedule scheduler:schedule)
 (alias callback schedule)
 
@@ -33,6 +33,7 @@
 (define *channels* 2)
 
 (sound:start)
+(scheduler:init now)
 (scheduler:start)
 (repl:start-repl-server)
 (define (compose . fns)
@@ -57,8 +58,7 @@
   (sin (* two-pi freq time)))
 
 (define (tuner time channel)
-  ;; inexact because otherwise exact 0 would crash soundio
-  (inexact (sine time tuner-frequency)))
+  (sine time tuner-frequency))
 
 ;; (sound:set-dsp! tuner)
 (define (constant amplitude)
@@ -81,11 +81,11 @@
   (phase frequency silence))
 (define (sine-wave phase)
   (lambda (time channel)
-    (inexact (sin (* two-pi (@ phase))))))
+    (sin (* two-pi (@ phase)))))
 
 (define (cosine-wave phase)
   (lambda (time channel)
-    (inexact (cos (* two-pi (@ phase))))))
+    (cos (* two-pi (@ phase)))))
 
 (define (square-wave phase)
   (lambda (time channel)
@@ -122,6 +122,9 @@
 (define (live-signal symbol)
   (lambda (time channel)
     ((top-level-value symbol) time channel)))
+(define (live-constant symbol)
+  (λ (time channel)
+    (top-level-value symbol)))
 (define (signal-sum* x y)
   (lambda (time channel)
     (+ (@ x) (@ y))))
@@ -154,3 +157,30 @@
 (alias ∑ signal-sum)
 (alias ∏ signal-prod)
 (define simple-osc (∘ sine-wave phase* constant))
+(define (adsr start end attack decay sustain release)
+  (λ (time channel)
+    (let ([end (@ end)])
+      (if (<= end time)
+          ;; NOTE OFF
+          (let ([Δt (- time end)]
+                [r (@ release)])
+            (if (and (positive? r)
+                     (<= Δt r))
+                (* (- 1.0 (/ Δt r)) (@ sustain))
+                0.0))
+          ;; NOTE ON
+          (let ([start (@ start)])
+            (if (<= start time)
+                (let ([Δt (- time start)]
+                      [a (@ attack)])
+                  (if (and (positive? a)
+                           (<= Δt a))
+                      (/ Δt a)
+                      (let ([Δt (- Δt a)]
+                            [d (@ decay)]
+                            [s (@ sustain)])
+                        (if (and (positive? d)
+                                 (<= Δt d))
+                            (- 1.0 (* (- 1.0 s) (/ Δt d)))
+                            s))))
+                0.0))))))

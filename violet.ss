@@ -4,19 +4,12 @@
   (if (> (mod time tuner-period) tuner-half-period)
       1.0
       -1.0))
-(define (make-overtone wave frequency phase0)
-  (+~ (*~ (wave (phase frequency phase0)) (constant 0.4))
-      (*~ (wave (phase (*~ (constant 2.0) frequency) phase0)) (constant 0.2))
-      (*~ (wave (phase (*~ (constant 3.0) frequency) phase0)) (constant 0.1))
-      (*~ (wave (phase (*~ (constant 4.0) frequency) phase0)) (constant 0.1))
-      (*~ (wave (phase (*~ (constant 0.5) frequency) phase0)) (constant 0.2))
-      ))
-(define second (make-time 'time-duration 0 1))
-(define half-second (make-time 'time-duration 500000000 0))
-(define quarter-second (make-time 'time-duration 250000000 0))
-(define 1/8-second (make-time 'time-duration 125000000 0))
-(define 1/16-second (make-time 'time-duration 62500000 0))
-(define 1/32-second (make-time 'time-duration 31250000 0))
+(define second 1.0)
+(define half-second 0.5)
+(define quarter-second 0.25)
+(define 1/8-second 0.125)
+(define 1/16-second 0.0625)
+(define 1/32-second 0.03125)
 
 (define (random-choice list)
   (list-ref list (random (length list))))
@@ -59,3 +52,39 @@
       (table-wave table phase))))
 
 ;; (define table-sine-wave (unroll (simple-osc 0.1) 10 96000))
+
+(define (make-overtone wave frequency phase0)
+  (+~ (*~ (wave (phase frequency phase0)) (constant 0.4))
+      (*~ (wave (phase (*~ (constant 2.0) frequency) phase0)) (constant 0.2))
+      (*~ (wave (phase (*~ (constant 3.0) frequency) phase0)) (constant 0.1))
+      (*~ (wave (phase (*~ (constant 4.0) frequency) phase0)) (constant 0.1))
+      (*~ (wave (phase (*~ (constant 0.5) frequency) phase0)) (constant 0.2))
+      ))
+(define (simple-intrument start end freq a d s r)
+  (let* ([start (live-constant start)]
+         [end (live-constant end)]
+         [freq (live-constant freq)]
+         [osc (sine-wave (phase* freq))]
+         [env (adsr start
+                    end
+                    (constant a)
+                    (constant d)
+                    (constant s)
+                    (constant r))])
+    (*~ env osc)))
+
+(define (make-play-note start end frequency)
+  (λ (freq dur)
+    (set-top-level-value! frequency freq)
+    (set-top-level-value! start (now))
+    (set-top-level-value! end (+ (now) dur))))
+
+;; (define start 0.0)
+;; (define end 1.0)
+;; (define frequency 440.0)
+
+;; (define inst (simple-intrument 'start 'end 'frequency 0.3 0.5 0.8 1.0))
+;; (define play-note (make-play-note 'start 'end 'frequency))
+
+;; (sound:set-dsp! (live-signal 'inst))
+;; (play-note 440.0 1.1)

@@ -1,5 +1,5 @@
 (library (sound (1))
-  (export start set-dsp! hush!)
+  (export start set-dsp! hush! now)
   (import (chezscheme) (prefix (soundio) soundio:))
   (define (try thunk default)
     (call/cc
@@ -14,6 +14,8 @@
   (define (silence time channel) 0.0)
   
   (define *sound-out* (soundio:open-default-out-stream silence))
+  
+  (define (now) (soundio:sound-out-time *sound-out*))
   
   (define (set-dsp! f)
     (soundio:sound-out-write-callback-set! *sound-out* (safe-function f)))

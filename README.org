@@ -140,6 +140,8 @@ licensing.
 
   (define *sound-out* (soundio:open-default-out-stream silence))
 
+  (define (now) (soundio:sound-out-time *sound-out*))
+
   (define (set-dsp! f)
     (soundio:sound-out-write-callback-set! *sound-out* (safe-function f)))
 
@@ -193,9 +195,9 @@ licensing.
   (define-record-type scheduler
     (fields now (mutable queue) resolution (mutable thread) mutex))
 
-  (define (simple-scheduler)
+  (define (simple-scheduler now)
     (make-scheduler
-     current-time                         ; now
+     now                                  ; now
      heap/empty                           ; queue
      (make-time 'time-duration 1000000 0) ; resolution
      #f                                   ; thread
@@ -217,14 +219,6 @@ licensing.
 #+BEGIN_SRC scheme
   (define-record-type event
     (fields time f args))
-
-  (define (event-comparator e1 e2)
-    (let ([t1 (event-time e1)]
-          [t2 (event-time e2)])
-      (cond
-       [(time<? t1 t2) 1]
-       [(time>? t1 t2) -1]
-       [else 0])))
 #+END_SRC
 
   For =queue= we need some heap implementation, I'm going to jump into [[Pairing
@@ -237,7 +231,7 @@ licensing.
 #+BEGIN_SRC scheme
   (define (schedule scheduler event)
     (with-mutex (scheduler-mutex scheduler)
-                (scheduler-queue-set! scheduler (heap/insert event-comparator event (scheduler-queue scheduler)))))
+                (scheduler-queue-set! scheduler (heap/insert event-time event (scheduler-queue scheduler)))))
 #+END_SRC
 
   Processing events is just executing any expired events' functions and removing
@@ -250,10 +244,6 @@ licensing.
   Of course, live events are error prone, but we don't want flawed event to blow
   entire thread. Thus =f= execution is secured with =try=.
 
-*** TODO make process-events scheduler clock type independent
-
-*** CODE
-
 #+NAME: process-events
 #+BEGIN_SRC scheme
   (define (process-events scheduler t)
@@ -261,8 +251,8 @@ licensing.
      (scheduler-mutex scheduler)
      (let next-event ()
        (let ([event (heap/find-min (scheduler-queue scheduler))])
-         (when (and event (time<=? (event-time event) t))
-           (scheduler-queue-set! scheduler (heap/delete-min event-comparator (scheduler-queue scheduler)))
+         (when (and event (<= (event-time event) t))
+           (scheduler-queue-set! scheduler (heap/delete-min event-time (scheduler-queue scheduler)))
            (try
             (lambda ()
               (apply (top-level-value (event-f event)) (event-args event)))
@@ -291,12 +281,14 @@ licensing.
     (fork-thread
      (lambda ()
        (scheduler-thread-set! scheduler (get-thread-id))
-       (let ([zero-duration (make-time 'time-duration 0 0)]
-             [resolution (scheduler-resolution scheduler)])
+       (let* ([zero-duration (make-time 'time-duration 0 0)]
+              [resolution (scheduler-resolution scheduler)]
+              [fl-resolution (inexact (+ (time-second resolution)
+                                         (* 1e-9 (time-nanosecond resolution))))])
          (let loop ()
            (when (scheduler-thread scheduler)
              (let ([clock (current-time)]
-                   [t (add-duration (now scheduler) resolution)])
+                   [t (+ (now scheduler) fl-resolution)])
                (process-events scheduler t)
                (let* ([day (time-difference (current-time) clock)]
                       [night (time-difference resolution day)])
@@ -317,7 +309,8 @@ licensing.
 
 #+NAME: easy-scheduler
 #+BEGIN_SRC scheme
-  (define *scheduler* (simple-scheduler))
+  (define *scheduler* #f)
+  (define (init now) (set! *scheduler* (simple-scheduler now)))
   (define (start) (start-scheduler *scheduler*))
   (define (stop) (stop-scheduler *scheduler*))
   (define (*schedule* t f . args) (schedule *scheduler* (make-event t f args)))
@@ -344,7 +337,7 @@ licensing.
     (cond
      [(null? h1) h2]
      [(null? h2) h1]
-     [(positive? (comparator (car h1) (car h2)))
+     [(< (comparator (car h1)) (comparator (car h2)))
       (cons (car h1) (cons h2 (cdr h1)))]
      [else
       (cons (car h2) (cons h1 (cdr h2)))]))
@@ -638,33 +631,34 @@ accepting new connection we'll proceed it in new thread.
         -1.0))
 #+END_SRC
 
-  Actually, this waveform is called square, because of shape. Once we'll add
-  visualisation library to Ad Libitum, before that try to draw function plot by hands.
+   Actually, this waveform is called square, because of shape. Once we'll add
+   visualisation library to Ad Libitum, before that try to draw function plot by hands.
 
-  Feel free to experiment with different waveforms, we will do it together
-  later. Let's step back and look at our example and try to come up with useful
-  abstraction. Our DSP callback has signature =f(time, channel) -> amplitude=,
-  which is the basis for any audio signal. But what prevents us using audio
-  signals as the main medium for building sound? Nothing! It's even very handy.
-  Audio signals then are capable of control parameters of other signal,
-  naturally forming audio graph. And Chez Scheme should optimize that CSP-like
-  style well. But we need to think carefully ahead of time about signature
-  itself. What if later we want add additional information flowing every sample?
-  What if returning just float is not enough to express all we want? Because
-  it's very beautiful, that every signal could be either interpreted as a DSP
-  callback alone, and could be passed to other signals. But in the latter case
-  sometimes it's not enough to communicate between signals with a single float.
-  Perhaps something like =f(time, channel, data) -> (amplitude, data)= could do
-  the job? Where structure of =data= is determined by your application, and
-  parent signal is responsible for using or discarding the =data= returned by
-  child signal. OTOH, =data= in parameters plays like a container for some
-  global state to survive between samples, and we could replace it with actual
-  global or closured state in our application. The same thing for returned data.
+   Feel free to experiment with different waveforms, we will do it together
+   later. Let's step back and look at our example and try to come up with useful
+   abstraction. Our DSP callback has signature =f(time, channel) -> amplitude=,
+   which is the basis for any audio signal. But what prevents us using audio
+   signals as the main medium for building sound? Nothing! It's even very handy.
+   Audio signals then are capable of control parameters of other signal,
+   naturally forming audio graph. And Chez Scheme should optimize that CSP-like
+   style well. But we need to think carefully ahead of time about signature
+   itself. What if later we want add additional information flowing every
+   sample? What if returning just float is not enough to express all we want?
+   Because it's very beautiful, that every signal could be either interpreted as
+   a DSP callback alone, and could be passed to other signals. But in the latter
+   case sometimes it's not enough to communicate between signals with a single
+   float. Perhaps something like =f(time, channel, data) -> (amplitude, data)=
+   could do the job? Where structure of =data= is determined by your
+   application, and parent signal is responsible for using or discarding the
+   =data= returned by child signal. OTOH, =data= in parameters plays like a
+   container for some global state to survive between samples, and we could
+   replace it with actual global or closured state in our application. The same
+   thing for returned data.
 
-  Let's start with =f(time, channel) -> amplitude= then and pray that we didn't
-  overlook something important.
+   Let's start with =f(time, channel) -> amplitude= then and pray that we didn't
+   overlook something important.
 
-  The most basic signal is just a constant one:
+   The most basic signal is just a constant one:
 
 #+NAME: constant
 #+BEGIN_SRC scheme
@@ -673,24 +667,24 @@ accepting new connection we'll proceed it in new thread.
       amplitude))
 #+END_SRC
 
-  Then we are able to define =silence= as follows:
+   Then we are able to define =silence= as follows:
 
 #+NAME: silence
 #+BEGIN_SRC scheme
   (define silence (constant 0.0))
 #+END_SRC
 
-  Quick question for self-test: what sound would =(constant 1.0)= produce?
+   Quick question for self-test: what sound would =(constant 1.0)= produce?
 
-  For unifying oscillators we are going to define signal which will care about
-  converting time to proper phase. When you deal with periodic signals it's
-  important to distinguish time from phase, because at different frequencies
-  phase would be different at the given point of time. Which is okay when
-  frequency of you oscillator is constant. When it's variable as in FM
-  synthesis, you need to track phase for your oscillator to make it behave
-  properly. Let's create special signal =phase= for that purpose. It will take
-  =frequency= signal and =phase0= signal and return signal of phase in =[0, 1)=
-  half-interval.
+   For unifying oscillators we are going to define signal which will care about
+   converting time to proper phase. When you deal with periodic signals it's
+   important to distinguish time from phase, because at different frequencies
+   phase would be different at the given point of time. Which is okay when
+   frequency of you oscillator is constant. When it's variable as in FM
+   synthesis, you need to track phase for your oscillator to make it behave
+   properly. Let's create special signal =phase= for that purpose. It will take
+   =frequency= signal and =phase0= signal and return signal of phase in =[0, 1)=
+   half-interval.
 
 #+BEGIN_SRC scheme
   (define (phase frequency phase0)
@@ -709,17 +703,17 @@ accepting new connection we'll proceed it in new thread.
     (phase frequency (constant 0.0)))
 #+END_SRC
 
-  Here we have an opportunity for a small syntactic improvement. The use-case
-  when signal is applied to parameters named exactly time and channel in current
-  scope is very common. Let's create a special syntax for it. =@= is chosen as
-  resembling =deref= from Clojure:
+   Here we have an opportunity for a small syntactic improvement. The use-case
+   when signal is applied to parameters named exactly time and channel in
+   current scope is very common. Let's create a special syntax for it. =@= is
+   chosen as resembling =deref= from Clojure:
 
 #+NAME: deref-signal
 #+BEGIN_SRC scheme
   (extend-syntax (@) [(@ signal) (signal time channel)])
 #+END_SRC
 
-  Let's use it in our phase signal:
+   Let's use it in our phase signal:
 
 #+NAME: phase
 #+BEGIN_SRC scheme
@@ -738,17 +732,17 @@ accepting new connection we'll proceed it in new thread.
     (phase frequency silence))
 #+END_SRC
 
-  Then basic waveforms are defined in very clean way:
+   Then basic waveforms are defined in very clean way:
 
 #+NAME: waveforms
 #+BEGIN_SRC scheme
   (define (sine-wave phase)
     (lambda (time channel)
-      (inexact (sin (* two-pi (@ phase))))))
+      (sin (* two-pi (@ phase)))))
 
   (define (cosine-wave phase)
     (lambda (time channel)
-      (inexact (cos (* two-pi (@ phase))))))
+      (cos (* two-pi (@ phase)))))
 
   (define (square-wave phase)
     (lambda (time channel)
@@ -784,12 +778,12 @@ accepting new connection we'll proceed it in new thread.
     (random-amplitude))
 #+END_SRC
 
-  Before we play something interesting with stuff we already defined we need one
-  more helper. Drawback of our way of composition of signals is that we can't
-  change code of one of them in live and make changed reloaded live, even if
-  signal is not anonymous and was defined as a top-level variable. For signal
-  which we plan to reload dynamically we are going to introduce wrapper which
-  will look for given signal's symbol on every invocation:
+   Before we play something interesting with stuff we already defined we need
+   one more helper. Drawback of our way of composition of signals is that we
+   can't change code of one of them in live and make changed reloaded live, even
+   if signal is not anonymous and was defined as a top-level variable. For
+   signal which we plan to reload dynamically we are going to introduce wrapper
+   which will look for given signal's symbol on every invocation:
 
 #+NAME: live-signal
 #+BEGIN_SRC scheme
@@ -798,8 +792,17 @@ accepting new connection we'll proceed it in new thread.
       ((top-level-value symbol) time channel)))
 #+END_SRC
 
-  Next step is implementation of signal arithmetics to ease their mixing and
-  matching.
+   Also useful to have live constant (sorry for oxymoron) counterpart:
+
+#+NAME: live-constant
+#+BEGIN_SRC scheme
+  (define (live-constant symbol)
+    (λ (time channel)
+      (top-level-value symbol)))
+#+END_SRC
+
+   Next step is implementation of signal arithmetics to ease their mixing and
+   matching.
 
 #+NAME: signal-operators
 #+BEGIN_SRC scheme
@@ -836,8 +839,7 @@ accepting new connection we'll proceed it in new thread.
   (alias ∏ signal-prod)
 #+END_SRC
 
-
-  For composing signals we could define a helper:
+   For composing signals we could define a helper:
 
 #+NAME: compose
 #+BEGIN_SRC scheme
@@ -850,42 +852,100 @@ accepting new connection we'll proceed it in new thread.
   (define ∘ compose)
 #+END_SRC
 
-  And use it to define simple osc factory:
+   And use it to define simple osc factory:
 
 #+NAME: oscillator
 #+BEGIN_SRC scheme
   (define simple-osc (∘ sine-wave phase* constant))
 #+END_SRC
 
-
-  If you tried to make some composite wave like
-
-#+NAME: make-overtone
-#+BEGIN_SRC scheme
-  (define (make-overtone wave frequency phase0)
-    (+~ (*~ (wave (phase frequency phase0)) (constant 0.4))
-        (*~ (wave (phase (*~ (constant 2.0) frequency) phase0)) (constant 0.2))
-        (*~ (wave (phase (*~ (constant 3.0) frequency) phase0)) (constant 0.1))
-        (*~ (wave (phase (*~ (constant 4.0) frequency) phase0)) (constant 0.1))
-        (*~ (wave (phase (*~ (constant 0.5) frequency) phase0)) (constant 0.2))
-        ))
-#+END_SRC
-
-  And applied it to =sine-wave=:
-
-#+BEGIN_SRC scheme
-
-#+END_SRC
-
-  You might noticed that it's CPU hungry and profiler shows that tons of time is
-  spent in system sin function. Let's write a function which will unroll sine
-  wave (and any other wave) into a table.
-
-
-*** TODO add references section
-*** TODO add to references link to interactive FFT tutorial
-
 ** Envelopes
+
+   ADSR envelope shapes signal with polyline described with 4 parameters:
+
+   - Attack time is the time taken for initial run-up of level from nil to peak,
+     beginning when the key is first pressed.
+   - Decay time is the time taken for the subsequent run down from the attack
+     level to the designated sustain level.
+   - Sustain level is the level during the main sequence of the sound's
+     duration, until the key is released.
+   - Release time is the time taken for the level to decay from the sustain
+     level to zero after the key is released.
+
+   (Thanks, [[https://en.wikipedia.org/wiki/Synthesizer#Attack_Decay_Sustain_Release_.28ADSR.29_envelope][Wikipedia]])
+
+   Two more parameter required to apply envelope in real performance: note's
+   moments of start and end. To make envelope generic and open for crazy
+   experiments all 6 parameters are going to be signals:
+
+#+NAME: adsr
+#+BEGIN_SRC scheme
+  (define (adsr start end attack decay sustain release)
+    (λ (time channel)
+      (let ([end (@ end)])
+        (if (<= end time)
+            ;; NOTE OFF
+            (let ([Δt (- time end)]
+                  [r (@ release)])
+              (if (and (positive? r)
+                       (<= Δt r))
+                  (* (- 1.0 (/ Δt r)) (@ sustain))
+                  0.0))
+            ;; NOTE ON
+            (let ([start (@ start)])
+              (if (<= start time)
+                  (let ([Δt (- time start)]
+                        [a (@ attack)])
+                    (if (and (positive? a)
+                             (<= Δt a))
+                        (/ Δt a)
+                        (let ([Δt (- Δt a)]
+                              [d (@ decay)]
+                              [s (@ sustain)])
+                          (if (and (positive? d)
+                                   (<= Δt d))
+                              (- 1.0 (* (- 1.0 s) (/ Δt d)))
+                              s))))
+                  0.0))))))
+#+END_SRC
+
+   Let's test it with simple note play:
+
+#+NAME: play-note
+#+BEGIN_SRC scheme
+  (define (simple-intrument start end freq a d s r)
+    (let* ([start (live-constant start)]
+           [end (live-constant end)]
+           [freq (live-constant freq)]
+           [osc (sine-wave (phase* freq))]
+           [env (adsr start
+                      end
+                      (constant a)
+                      (constant d)
+                      (constant s)
+                      (constant r))])
+      (*~ env osc)))
+
+  (define (make-play-note start end frequency)
+    (λ (freq dur)
+      (set-top-level-value! frequency freq)
+      (set-top-level-value! start (now))
+      (set-top-level-value! end (+ (now) dur))))
+
+  ;; (define start 0.0)
+  ;; (define end 1.0)
+  ;; (define frequency 440.0)
+
+  ;; (define inst (simple-intrument 'start 'end 'frequency 0.3 0.5 0.8 1.0))
+  ;; (define play-note (make-play-note 'start 'end 'frequency))
+
+  ;; (sound:set-dsp! (live-signal 'inst))
+  ;; (play-note 440.0 1.1)
+#+END_SRC
+
+   We return to instrument concept later and come up with better design for it.
+
+
 ** Metronome
 
 * Std
@@ -953,7 +1013,7 @@ accepting new connection we'll proceed it in new thread.
 
   (alias λ lambda)
 
-  (alias now scheduler:now)
+  (alias now sound:now)
   (alias schedule scheduler:schedule)
   (alias callback schedule)
 
@@ -964,6 +1024,7 @@ accepting new connection we'll proceed it in new thread.
   (define *channels* 2)
 
   (sound:start)
+  (scheduler:init now)
   (scheduler:start)
   (repl:start-repl-server)
 #+END_SRC
@@ -976,8 +1037,7 @@ accepting new connection we'll proceed it in new thread.
     (sin (* two-pi freq time)))
 
   (define (tuner time channel)
-    ;; inexact because otherwise exact 0 would crash soundio
-    (inexact (sine time tuner-frequency)))
+    (sine time tuner-frequency))
 
   ;; (sound:set-dsp! tuner)
 #+END_SRC
@@ -987,12 +1047,12 @@ accepting new connection we'll proceed it in new thread.
 
 #+NAME: sandbox
 #+BEGIN_SRC scheme
-  (define second (make-time 'time-duration 0 1))
-  (define half-second (make-time 'time-duration 500000000 0))
-  (define quarter-second (make-time 'time-duration 250000000 0))
-  (define 1/8-second (make-time 'time-duration 125000000 0))
-  (define 1/16-second (make-time 'time-duration 62500000 0))
-  (define 1/32-second (make-time 'time-duration 31250000 0))
+  (define second 1.0)
+  (define half-second 0.5)
+  (define quarter-second 0.25)
+  (define 1/8-second 0.125)
+  (define 1/16-second 0.0625)
+  (define 1/32-second 0.03125)
 
   (define (random-choice list)
     (list-ref list (random (length list))))
@@ -1035,10 +1095,19 @@ accepting new connection we'll proceed it in new thread.
         (table-wave table phase))))
 
   ;; (define table-sine-wave (unroll (simple-osc 0.1) 10 96000))
+
+  (define (make-overtone wave frequency phase0)
+    (+~ (*~ (wave (phase frequency phase0)) (constant 0.4))
+        (*~ (wave (phase (*~ (constant 2.0) frequency) phase0)) (constant 0.2))
+        (*~ (wave (phase (*~ (constant 3.0) frequency) phase0)) (constant 0.1))
+        (*~ (wave (phase (*~ (constant 4.0) frequency) phase0)) (constant 0.1))
+        (*~ (wave (phase (*~ (constant 0.5) frequency) phase0)) (constant 0.2))
+        ))
 #+END_SRC
 
 * Files :noexport:
 
+#+NAME: ad-libitum.ss
 #+BEGIN_SRC scheme :tangle ad-libitum.ss :noweb yes :mkdirp yes :paddle no
   <<add-library-directories>>
   (import (chezscheme)
@@ -1057,30 +1126,35 @@ accepting new connection we'll proceed it in new thread.
   <<phase>>
   <<waveforms>>
   <<live-signal>>
+  <<live-constant>>
   <<signal-operators>>
   <<oscillator>>
+  <<adsr>>
 #+END_SRC
 
+#+NAME: violet.ss
 #+BEGIN_SRC scheme :tangle violet.ss :noweb yes :mkdirp yes :paddle no
   (load "ad-libitum.ss")
 
   <<simplest-oscillator>>
-  <<make-overtone>>
   <<sandbox>>
+  <<play-note>>
 #+END_SRC
 
+#+NAME: sound.ss
 #+BEGIN_SRC scheme :tangle sound.ss :noweb yes :mkdirp yes :paddle no
   (library (sound (1))
-    (export start set-dsp! hush!)
+    (export start set-dsp! hush! now)
     (import (chezscheme) (prefix (soundio) soundio:))
     <<try>>
     <<sound>>
     )
 #+END_SRC
 
+#+NAME: scheduler.ss
 #+BEGIN_SRC scheme :tangle scheduler.ss :noweb yes :mkdirp yes :paddle no
   (library (scheduler)
-    (export start stop
+    (export start stop init
             (rename (*schedule* schedule) (*now* now)))
     (import (chezscheme))
     <<try>>
