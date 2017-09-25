@@ -737,28 +737,35 @@ accepting new connection we'll proceed it in new thread.
 #+NAME: waveforms
 #+BEGIN_SRC scheme
   (define (sine-wave phase)
-    (lambda (time channel)
+    (λ (time channel)
       (sin (* two-pi (@ phase)))))
 
   (define (cosine-wave phase)
-    (lambda (time channel)
+    (λ (time channel)
       (cos (* two-pi (@ phase)))))
 
   (define (square-wave phase)
-    (lambda (time channel)
+    (λ (time channel)
       (if (< (@ phase) 0.5)
           1.0
           -1.0)))
 
+  ;; when `pulse-width' is `(constant 0.5)' it's identical to `square-wave'
+  (define (pulse-wave pulse-width phase)
+    (λ (time channel)
+      (if (< (@ phase) (@ pulse-width))
+          1.0
+          -1.0)))
+
   (define (tri-wave phase)
-    (lambda (time channel)
+    (λ (time channel)
       (let ([phase (@ phase)])
         (if (< phase 0.5)
             (- (* 4.0 phase) 1.0)
             (+ (* -4.0 phase) 3.0)))))
 
   (define (saw-wave phase)
-    (lambda (time channel)
+    (λ (time channel)
       (- (* 2.0 (@ phase)) 1.0)))
 
   ;; (define (table-wave table phase)
@@ -768,7 +775,7 @@ accepting new connection we'll proceed it in new thread.
 
   (define (table-wave table phase)
     (let ([n (fixnum->flonum (vector-length table))])
-      (lambda (time channel)
+      (λ (time channel)
         (vector-ref table (flonum->fixnum (fltruncate (fl* (@ phase) n)))))))
 
   (define (random-amplitude)
@@ -861,6 +868,8 @@ accepting new connection we'll proceed it in new thread.
 
 ** Envelopes
 
+*** ADSR
+
    ADSR envelope shapes signal with polyline described with 4 parameters:
 
    - Attack time is the time taken for initial run-up of level from nil to peak,
@@ -913,7 +922,7 @@ accepting new connection we'll proceed it in new thread.
 
 #+NAME: play-note
 #+BEGIN_SRC scheme
-  (define (simple-intrument start end freq a d s r)
+  (define (simple-instrument start end freq a d s r)
     (let* ([start (live-constant start)]
            [end (live-constant end)]
            [freq (live-constant freq)]
@@ -944,6 +953,22 @@ accepting new connection we'll proceed it in new thread.
 #+END_SRC
 
    We return to instrument concept later and come up with better design for it.
+
+*** Impulse
+
+    Another simple though useful envelope is impulse.
+
+#+NAME: impulse
+#+BEGIN_SRC scheme
+  (define (impulse start apex)
+    (λ (time channel)
+      (let ([start (@ start)])
+        (if (<= start time)
+            (let ([h (/ (- time start)
+                        (- (@ apex) start))])
+              (* h (exp (- 1.0 h))))
+            0.0))))
+#+END_SRC
 
 
 ** Metronome
@@ -1047,6 +1072,37 @@ accepting new connection we'll proceed it in new thread.
 
 #+NAME: sandbox
 #+BEGIN_SRC scheme
+  (define (pan p)
+    (λ (time channel)
+      (let ([p (* 0.5 (+ 1.0 (@ p)))])
+        (if (zero? channel)
+            (- 1.0 p)
+            p))))
+
+  ;; normalizing +~
+  (define (mix . args)
+    (*~ (apply +~ args) (constant (inexact (/ (length args))))))
+
+  (define (midi2frq pitch)
+    (if (<= pitch 0.0) 0.0
+        (* 440.0 (expt 2.0 (/ (- pitch 69.0) 12.0)))))
+
+  (define (frq2midi freq)
+    (if (<= freq 0.0) 0.0
+        (+ (* 12.0 (log (/ freq 440.0) 2.0)) 69.0)))
+
+  (define (bpm2hz bpm)
+    (/ 60.0 bpm))
+
+  (define (hz2bpm hz)
+    (* 60.0 hz))
+
+  (define (amp2db x)
+    (* 20.0 (log10 x)))
+
+  (define (db2amp x)
+    (expt 10.0 (/ x 20.0)))
+
   (define second 1.0)
   (define half-second 0.5)
   (define quarter-second 0.25)
@@ -1130,6 +1186,7 @@ accepting new connection we'll proceed it in new thread.
   <<signal-operators>>
   <<oscillator>>
   <<adsr>>
+  <<impulse>>
 #+END_SRC
 
 #+NAME: violet.ss

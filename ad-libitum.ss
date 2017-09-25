@@ -80,28 +80,35 @@
 (define (phase* frequency)
   (phase frequency silence))
 (define (sine-wave phase)
-  (lambda (time channel)
+  (λ (time channel)
     (sin (* two-pi (@ phase)))))
 
 (define (cosine-wave phase)
-  (lambda (time channel)
+  (λ (time channel)
     (cos (* two-pi (@ phase)))))
 
 (define (square-wave phase)
-  (lambda (time channel)
+  (λ (time channel)
     (if (< (@ phase) 0.5)
         1.0
         -1.0)))
 
+;; when `pulse-width' is `(constant 0.5)' it's identical to `square-wave'
+(define (pulse-wave pulse-width phase)
+  (λ (time channel)
+    (if (< (@ phase) (@ pulse-width))
+        1.0
+        -1.0)))
+
 (define (tri-wave phase)
-  (lambda (time channel)
+  (λ (time channel)
     (let ([phase (@ phase)])
       (if (< phase 0.5)
           (- (* 4.0 phase) 1.0)
           (+ (* -4.0 phase) 3.0)))))
 
 (define (saw-wave phase)
-  (lambda (time channel)
+  (λ (time channel)
     (- (* 2.0 (@ phase)) 1.0)))
 
 ;; (define (table-wave table phase)
@@ -111,7 +118,7 @@
 
 (define (table-wave table phase)
   (let ([n (fixnum->flonum (vector-length table))])
-    (lambda (time channel)
+    (λ (time channel)
       (vector-ref table (flonum->fixnum (fltruncate (fl* (@ phase) n)))))))
 
 (define (random-amplitude)
@@ -184,3 +191,11 @@
                             (- 1.0 (* (- 1.0 s) (/ Δt d)))
                             s))))
                 0.0))))))
+(define (impulse start apex)
+  (λ (time channel)
+    (let ([start (@ start)])
+      (if (<= start time)
+          (let ([h (/ (- time start)
+                      (- (@ apex) start))])
+            (* h (exp (- 1.0 h))))
+          0.0))))

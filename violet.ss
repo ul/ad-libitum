@@ -4,6 +4,37 @@
   (if (> (mod time tuner-period) tuner-half-period)
       1.0
       -1.0))
+(define (pan p)
+  (λ (time channel)
+    (let ([p (* 0.5 (+ 1.0 (@ p)))])
+      (if (zero? channel)
+          (- 1.0 p)
+          p))))
+
+;; normalizing +~
+(define (mix . args)
+  (*~ (apply +~ args) (constant (inexact (/ (length args))))))
+
+(define (midi2frq pitch)
+  (if (<= pitch 0.0) 0.0
+      (* 440.0 (expt 2.0 (/ (- pitch 69.0) 12.0)))))
+
+(define (frq2midi freq)
+  (if (<= freq 0.0) 0.0
+      (+ (* 12.0 (log (/ freq 440.0) 2.0)) 69.0)))
+
+(define (bpm2hz bpm)
+  (/ 60.0 bpm))
+
+(define (hz2bpm hz)
+  (* 60.0 hz))
+
+(define (amp2db x)
+  (* 20.0 (log10 x)))
+
+(define (db2amp x)
+  (expt 10.0 (/ x 20.0)))
+
 (define second 1.0)
 (define half-second 0.5)
 (define quarter-second 0.25)
@@ -60,7 +91,7 @@
       (*~ (wave (phase (*~ (constant 4.0) frequency) phase0)) (constant 0.1))
       (*~ (wave (phase (*~ (constant 0.5) frequency) phase0)) (constant 0.2))
       ))
-(define (simple-intrument start end freq a d s r)
+(define (simple-instrument start end freq a d s r)
   (let* ([start (live-constant start)]
          [end (live-constant end)]
          [freq (live-constant freq)]
