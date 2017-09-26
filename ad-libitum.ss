@@ -66,16 +66,19 @@
     amplitude))
 (define silence (constant 0.0))
 (extend-syntax (@) [(@ signal) (signal time channel)])
+(define (mod1 x)
+  (mod x 1.0))
+
 (define (phase frequency phase0)
-  (let ([previous-time 0.0]
-        [previous-phase 0.0])
+  (let ([previous-time (make-vector *channels* 0.0)]
+        [previous-phase (make-vector *channels* 0.0)])
     (lambda (time channel)
-      (let* ([time-delta (- time previous-time)]
+      (let* ([time-delta (- time (vector-ref previous-time channel))]
              [phase-delta (* time-delta (@ frequency))]
-             [next-phase (mod (+ previous-phase phase-delta (@ phase0)) 1.0)])
-        (set! previous-time time)
-        (set! previous-phase next-phase)
-        next-phase))))
+             [next-phase (mod1 (+ (vector-ref previous-phase channel) phase-delta))])
+        (vector-set! previous-time channel time)
+        (vector-set! previous-phase channel next-phase)
+        (mod1 (+ next-phase (@ phase0)))))))
 
 (define (phase* frequency)
   (phase frequency silence))
