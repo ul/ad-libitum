@@ -89,14 +89,14 @@
   (∑ (map
       (λ (amplitude factor)
         (*~ amplitude
-            (wave (phase (*~ (~< factor) frequency) phase0))))
+            (wave (phasor (*~ (~< factor) frequency) phase0))))
       amplitudes
       (range (length amplitudes)))))
 (define (simple-instrument start end freq a d s r)
   (let* ([start (live-value start)]
          [end (live-value end)]
          [freq (live-value freq)]
-         [osc (sine-wave (phase* freq))]
+         [osc (sine-wave (phasor* freq))]
          [env (adsr start end (~< a) (~< d) (~< s) (~< r))])
     (*~ env osc)))
 

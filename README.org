@@ -709,7 +709,7 @@ accepting new connection we'll proceed it in new thread.
    phase would be different at the given point of time. Which is okay when
    frequency of you oscillator is constant. When it's variable as in FM
    synthesis, you need to track phase for your oscillator to make it behave
-   properly. Let's create special signal =phase= for that purpose. It will take
+   properly. Let's create special signal =phasor= for that purpose. It will take
    =frequency= signal and =phase0= signal and return signal of phase in =[0, 1)=
    half-interval.
 
@@ -717,7 +717,7 @@ accepting new connection we'll proceed it in new thread.
   (define (mod1 x)
     (mod x 1.0))
 
-  (define (phase frequency phase0)
+  (define (phasor frequency phase0)
     (let ([previous-time (make-vector *channels* 0.0)]
           [previous-phase (make-vector *channels* 0.0)])
       (~<
@@ -728,8 +728,8 @@ accepting new connection we'll proceed it in new thread.
          (vector-set! previous-phase channel next-phase)
          (mod1 (+ next-phase (phase0 time channel)))))))
 
-  (define (phase* frequency)
-    (phase frequency silence))
+  (define (phasor* frequency)
+    (phasor frequency ∅))
 #+END_SRC
 
    Here we have an opportunity for a small syntactic improvement. The use-case
@@ -746,14 +746,14 @@ accepting new connection we'll proceed it in new thread.
          #'(signal time channel))]))
 #+END_SRC
 
-   Let's use it in our phase signal:
+   Let's use it in our phasor signal:
 
-#+NAME: phase
+#+NAME: phasor
 #+BEGIN_SRC scheme
   (define (mod1 x)
     (mod x 1.0))
 
-  (define (phase frequency phase0)
+  (define (phasor frequency phase0)
     (let ([previous-time (make-vector *channels* 0.0)]
           [previous-phase (make-vector *channels* 0.0)])
       (~<
@@ -764,8 +764,8 @@ accepting new connection we'll proceed it in new thread.
           (vector-set! previous-phase channel next-phase)
           (mod1 (+ next-phase (<~ phase0)))))))
 
-  (define (phase* frequency)
-    (phase frequency silence))
+  (define (phasor* frequency)
+    (phasor frequency ∅))
 #+END_SRC
 
    Then basic waveforms are defined in very clean way:
@@ -881,7 +881,7 @@ accepting new connection we'll proceed it in new thread.
 
 #+NAME: oscillator
 #+BEGIN_SRC scheme
-  (define simple-osc (∘ sine-wave phase* constant))
+  (define simple-osc (∘ sine-wave phasor* constant))
 #+END_SRC
 
 ** Envelopes
@@ -943,7 +943,7 @@ accepting new connection we'll proceed it in new thread.
     (let* ([start (live-value start)]
            [end (live-value end)]
            [freq (live-value freq)]
-           [osc (sine-wave (phase* freq))]
+           [osc (sine-wave (phasor* freq))]
            [env (adsr start end (~< a) (~< d) (~< s) (~< r))])
       (*~ env osc)))
 
@@ -1199,7 +1199,7 @@ accepting new connection we'll proceed it in new thread.
     (∑ (map
         (λ (amplitude factor)
           (*~ amplitude
-              (wave (phase (*~ (~< factor) frequency) phase0))))
+              (wave (phasor (*~ (~< factor) frequency) phase0))))
         amplitudes
         (range (length amplitudes)))))
 #+END_SRC
@@ -1225,7 +1225,7 @@ accepting new connection we'll proceed it in new thread.
   <<constant>>
   <<silence>>
   <<deref-signal>>
-  <<phase>>
+  <<phasor>>
   <<waveforms>>
   <<live-signal>>
   <<live-value>>

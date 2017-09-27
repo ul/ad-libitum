@@ -85,15 +85,15 @@
   (let ([start (live-value start)]
         [apex (live-value apex)]
         [frequency (live-value frequency)]
-        [lfo (sine-wave (phase* (~< 1.5)))])
-    (*~ (pan lfo) (tri-wave (phase* frequency)) (impulse start apex))))
+        [lfo (sine-wave (phasor* (~< 1.5)))])
+    (*~ (pan lfo) (tri-wave (phasor* frequency)) (impulse start apex))))
 
 (begin
   (define (make-instrument start apex frequency)
     (let ([start (live-value start)]
           [apex (live-value apex)]
           [frequency (live-value frequency)]
-          [lfo (sine-wave (phase* (~< 220.0)))])
+          [lfo (sine-wave (phasor* (~< 220.0)))])
       (*~ (pan lfo) (live-signal 'my-dsp) (impulse start apex))
       ;; (*~ #;(pan lfo) (live-signal 'my-dsp) #;(adsr start apex (~< 0.1) (~< 0.03) (~< 1.0) (~< 0.02)))
       ))
@@ -113,9 +113,9 @@
 (play-note 440.0 1/16-second)
 
 
-(define my-dsp (mix (sine-wave (phase* (live-value 'frequency)))
-                    (sine-wave (phase* (*~ (~< 2.0) (live-value 'frequency))))
-                    (sine-wave (phase* (+~ (~< 2.0) (live-value 'frequency))))
+(define my-dsp (mix (sine-wave (phasor* (live-value 'frequency)))
+                    (sine-wave (phasor* (*~ (~< 2.0) (live-value 'frequency))))
+                    (sine-wave (phasor* (+~ (~< 2.0) (live-value 'frequency))))
                     (simple-osc 220.0)
                     (simple-osc 110.0)
                     (simple-osc 50.0)
@@ -135,26 +135,24 @@
 
 ;;;;;;;
 
-((phase (constant 220.0) silence) 0.123 0)
-
 (define (make-overlap wave freq shift)
   (mix
-   (wave (phase (constant freq) silence))
-   (wave (phase (constant freq) (constant shift)))))
+   (wave (phasor (constant freq) silence))
+   (wave (phasor (constant freq) (constant shift)))))
 
 (define my-dsp
   (make-overlap saw-wave frequency 0.0123))
 (h!)
 
 (alias ∅ silence)
-(define my-dsp (pulse-wave (phase (~< 440.0) ∅)
+(define my-dsp (pulse-wave (phasor (~< 440.0) ∅)
                            (*~ (~< 0.5)
                                (+~ (pulse-wave
-                                    (phase* (~< 432.0))
+                                    (phasor* (~< 432.0))
                                     (simple-osc 1.0))
                                    (~< 1.0)))))
-(define my-dsp (sine-wave (phase (~< 440.0)
-                                 (square-wave (phase (~< 220.0) ∅)
-                                             ))))
+(define my-dsp (sine-wave (phasor (~< 440.0)
+                                  (square-wave (phasor (~< 220.0) ∅)
+                                               ))))
 (sound:set-dsp! (live-signal 'my-dsp))
 (h!)

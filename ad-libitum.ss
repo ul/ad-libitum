@@ -124,7 +124,7 @@
 (define (mod1 x)
   (mod x 1.0))
 
-(define (phase frequency phase0)
+(define (phasor frequency phase0)
   (let ([previous-time (make-vector *channels* 0.0)]
         [previous-phase (make-vector *channels* 0.0)])
     (~<
@@ -135,8 +135,8 @@
         (vector-set! previous-phase channel next-phase)
         (mod1 (+ next-phase (<~ phase0)))))))
 
-(define (phase* frequency)
-  (phase frequency silence))
+(define (phasor* frequency)
+  (phasor frequency ∅))
 (define~ (sine-wave phase)
   (sin (* two-pi (<~ phase))))
 
@@ -204,7 +204,7 @@
 (define ∑ (cut apply signal-sum <...>))
 
 (define ∏ (cut apply signal-prod <...>))
-(define simple-osc (∘ sine-wave phase* constant))
+(define simple-osc (∘ sine-wave phasor* constant))
 (define~ (adsr start end attack decay sustain release)
   (let ([end (<~ end)])
     (if (<= end time)
