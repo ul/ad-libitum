@@ -859,8 +859,9 @@ accepting new connection we'll proceed it in new thread.
   (alias -~ signal-diff)
   (alias /~ signal-div)
 
-  (alias ∑ signal-sum)
-  (alias ∏ signal-prod)
+  (define ∑ (cut apply signal-sum <...>))
+
+  (define ∏ (cut apply signal-prod <...>))
 #+END_SRC
 
    For composing signals we could define a helper:
@@ -1194,13 +1195,12 @@ accepting new connection we'll proceed it in new thread.
     (unfold (cut <= n <>) id (cut + <> 1) 0))
 
   (define (make-overtone amplitudes wave frequency phase0)
-    (apply ∑
-     (map
-      (λ (amplitude factor)
-        (*~ amplitude
-            (wave (phase (*~ (~< factor) frequency) phase0))))
-      amplitudes
-      (range (length amplitudes)))))
+    (∑ (map
+        (λ (amplitude factor)
+          (*~ amplitude
+              (wave (phase (*~ (~< factor) frequency) phase0))))
+        amplitudes
+        (range (length amplitudes)))))
 #+END_SRC
 
 * Files :noexport:

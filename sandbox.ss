@@ -3,14 +3,6 @@
 (define wave-base 22.0)
 (define wave-base~ (live-value 'wave-base))
 
-(define (make-overtone amplitudes wave frequency phase0)
-  (apply ∑
-   (map
-    (λ (amplitude factor)
-      (*~ amplitude
-          (wave (phase (*~ (~< factor) frequency) phase0))))
-    amplitudes
-    (range (length amplitudes)))))
 (define (~ m)
   (make-overtone
    (map constant '(0.4 0.2 0.1 0.2))
@@ -138,6 +130,7 @@
                               silence))
 
 (sound:set-dsp! (live-signal 'my-dsp))
+(sound:set-dsp! tuner)
 (h!)
 
 ;;;;;;;

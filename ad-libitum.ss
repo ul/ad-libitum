@@ -199,8 +199,9 @@
 (alias -~ signal-diff)
 (alias /~ signal-div)
 
-(alias ∑ signal-sum)
-(alias ∏ signal-prod)
+(define ∑ (cut apply signal-sum <...>))
+
+(define ∏ (cut apply signal-prod <...>))
 (define simple-osc (∘ sine-wave phase* constant))
 (define~ (adsr start end attack decay sustain release)
   (let ([end (<~ end)])

@@ -86,13 +86,12 @@
   (unfold (cut <= n <>) id (cut + <> 1) 0))
 
 (define (make-overtone amplitudes wave frequency phase0)
-  (apply ∑
-   (map
-    (λ (amplitude factor)
-      (*~ amplitude
-          (wave (phase (*~ (~< factor) frequency) phase0))))
-    amplitudes
-    (range (length amplitudes)))))
+  (∑ (map
+      (λ (amplitude factor)
+        (*~ amplitude
+            (wave (phase (*~ (~< factor) frequency) phase0))))
+      amplitudes
+      (range (length amplitudes)))))
 (define (simple-instrument start end freq a d s r)
   (let* ([start (live-value start)]
          [end (live-value end)]
