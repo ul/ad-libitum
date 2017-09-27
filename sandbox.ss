@@ -145,3 +145,16 @@
 (define my-dsp
   (make-overlap saw-wave frequency 0.0123))
 (h!)
+
+(alias ∅ silence)
+(define my-dsp (pulse-wave (phase (~< 440.0) ∅)
+                           (*~ (~< 0.5)
+                               (+~ (pulse-wave
+                                    (phase* (~< 432.0))
+                                    (simple-osc 1.0))
+                                   (~< 1.0)))))
+(define my-dsp (sine-wave (phase (~< 440.0)
+                                 (square-wave (phase (~< 220.0) ∅)
+                                             ))))
+(sound:set-dsp! (live-signal 'my-dsp))
+(h!)

@@ -83,7 +83,7 @@
 ;; (define table-sine-wave (unroll (simple-osc 0.1) 10 96000))
 
 (define (range n)
-  (unfold (cut <= n <>) id (cut + <> 1) 0))
+  (list-ec (: i n) i))
 
 (define (make-overtone amplitudes wave frequency phase0)
   (∑ (map

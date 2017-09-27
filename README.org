@@ -698,6 +698,7 @@ accepting new connection we'll proceed it in new thread.
 #+NAME: silence
 #+BEGIN_SRC scheme
   (define~ silence 0.0)
+  (alias ∅ silence)
 #+END_SRC
 
    Quick question for self-test: what sound would =(~< 1.0)= produce?
@@ -870,10 +871,10 @@ accepting new connection we'll proceed it in new thread.
 #+BEGIN_SRC scheme
   (define (compose . fns)
     (define (make-chain fn chain)
-      (λ args call-with-values (cut apply fn args) chain))
+      (λ args (call-with-values (cut apply fn args) chain)))
     (reduce make-chain values fns))
 
-  (define ∘ compose)
+  (alias ∘ compose)
 #+END_SRC
 
    And use it to define simple osc factory:
@@ -1192,7 +1193,7 @@ accepting new connection we'll proceed it in new thread.
   ;; (define table-sine-wave (unroll (simple-osc 0.1) 10 96000))
 
   (define (range n)
-    (unfold (cut <= n <>) id (cut + <> 1) 0))
+    (list-ec (: i n) i))
 
   (define (make-overtone amplitudes wave frequency phase0)
     (∑ (map
@@ -1211,6 +1212,7 @@ accepting new connection we'll proceed it in new thread.
   (import (chezscheme)
           (srfi s1 lists)
           (srfi s26 cut)
+          (srfi s42 eager-comprehensions)
           (prefix (sound) sound:)
           (prefix (scheduler) scheduler:)
           (prefix (repl) repl:))
