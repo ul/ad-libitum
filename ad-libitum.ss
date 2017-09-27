@@ -12,6 +12,7 @@
  "./chez-sockets")
 (import (chezscheme)
         (srfi s1 lists)
+        (srfi s26 cut)
         (prefix (sound) sound:)
         (prefix (scheduler) scheduler:)
         (prefix (repl) repl:))
@@ -20,7 +21,38 @@
 (collect-generation-radix 2)
 (optimize-level 3)
 
+;; symbols
 (alias λ lambda)
+(define (id x) x)
+
+;; threading
+
+(define-syntax (>>> stx)
+  (syntax-case stx ()
+    [(_ it x) #'x]
+    [(_ it x (y ...) rest ...)
+     #'(let ([it x])
+         (>>> it (y ...) rest ...))]))
+
+(define-syntax (>> stx)
+  (syntax-case stx ()
+    [(k rest ...)
+     (with-syntax ([^ (datum->syntax #'k '^)])
+       #'(>>> ^ rest ...))]))
+
+(define-syntax ->
+  (syntax-rules ()
+    [(_ x) x]
+    [(_ x (y z ...) rest ...)
+     (-> (y x z ...) rest ...)]))
+
+(define-syntax ->>
+  (syntax-rules ()
+    [(_ x) x]
+    [(_ x (y ...) rest ...)
+     (->> (y ... x) rest ...)]))
+
+;;
 
 (alias now sound:now)
 (alias schedule scheduler:schedule)
@@ -38,8 +70,7 @@
 (repl:start-repl-server)
 (define (compose . fns)
   (define (make-chain fn chain)
-    (lambda args
-      (call-with-values (lambda () (apply fn args)) chain)))
+    (λ args call-with-values (cut apply fn args) chain))
   (reduce make-chain values fns))
 
 (define ∘ compose)
@@ -61,103 +92,107 @@
   (sine time tuner-frequency))
 
 ;; (sound:set-dsp! tuner)
-(define (constant amplitude)
-  (lambda (time channel)
-    amplitude))
-(define silence (constant 0.0))
-(extend-syntax (@) [(@ signal) (signal time channel)])
+(define-syntax (signal stx)
+  (syntax-case stx ()
+    [(k body ...)
+     (with-syntax ([time (datum->syntax #'k 'time)]
+                   [channel (datum->syntax #'k 'channel)])
+       #'(λ (time channel) body ...))]))
+
+(alias ~< signal)
+
+(define-syntax (define-signal stx)
+  (syntax-case stx ()
+    [(k args body ...)
+     (with-syntax ([time (datum->syntax #'k 'time)]
+                   [channel (datum->syntax #'k 'channel)])
+       #'(define args
+           (λ (time channel)
+             body ...)))]))
+
+(alias define~ define-signal)
+(define~ (constant amplitude) amplitude)
+(define~ silence 0.0)
+(define-syntax (<~ stx)
+  (syntax-case stx ()
+    [(k signal)
+     (with-syntax ([time (datum->syntax #'k 'time)]
+                   [channel (datum->syntax #'k 'channel)])
+       #'(signal time channel))]))
 (define (mod1 x)
   (mod x 1.0))
 
 (define (phase frequency phase0)
   (let ([previous-time (make-vector *channels* 0.0)]
         [previous-phase (make-vector *channels* 0.0)])
-    (lambda (time channel)
+    (~<
       (let* ([time-delta (- time (vector-ref previous-time channel))]
-             [phase-delta (* time-delta (@ frequency))]
+             [phase-delta (* time-delta (<~ frequency))]
              [next-phase (mod1 (+ (vector-ref previous-phase channel) phase-delta))])
         (vector-set! previous-time channel time)
         (vector-set! previous-phase channel next-phase)
-        (mod1 (+ next-phase (@ phase0)))))))
+        (mod1 (+ next-phase (<~ phase0)))))))
 
 (define (phase* frequency)
   (phase frequency silence))
-(define (sine-wave phase)
-  (λ (time channel)
-    (sin (* two-pi (@ phase)))))
+(define~ (sine-wave phase)
+  (sin (* two-pi (<~ phase))))
 
-(define (cosine-wave phase)
-  (λ (time channel)
-    (cos (* two-pi (@ phase)))))
+(define~ (cosine-wave phase)
+  (cos (* two-pi (<~ phase))))
 
-(define (square-wave phase)
-  (λ (time channel)
-    (if (< (@ phase) 0.5)
-        1.0
-        -1.0)))
+(define~ (square-wave phase)
+  (if (< (<~ phase) 0.5)
+      1.0
+      -1.0))
 
 ;; when `pulse-width' is `(constant 0.5)' it's identical to `square-wave'
-(define (pulse-wave pulse-width phase)
-  (λ (time channel)
-    (if (< (@ phase) (@ pulse-width))
-        1.0
-        -1.0)))
+(define~ (pulse-wave pulse-width phase)
+  (if (< (<~ phase) (<~ pulse-width))
+      1.0
+      -1.0))
 
-(define (tri-wave phase)
-  (λ (time channel)
-    (let ([phase (@ phase)])
-      (if (< phase 0.5)
-          (- (* 4.0 phase) 1.0)
-          (+ (* -4.0 phase) 3.0)))))
+(define~ (tri-wave phase)
+  (let ([phase (<~ phase)])
+    (if (< phase 0.5)
+        (- (* 4.0 phase) 1.0)
+        (+ (* -4.0 phase) 3.0))))
 
-(define (saw-wave phase)
-  (λ (time channel)
-    (- (* 2.0 (@ phase)) 1.0)))
-
-;; (define (table-wave table phase)
-;;   (let ([n (vector-length table)])
-;;     (lambda (time channel)
-;;       (vector-ref table (exact (truncate (* (@ phase) n)))))))
+(define~ (saw-wave phase)
+  (- (* 2.0 (<~ phase)) 1.0))
 
 (define (table-wave table phase)
   (let ([n (fixnum->flonum (vector-length table))])
-    (λ (time channel)
-      (vector-ref table (flonum->fixnum (fltruncate (fl* (@ phase) n)))))))
+    (~< (vector-ref table (flonum->fixnum (fltruncate (fl* (<~ phase) n)))))))
 
 (define (random-amplitude)
   (- (random 2.0) 1.0))
 
 (define (random-wave time channel)
   (random-amplitude))
-(define (live-signal symbol)
-  (lambda (time channel)
-    ((top-level-value symbol) time channel)))
-(define (live-constant symbol)
-  (λ (time channel)
-    (top-level-value symbol)))
-(define (signal-sum* x y)
-  (lambda (time channel)
-    (+ (@ x) (@ y))))
+(define~ (live-signal symbol)
+  (<~ (top-level-value symbol)))
+(define~ (live-value symbol)
+  (top-level-value symbol))
+(define~ (signal-sum* x y)
+  (+ (<~ x) (<~ y)))
 
 (define (signal-sum x . xs)
   (fold-left signal-sum* x xs))
 
-(define (signal-prod* x y)
-  (lambda (time channel)
-    (* (@ x) (@ y))))
+(define~ (signal-prod* x y)
+  (* (<~ x) (<~ y)))
 
 (define (signal-prod x . xs)
   (fold-left signal-prod* x xs))
 
 (define (signal-diff x . xs)
   (let ([y (apply signal-sum xs)])
-    (lambda (time channel)
-      (- (@ x) (@ y)))))
+    (~< (- (<~ x) (<~ y)))))
 
 (define (signal-div x . xs)
   (let ([y (apply signal-prod xs)])
-    (lambda (time channel)
-      (/ (@ x) (@ y)))))
+    (~< (/ (<~ x) (<~ y)))))
 
 (alias +~ signal-sum)
 (alias *~ signal-prod)
@@ -167,38 +202,36 @@
 (alias ∑ signal-sum)
 (alias ∏ signal-prod)
 (define simple-osc (∘ sine-wave phase* constant))
-(define (adsr start end attack decay sustain release)
-  (λ (time channel)
-    (let ([end (@ end)])
-      (if (<= end time)
-          ;; NOTE OFF
-          (let ([Δt (- time end)]
-                [r (@ release)])
-            (if (and (positive? r)
-                     (<= Δt r))
-                (* (- 1.0 (/ Δt r)) (@ sustain))
-                0.0))
-          ;; NOTE ON
-          (let ([start (@ start)])
-            (if (<= start time)
-                (let ([Δt (- time start)]
-                      [a (@ attack)])
-                  (if (and (positive? a)
-                           (<= Δt a))
-                      (/ Δt a)
-                      (let ([Δt (- Δt a)]
-                            [d (@ decay)]
-                            [s (@ sustain)])
-                        (if (and (positive? d)
-                                 (<= Δt d))
-                            (- 1.0 (* (- 1.0 s) (/ Δt d)))
-                            s))))
-                0.0))))))
-(define (impulse start apex)
-  (λ (time channel)
-    (let ([start (@ start)])
-      (if (<= start time)
-          (let ([h (/ (- time start)
-                      (- (@ apex) start))])
-            (* h (exp (- 1.0 h))))
-          0.0))))
+(define~ (adsr start end attack decay sustain release)
+  (let ([end (<~ end)])
+    (if (<= end time)
+        ;; NOTE OFF
+        (let ([Δt (- time end)]
+              [r (<~ release)])
+          (if (and (positive? r)
+                   (<= Δt r))
+              (* (- 1.0 (/ Δt r)) (<~ sustain))
+              0.0))
+        ;; NOTE ON
+        (let ([start (<~ start)])
+          (if (<= start time)
+              (let ([Δt (- time start)]
+                    [a (<~ attack)])
+                (if (and (positive? a)
+                         (<= Δt a))
+                    (/ Δt a)
+                    (let ([Δt (- Δt a)]
+                          [d (<~ decay)]
+                          [s (<~ sustain)])
+                      (if (and (positive? d)
+                               (<= Δt d))
+                          (- 1.0 (* (- 1.0 s) (/ Δt d)))
+                          s))))
+              0.0)))))
+(define~ (impulse start apex)
+  (let ([start (<~ start)])
+    (if (<= start time)
+        (let ([h (/ (- time start)
+                    (- (<~ apex) start))])
+          (* h (exp (- 1.0 h))))
+        0.0)))

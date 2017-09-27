@@ -4,12 +4,11 @@
   (if (> (mod time tuner-period) tuner-half-period)
       1.0
       -1.0))
-(define (pan p)
-  (λ (time channel)
-    (let ([p (* 0.5 (+ 1.0 (@ p)))])
-      (if (zero? channel)
-          (- 1.0 p)
-          p))))
+(define~ (pan p)
+  (let ([p (* 0.5 (+ 1.0 (<~ p)))])
+    (if (zero? channel)
+        (- 1.0 p)
+        p)))
 
 ;; normalizing +~
 (define (mix . args)
@@ -69,7 +68,7 @@
 (define minor-scale '(1 3 4 6 8 9 11))
 
 (define (make-scale base-frequency scale)
-  (map (lambda (x) (* base-frequency (expt chromatic-scale-half-step (- x 1)))) scale))
+  (map (λ (x) (* base-frequency (expt chromatic-scale-half-step (- x 1)))) scale))
 
 ;;
 
@@ -79,36 +78,27 @@
     (do ([i 0 (+ i 1)])
         ((= i n))
       (vector-set! table i (inexact (signal (/ i sample-rate) 0))))
-    (λ (phase)
-      (table-wave table phase))))
+    (cut table-wave table <>)))
 
 ;; (define table-sine-wave (unroll (simple-osc 0.1) 10 96000))
 
 (define (range n)
-  (unfold (λ (x) (<= n x))
-          (λ (x) x)
-          (λ (x) (+ x 1))
-          0))
+  (unfold (cut <= n <>) id (cut + <> 1) 0))
 
 (define (make-overtone amplitudes wave frequency phase0)
   (apply ∑
    (map
     (λ (amplitude factor)
       (*~ amplitude
-          (wave (phase (*~ (constant factor) frequency) phase0))))
+          (wave (phase (*~ (~< factor) frequency) phase0))))
     amplitudes
     (range (length amplitudes)))))
 (define (simple-instrument start end freq a d s r)
-  (let* ([start (live-constant start)]
-         [end (live-constant end)]
-         [freq (live-constant freq)]
+  (let* ([start (live-value start)]
+         [end (live-value end)]
+         [freq (live-value freq)]
          [osc (sine-wave (phase* freq))]
-         [env (adsr start
-                    end
-                    (constant a)
-                    (constant d)
-                    (constant s)
-                    (constant r))])
+         [env (adsr start end (~< a) (~< d) (~< s) (~< r))])
     (*~ env osc)))
 
 (define (make-play-note start end frequency)

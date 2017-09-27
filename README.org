@@ -658,23 +658,49 @@ accepting new connection we'll proceed it in new thread.
    Let's start with =f(time, channel) -> amplitude= then and pray that we didn't
    overlook something important.
 
-   The most basic signal is just a constant one:
+   To ease writing signal creators and spotting them in code let's introduce
+   small helper:
+
+#+NAME: signal
+#+BEGIN_SRC scheme
+  (define-syntax (signal stx)
+    (syntax-case stx ()
+      [(k body ...)
+       (with-syntax ([time (datum->syntax #'k 'time)]
+                     [channel (datum->syntax #'k 'channel)])
+         #'(λ (time channel) body ...))]))
+
+  (alias ~< signal)
+
+  (define-syntax (define-signal stx)
+    (syntax-case stx ()
+      [(k args body ...)
+       (with-syntax ([time (datum->syntax #'k 'time)]
+                     [channel (datum->syntax #'k 'channel)])
+         #'(define args
+             (λ (time channel)
+               body ...)))]))
+
+  (alias define~ define-signal)
+#+END_SRC
+
+   The most basic signal is just a constant one, which is essentially created by
+   our shiny new syntax =(~< amplitude)=. But =~<= is a macro and having
+   function is useful for composition matters:
 
 #+NAME: constant
 #+BEGIN_SRC scheme
-  (define (constant amplitude)
-    (lambda (time channel)
-      amplitude))
+  (define~ (constant amplitude) amplitude)
 #+END_SRC
 
    Then we are able to define =silence= as follows:
 
 #+NAME: silence
 #+BEGIN_SRC scheme
-  (define silence (constant 0.0))
+  (define~ silence 0.0)
 #+END_SRC
 
-   Quick question for self-test: what sound would =(constant 1.0)= produce?
+   Quick question for self-test: what sound would =(~< 1.0)= produce?
 
    For unifying oscillators we are going to define signal which will care about
    converting time to proper phase. When you deal with periodic signals it's
@@ -687,30 +713,36 @@ accepting new connection we'll proceed it in new thread.
    half-interval.
 
 #+BEGIN_SRC scheme
+  (define (mod1 x)
+    (mod x 1.0))
+
   (define (phase frequency phase0)
-    (let ([previous-time 0.0]
-          [previous-phase 0.0])
-      (lambda (time channel)
-        (let* ([frequency (frequency time channel)]
-               [time-delta (- time previous-time)]
-               [phase-delta (* time-delta frequency)]
-               [next-phase (mod (+ previous-phase phase-delta (phase0 time channel)) 1.0)])
-          (set! previous-time time)
-          (set! previous-phase next-phase)
-          next-phase))))
+    (let ([previous-time (make-vector *channels* 0.0)]
+          [previous-phase (make-vector *channels* 0.0)])
+      (~<
+       (let* ([time-delta (- time (vector-ref previous-time channel))]
+              [phase-delta (* time-delta (frequency time channel))]
+              [next-phase (mod1 (+ (vector-ref previous-phase channel) phase-delta))])
+         (vector-set! previous-time channel time)
+         (vector-set! previous-phase channel next-phase)
+         (mod1 (+ next-phase (phase0 time channel)))))))
 
   (define (phase* frequency)
-    (phase frequency (constant 0.0)))
+    (phase frequency silence))
 #+END_SRC
 
    Here we have an opportunity for a small syntactic improvement. The use-case
    when signal is applied to parameters named exactly time and channel in
-   current scope is very common. Let's create a special syntax for it. =@= is
-   chosen as resembling =deref= from Clojure:
+   current scope is very common. Let's create a special syntax for it.
 
 #+NAME: deref-signal
 #+BEGIN_SRC scheme
-  (extend-syntax (@) [(@ signal) (signal time channel)])
+  (define-syntax (<~ stx)
+    (syntax-case stx ()
+      [(k signal)
+       (with-syntax ([time (datum->syntax #'k 'time)]
+                     [channel (datum->syntax #'k 'channel)])
+         #'(signal time channel))]))
 #+END_SRC
 
    Let's use it in our phase signal:
@@ -723,13 +755,13 @@ accepting new connection we'll proceed it in new thread.
   (define (phase frequency phase0)
     (let ([previous-time (make-vector *channels* 0.0)]
           [previous-phase (make-vector *channels* 0.0)])
-      (lambda (time channel)
+      (~<
         (let* ([time-delta (- time (vector-ref previous-time channel))]
-               [phase-delta (* time-delta (@ frequency))]
+               [phase-delta (* time-delta (<~ frequency))]
                [next-phase (mod1 (+ (vector-ref previous-phase channel) phase-delta))])
           (vector-set! previous-time channel time)
           (vector-set! previous-phase channel next-phase)
-          (mod1 (+ next-phase (@ phase0)))))))
+          (mod1 (+ next-phase (<~ phase0)))))))
 
   (define (phase* frequency)
     (phase frequency silence))
@@ -739,47 +771,35 @@ accepting new connection we'll proceed it in new thread.
 
 #+NAME: waveforms
 #+BEGIN_SRC scheme
-  (define (sine-wave phase)
-    (λ (time channel)
-      (sin (* two-pi (@ phase)))))
+  (define~ (sine-wave phase)
+    (sin (* two-pi (<~ phase))))
 
-  (define (cosine-wave phase)
-    (λ (time channel)
-      (cos (* two-pi (@ phase)))))
+  (define~ (cosine-wave phase)
+    (cos (* two-pi (<~ phase))))
 
-  (define (square-wave phase)
-    (λ (time channel)
-      (if (< (@ phase) 0.5)
-          1.0
-          -1.0)))
+  (define~ (square-wave phase)
+    (if (< (<~ phase) 0.5)
+        1.0
+        -1.0))
 
   ;; when `pulse-width' is `(constant 0.5)' it's identical to `square-wave'
-  (define (pulse-wave pulse-width phase)
-    (λ (time channel)
-      (if (< (@ phase) (@ pulse-width))
-          1.0
-          -1.0)))
+  (define~ (pulse-wave pulse-width phase)
+    (if (< (<~ phase) (<~ pulse-width))
+        1.0
+        -1.0))
 
-  (define (tri-wave phase)
-    (λ (time channel)
-      (let ([phase (@ phase)])
-        (if (< phase 0.5)
-            (- (* 4.0 phase) 1.0)
-            (+ (* -4.0 phase) 3.0)))))
+  (define~ (tri-wave phase)
+    (let ([phase (<~ phase)])
+      (if (< phase 0.5)
+          (- (* 4.0 phase) 1.0)
+          (+ (* -4.0 phase) 3.0))))
 
-  (define (saw-wave phase)
-    (λ (time channel)
-      (- (* 2.0 (@ phase)) 1.0)))
-
-  ;; (define (table-wave table phase)
-  ;;   (let ([n (vector-length table)])
-  ;;     (lambda (time channel)
-  ;;       (vector-ref table (exact (truncate (* (@ phase) n)))))))
+  (define~ (saw-wave phase)
+    (- (* 2.0 (<~ phase)) 1.0))
 
   (define (table-wave table phase)
     (let ([n (fixnum->flonum (vector-length table))])
-      (λ (time channel)
-        (vector-ref table (flonum->fixnum (fltruncate (fl* (@ phase) n)))))))
+      (~< (vector-ref table (flonum->fixnum (fltruncate (fl* (<~ phase) n)))))))
 
   (define (random-amplitude)
     (- (random 2.0) 1.0))
@@ -797,18 +817,16 @@ accepting new connection we'll proceed it in new thread.
 
 #+NAME: live-signal
 #+BEGIN_SRC scheme
-  (define (live-signal symbol)
-    (lambda (time channel)
-      ((top-level-value symbol) time channel)))
+  (define~ (live-signal symbol)
+    (<~ (top-level-value symbol)))
 #+END_SRC
 
-   Also useful to have live constant (sorry for oxymoron) counterpart:
+   Also useful to have live value counterpart:
 
-#+NAME: live-constant
+#+NAME: live-value
 #+BEGIN_SRC scheme
-  (define (live-constant symbol)
-    (λ (time channel)
-      (top-level-value symbol)))
+  (define~ (live-value symbol)
+    (top-level-value symbol))
 #+END_SRC
 
    Next step is implementation of signal arithmetics to ease their mixing and
@@ -816,29 +834,25 @@ accepting new connection we'll proceed it in new thread.
 
 #+NAME: signal-operators
 #+BEGIN_SRC scheme
-  (define (signal-sum* x y)
-    (lambda (time channel)
-      (+ (@ x) (@ y))))
+  (define~ (signal-sum* x y)
+    (+ (<~ x) (<~ y)))
 
   (define (signal-sum x . xs)
     (fold-left signal-sum* x xs))
 
-  (define (signal-prod* x y)
-    (lambda (time channel)
-      (* (@ x) (@ y))))
+  (define~ (signal-prod* x y)
+    (* (<~ x) (<~ y)))
 
   (define (signal-prod x . xs)
     (fold-left signal-prod* x xs))
 
   (define (signal-diff x . xs)
     (let ([y (apply signal-sum xs)])
-      (lambda (time channel)
-        (- (@ x) (@ y)))))
+      (~< (- (<~ x) (<~ y)))))
 
   (define (signal-div x . xs)
     (let ([y (apply signal-prod xs)])
-      (lambda (time channel)
-        (/ (@ x) (@ y)))))
+      (~< (/ (<~ x) (<~ y)))))
 
   (alias +~ signal-sum)
   (alias *~ signal-prod)
@@ -855,8 +869,7 @@ accepting new connection we'll proceed it in new thread.
 #+BEGIN_SRC scheme
   (define (compose . fns)
     (define (make-chain fn chain)
-      (lambda args
-        (call-with-values (lambda () (apply fn args)) chain)))
+      (λ args call-with-values (cut apply fn args) chain))
     (reduce make-chain values fns))
 
   (define ∘ compose)
@@ -892,33 +905,32 @@ accepting new connection we'll proceed it in new thread.
 
 #+NAME: adsr
 #+BEGIN_SRC scheme
-  (define (adsr start end attack decay sustain release)
-    (λ (time channel)
-      (let ([end (@ end)])
-        (if (<= end time)
-            ;; NOTE OFF
-            (let ([Δt (- time end)]
-                  [r (@ release)])
-              (if (and (positive? r)
-                       (<= Δt r))
-                  (* (- 1.0 (/ Δt r)) (@ sustain))
-                  0.0))
-            ;; NOTE ON
-            (let ([start (@ start)])
-              (if (<= start time)
-                  (let ([Δt (- time start)]
-                        [a (@ attack)])
-                    (if (and (positive? a)
-                             (<= Δt a))
-                        (/ Δt a)
-                        (let ([Δt (- Δt a)]
-                              [d (@ decay)]
-                              [s (@ sustain)])
-                          (if (and (positive? d)
-                                   (<= Δt d))
-                              (- 1.0 (* (- 1.0 s) (/ Δt d)))
-                              s))))
-                  0.0))))))
+  (define~ (adsr start end attack decay sustain release)
+    (let ([end (<~ end)])
+      (if (<= end time)
+          ;; NOTE OFF
+          (let ([Δt (- time end)]
+                [r (<~ release)])
+            (if (and (positive? r)
+                     (<= Δt r))
+                (* (- 1.0 (/ Δt r)) (<~ sustain))
+                0.0))
+          ;; NOTE ON
+          (let ([start (<~ start)])
+            (if (<= start time)
+                (let ([Δt (- time start)]
+                      [a (<~ attack)])
+                  (if (and (positive? a)
+                           (<= Δt a))
+                      (/ Δt a)
+                      (let ([Δt (- Δt a)]
+                            [d (<~ decay)]
+                            [s (<~ sustain)])
+                        (if (and (positive? d)
+                                 (<= Δt d))
+                            (- 1.0 (* (- 1.0 s) (/ Δt d)))
+                            s))))
+                0.0)))))
 #+END_SRC
 
    Let's test it with simple note play:
@@ -926,16 +938,11 @@ accepting new connection we'll proceed it in new thread.
 #+NAME: play-note
 #+BEGIN_SRC scheme
   (define (simple-instrument start end freq a d s r)
-    (let* ([start (live-constant start)]
-           [end (live-constant end)]
-           [freq (live-constant freq)]
+    (let* ([start (live-value start)]
+           [end (live-value end)]
+           [freq (live-value freq)]
            [osc (sine-wave (phase* freq))]
-           [env (adsr start
-                      end
-                      (constant a)
-                      (constant d)
-                      (constant s)
-                      (constant r))])
+           [env (adsr start end (~< a) (~< d) (~< s) (~< r))])
       (*~ env osc)))
 
   (define (make-play-note start end frequency)
@@ -963,14 +970,13 @@ accepting new connection we'll proceed it in new thread.
 
 #+NAME: impulse
 #+BEGIN_SRC scheme
-  (define (impulse start apex)
-    (λ (time channel)
-      (let ([start (@ start)])
-        (if (<= start time)
-            (let ([h (/ (- time start)
-                        (- (@ apex) start))])
-              (* h (exp (- 1.0 h))))
-            0.0))))
+  (define~ (impulse start apex)
+    (let ([start (<~ start)])
+      (if (<= start time)
+          (let ([h (/ (- time start)
+                      (- (<~ apex) start))])
+            (* h (exp (- 1.0 h))))
+          0.0)))
 #+END_SRC
 
 
@@ -1039,7 +1045,38 @@ accepting new connection we'll proceed it in new thread.
   (collect-generation-radix 2)
   (optimize-level 3)
 
+  ;; symbols
   (alias λ lambda)
+  (define (id x) x)
+
+  ;; threading
+
+  (define-syntax (>>> stx)
+    (syntax-case stx ()
+      [(_ it x) #'x]
+      [(_ it x (y ...) rest ...)
+       #'(let ([it x])
+           (>>> it (y ...) rest ...))]))
+
+  (define-syntax (>> stx)
+    (syntax-case stx ()
+      [(k rest ...)
+       (with-syntax ([^ (datum->syntax #'k '^)])
+         #'(>>> ^ rest ...))]))
+
+  (define-syntax ->
+    (syntax-rules ()
+      [(_ x) x]
+      [(_ x (y z ...) rest ...)
+       (-> (y x z ...) rest ...)]))
+
+  (define-syntax ->>
+    (syntax-rules ()
+      [(_ x) x]
+      [(_ x (y ...) rest ...)
+       (->> (y ... x) rest ...)]))
+
+  ;;
 
   (alias now sound:now)
   (alias schedule scheduler:schedule)
@@ -1075,12 +1112,11 @@ accepting new connection we'll proceed it in new thread.
 
 #+NAME: sandbox
 #+BEGIN_SRC scheme
-  (define (pan p)
-    (λ (time channel)
-      (let ([p (* 0.5 (+ 1.0 (@ p)))])
-        (if (zero? channel)
-            (- 1.0 p)
-            p))))
+  (define~ (pan p)
+    (let ([p (* 0.5 (+ 1.0 (<~ p)))])
+      (if (zero? channel)
+          (- 1.0 p)
+          p)))
 
   ;; normalizing +~
   (define (mix . args)
@@ -1140,7 +1176,7 @@ accepting new connection we'll proceed it in new thread.
   (define minor-scale '(1 3 4 6 8 9 11))
 
   (define (make-scale base-frequency scale)
-    (map (lambda (x) (* base-frequency (expt chromatic-scale-half-step (- x 1)))) scale))
+    (map (λ (x) (* base-frequency (expt chromatic-scale-half-step (- x 1)))) scale))
 
   ;;
 
@@ -1150,23 +1186,19 @@ accepting new connection we'll proceed it in new thread.
       (do ([i 0 (+ i 1)])
           ((= i n))
         (vector-set! table i (inexact (signal (/ i sample-rate) 0))))
-      (λ (phase)
-        (table-wave table phase))))
+      (cut table-wave table <>)))
 
   ;; (define table-sine-wave (unroll (simple-osc 0.1) 10 96000))
 
   (define (range n)
-    (unfold (λ (x) (<= n x))
-            (λ (x) x)
-            (λ (x) (+ x 1))
-            0))
+    (unfold (cut <= n <>) id (cut + <> 1) 0))
 
   (define (make-overtone amplitudes wave frequency phase0)
     (apply ∑
      (map
       (λ (amplitude factor)
         (*~ amplitude
-            (wave (phase (*~ (constant factor) frequency) phase0))))
+            (wave (phase (*~ (~< factor) frequency) phase0))))
       amplitudes
       (range (length amplitudes)))))
 #+END_SRC
@@ -1178,6 +1210,7 @@ accepting new connection we'll proceed it in new thread.
   <<add-library-directories>>
   (import (chezscheme)
           (srfi s1 lists)
+          (srfi s26 cut)
           (prefix (sound) sound:)
           (prefix (scheduler) scheduler:)
           (prefix (repl) repl:))
@@ -1186,13 +1219,14 @@ accepting new connection we'll proceed it in new thread.
   <<basic-math>>
   <<tuner-constants>>
   <<test-tuner>>
+  <<signal>>
   <<constant>>
   <<silence>>
   <<deref-signal>>
   <<phase>>
   <<waveforms>>
   <<live-signal>>
-  <<live-constant>>
+  <<live-value>>
   <<signal-operators>>
   <<oscillator>>
   <<adsr>>

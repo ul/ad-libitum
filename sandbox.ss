@@ -1,73 +1,35 @@
-(alias ! constant)
 (define frequency 440.0)
-
-(define my-freq~ (live-constant 'frequency))
-
+(define my-freq~ (live-value 'frequency))
 (define wave-base 22.0)
+(define wave-base~ (live-value 'wave-base))
 
-(define wave-base~ (live-constant 'wave-base))
-
+(define (make-overtone amplitudes wave frequency phase0)
+  (apply ∑
+   (map
+    (λ (amplitude factor)
+      (*~ amplitude
+          (wave (phase (*~ (~< factor) frequency) phase0))))
+    amplitudes
+    (range (length amplitudes)))))
 (define (~ m)
   (make-overtone
+   (map constant '(0.4 0.2 0.1 0.2))
    (random-choice (list sine-wave square-wave tri-wave saw-wave))
-   (*~ (/~ (! m) wave-base~) my-freq~)
+   (*~ (/~ (~< m) wave-base~) my-freq~)
    silence))
 
 (define my-dsp
   (-~
    (*~ (~ 220.0) (~ 440.0))
    (*~ (~ 222.0) (~ 110.0))
-   (*~ (+~ (~ 110.0) (! 2.0))
-       (+~ (~ 0.05)  (! 1.0)))))
+   (*~ (+~ (~ 110.0) (~< 2.0))
+       (+~ (~ 0.05)  (~< 1.0)))))
+
+(my-dsp 3.1234 0)
 
 (sound:set-dsp! (live-signal 'my-dsp))
 
 ;;;
-
-(define (swap-frequency)
-  (set! my-freq (random-choice (make-scale 440.0 pentatonic-scale))))
-
-(define (be-playful-with-frequency)
-  (swap-frequency)
-  (schedule
-   (+ (now)
-      (random-choice
-       (list
-        second
-        half-second
-        quarter-second
-        quarter-second
-        quarter-second
-        quarter-second
-        ;; 1/8-second
-        ;; 1/8-second
-        ;; 1/8-second
-        ;; 1/8-second
-        ;; 1/16-second
-        ;; 1/16-second
-        ;; 1/16-second
-        ;; 1/16-second
-        ;; 1/32-second
-        ;; 1/32-second
-        )))
-   'be-playful-with-frequency))
-
-(be-playful-with-frequency)
-
-;; (sound:set-dsp! tuner)
-;; (h!)
-
-;;;;;;;;;;;;;;;;;
-
-(define start 0.0)
-(define end 1.0)
-(define frequency 440.0)
-
-(define inst (simple-intsrument 'start 'end 'frequency 0.05 0.01 0.4 0.1))
-(define play-note (make-play-note 'start 'end 'frequency))
-
-(sound:set-dsp! (live-signal 'inst))
-(play-note 440.0 second)
 
 (define (be-playful-with-frequency)
   (play-note (random-choice (make-scale 440.0 pentatonic-scale))
@@ -128,20 +90,20 @@
 (define frequency 440.0)
 
 (define (make-instrument start apex frequency)
-  (let ([start (live-constant start)]
-        [apex (live-constant apex)]
-        [frequency (live-constant frequency)]
-        [lfo (sine-wave (phase* (! 1.5)))])
+  (let ([start (live-value start)]
+        [apex (live-value apex)]
+        [frequency (live-value frequency)]
+        [lfo (sine-wave (phase* (~< 1.5)))])
     (*~ (pan lfo) (tri-wave (phase* frequency)) (impulse start apex))))
 
 (begin
   (define (make-instrument start apex frequency)
-    (let ([start (live-constant start)]
-          [apex (live-constant apex)]
-          [frequency (live-constant frequency)]
-          [lfo (sine-wave (phase* (! 220.0)))])
+    (let ([start (live-value start)]
+          [apex (live-value apex)]
+          [frequency (live-value frequency)]
+          [lfo (sine-wave (phase* (~< 220.0)))])
       (*~ (pan lfo) (live-signal 'my-dsp) (impulse start apex))
-      ;; (*~ #;(pan lfo) (live-signal 'my-dsp) #;(adsr start apex (! 0.1) (! 0.03) (! 1.0) (! 0.02)))
+      ;; (*~ #;(pan lfo) (live-signal 'my-dsp) #;(adsr start apex (~< 0.1) (~< 0.03) (~< 1.0) (~< 0.02)))
       ))
   (define inst (make-instrument 'start 'apex 'frequency)))
 
@@ -159,12 +121,9 @@
 (play-note 440.0 1/16-second)
 
 
-((pan (! -0.5)) 0.123 1	)
-(h!)
-
-(define my-dsp (mix (sine-wave (phase* (live-constant 'frequency)))
-                    (sine-wave (phase* (*~ (! 2.0) (live-constant 'frequency))))
-                    (sine-wave (phase* (+~ (! 2.0) (live-constant 'frequency))))
+(define my-dsp (mix (sine-wave (phase* (live-value 'frequency)))
+                    (sine-wave (phase* (*~ (~< 2.0) (live-value 'frequency))))
+                    (sine-wave (phase* (+~ (~< 2.0) (live-value 'frequency))))
                     (simple-osc 220.0)
                     (simple-osc 110.0)
                     (simple-osc 50.0)
@@ -179,4 +138,17 @@
                               silence))
 
 (sound:set-dsp! (live-signal 'my-dsp))
+(h!)
+
+;;;;;;;
+
+((phase (constant 220.0) silence) 0.123 0)
+
+(define (make-overlap wave freq shift)
+  (mix
+   (wave (phase (constant freq) silence))
+   (wave (phase (constant freq) (constant shift)))))
+
+(define my-dsp
+  (make-overlap saw-wave frequency 0.0123))
 (h!)
