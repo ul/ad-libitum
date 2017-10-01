@@ -586,14 +586,34 @@ accepting new connection we'll proceed it in new thread.
 
 #+NAME: basic-math
 #+BEGIN_SRC scheme
-  (define pi (* (asin 1.0) 2))
-  (define +pi   3.14159265358979323846264)
-  (define +pi/2 1.57079632679489661923132)
-  (define +pi/4  .78539816339744830961566)
-  (define -pi (- +pi))
-  (define -pi/2 (- +pi/2))
-  (define -pi/4 (- +pi/4))
-  (define two-pi (* 2 pi))
+  (define pi (inexact (* (asin 1.0) 2)))
+  (define two-pi (fl* 2.0 pi))
+
+  (define (mod1 x)
+    (mod x 1.0))
+
+  (define (random-amplitude)
+    (- (random 2.0) 1.0))
+
+  (define (midi2frq pitch)
+    (if (<= pitch 0.0) 0.0
+        (* 440.0 (expt 2.0 (/ (- pitch 69.0) 12.0)))))
+
+  (define (frq2midi freq)
+    (if (<= freq 0.0) 0.0
+        (+ (* 12.0 (log (/ freq 440.0) 2.0)) 69.0)))
+
+  (define (bpm2hz bpm)
+    (/ 60.0 bpm))
+
+  (define (hz2bpm hz)
+    (* 60.0 hz))
+
+  (define (amp2db x)
+    (* 20.0 (log x 10)))
+
+  (define (db2amp x)
+    (expt 10.0 (/ x 20.0)))
 #+END_SRC
 
 ** Generators
@@ -703,6 +723,19 @@ accepting new connection we'll proceed it in new thread.
 
    Quick question for self-test: what sound would =(~< 1.0)= produce?
 
+   For composing signal creators we could define a helper, which is the regular
+   function composition!
+
+#+NAME: compose
+#+BEGIN_SRC scheme
+  (define (compose . fns)
+    (define (make-chain fn chain)
+      (λ args (call-with-values (cut apply fn args) chain)))
+    (reduce make-chain values fns))
+
+  (alias ∘ compose)
+#+END_SRC
+
    For unifying oscillators we are going to define signal which will care about
    converting time to proper phase. When you deal with periodic signals it's
    important to distinguish time from phase, because at different frequencies
@@ -714,9 +747,6 @@ accepting new connection we'll proceed it in new thread.
    half-interval.
 
 #+BEGIN_SRC scheme
-  (define (mod1 x)
-    (mod x 1.0))
-
   (define (phasor frequency phase0)
     (let ([previous-time (make-vector *channels* 0.0)]
           [previous-phase (make-vector *channels* 0.0)])
@@ -750,9 +780,6 @@ accepting new connection we'll proceed it in new thread.
 
 #+NAME: phasor
 #+BEGIN_SRC scheme
-  (define (mod1 x)
-    (mod x 1.0))
-
   (define (phasor frequency phase0)
     (let ([previous-time (make-vector *channels* 0.0)]
           [previous-phase (make-vector *channels* 0.0)])
@@ -772,41 +799,53 @@ accepting new connection we'll proceed it in new thread.
 
 #+NAME: waveforms
 #+BEGIN_SRC scheme
-  (define~ (sine-wave phase)
+  (define~ (sine phase)
     (sin (* two-pi (<~ phase))))
 
-  (define~ (cosine-wave phase)
+  (define~ (cosine phase)
     (cos (* two-pi (<~ phase))))
 
-  (define~ (square-wave phase)
+  (define~ (square phase)
     (if (< (<~ phase) 0.5)
         1.0
         -1.0))
 
   ;; when `pulse-width' is `(constant 0.5)' it's identical to `square-wave'
-  (define~ (pulse-wave pulse-width phase)
+  (define~ (pulse pulse-width phase)
     (if (< (<~ phase) (<~ pulse-width))
         1.0
         -1.0))
 
-  (define~ (tri-wave phase)
+  (define~ (tri phase)
     (let ([phase (<~ phase)])
       (if (< phase 0.5)
           (- (* 4.0 phase) 1.0)
           (+ (* -4.0 phase) 3.0))))
 
-  (define~ (saw-wave phase)
+  (define~ (saw phase)
     (- (* 2.0 (<~ phase)) 1.0))
 
-  (define (table-wave table phase)
+  (define (sampler table phase)
     (let ([n (fixnum->flonum (vector-length table))])
       (~< (vector-ref table (flonum->fixnum (fltruncate (fl* (<~ phase) n)))))))
 
-  (define (random-amplitude)
-    (- (random 2.0) 1.0))
+  (define sine* (∘ sine phasor))
+  (define cosine* (∘ cosine phasor))
+  (define square* (∘ square phasor))
+  (define pulse* (∘ pulse phasor))
+  (define tri* (∘ tri phasor))
+  (define saw* (∘ saw phasor))
+  (define (sampler* table frequency phase)
+    (sampler table (phasor frequency phase)))
 
-  (define (random-wave time channel)
-    (random-amplitude))
+  (define sine** (∘ sine phasor*))
+  (define cosine** (∘ cosine phasor*))
+  (define square** (∘ square phasor*))
+  (define pulse** (∘ pulse phasor*))
+  (define tri** (∘ tri phasor*))
+  (define saw** (∘ saw phasor*))
+  (define (sampler** table frequency)
+    (sampler table (phasor* frequency)))
 #+END_SRC
 
    Before we play something interesting with stuff we already defined we need
@@ -863,25 +902,16 @@ accepting new connection we'll proceed it in new thread.
   (define ∑ (cut apply signal-sum <...>))
 
   (define ∏ (cut apply signal-prod <...>))
-#+END_SRC
 
-   For composing signals we could define a helper:
+  ;; normalizing +~
+  (define (mix . args)
+    (*~ (apply +~ args) (constant (inexact (/ (length args))))))
 
-#+NAME: compose
-#+BEGIN_SRC scheme
-  (define (compose . fns)
-    (define (make-chain fn chain)
-      (λ args (call-with-values (cut apply fn args) chain)))
-    (reduce make-chain values fns))
-
-  (alias ∘ compose)
-#+END_SRC
-
-   And use it to define simple osc factory:
-
-#+NAME: oscillator
-#+BEGIN_SRC scheme
-  (define simple-osc (∘ sine-wave phasor* constant))
+  (define~ (pan p)
+    (let ([p (* 0.5 (+ 1.0 (<~ p)))])
+      (if (zero? channel)
+          (- 1.0 p)
+          p)))
 #+END_SRC
 
 ** Envelopes
@@ -1042,53 +1072,12 @@ accepting new connection we'll proceed it in new thread.
 
 #+NAME: ad-libitum-init
 #+BEGIN_SRC scheme
-  ;; voodoo
-  (collect-maximum-generation 254)
-  (collect-generation-radix 2)
-  (optimize-level 3)
-
-  ;; symbols
-  (alias λ lambda)
-  (define (id x) x)
-
-  ;; threading
-
-  (define-syntax (>>> stx)
-    (syntax-case stx ()
-      [(_ it x) #'x]
-      [(_ it x (y ...) rest ...)
-       #'(let ([it x])
-           (>>> it (y ...) rest ...))]))
-
-  (define-syntax (>> stx)
-    (syntax-case stx ()
-      [(k rest ...)
-       (with-syntax ([^ (datum->syntax #'k '^)])
-         #'(>>> ^ rest ...))]))
-
-  (define-syntax ->
-    (syntax-rules ()
-      [(_ x) x]
-      [(_ x (y z ...) rest ...)
-       (-> (y x z ...) rest ...)]))
-
-  (define-syntax ->>
-    (syntax-rules ()
-      [(_ x) x]
-      [(_ x (y ...) rest ...)
-       (->> (y ... x) rest ...)]))
-
-  ;;
-
   (alias now sound:now)
   (alias schedule scheduler:schedule)
   (alias callback schedule)
 
   ;; in case of emergency ☺
   (alias h! sound:hush!)
-
-  ;; TODO make actual
-  (define *channels* 2)
 
   (sound:start)
   (scheduler:init now)
@@ -1100,11 +1089,8 @@ accepting new connection we'll proceed it in new thread.
 
 #+NAME: test-tuner
 #+BEGIN_SRC scheme
-  (define (sine time freq)
-    (sin (* two-pi freq time)))
-
   (define (tuner time channel)
-    (sine time tuner-frequency))
+    (sin (* two-pi time tuner-frequency)))
 
   ;; (sound:set-dsp! tuner)
 #+END_SRC
@@ -1114,36 +1100,6 @@ accepting new connection we'll proceed it in new thread.
 
 #+NAME: sandbox
 #+BEGIN_SRC scheme
-  (define~ (pan p)
-    (let ([p (* 0.5 (+ 1.0 (<~ p)))])
-      (if (zero? channel)
-          (- 1.0 p)
-          p)))
-
-  ;; normalizing +~
-  (define (mix . args)
-    (*~ (apply +~ args) (constant (inexact (/ (length args))))))
-
-  (define (midi2frq pitch)
-    (if (<= pitch 0.0) 0.0
-        (* 440.0 (expt 2.0 (/ (- pitch 69.0) 12.0)))))
-
-  (define (frq2midi freq)
-    (if (<= freq 0.0) 0.0
-        (+ (* 12.0 (log (/ freq 440.0) 2.0)) 69.0)))
-
-  (define (bpm2hz bpm)
-    (/ 60.0 bpm))
-
-  (define (hz2bpm hz)
-    (* 60.0 hz))
-
-  (define (amp2db x)
-    (* 20.0 (log10 x)))
-
-  (define (db2amp x)
-    (expt 10.0 (/ x 20.0)))
-
   (define second 1.0)
   (define half-second 0.5)
   (define quarter-second 0.25)
@@ -1188,7 +1144,7 @@ accepting new connection we'll proceed it in new thread.
       (do ([i 0 (+ i 1)])
           ((= i n))
         (vector-set! table i (inexact (signal (/ i sample-rate) 0))))
-      (cut table-wave table <>)))
+      (cut sampler table <>)))
 
   ;; (define table-sine-wave (unroll (simple-osc 0.1) 10 96000))
 
@@ -1199,7 +1155,7 @@ accepting new connection we'll proceed it in new thread.
     (∑ (map
         (λ (amplitude factor)
           (*~ amplitude
-              (wave (phasor (*~ (~< factor) frequency) phase0))))
+              (wave (osc:phasor (*~ (~< factor) frequency) phase0))))
         amplitudes
         (range (length amplitudes)))))
 #+END_SRC
@@ -1209,44 +1165,146 @@ accepting new connection we'll proceed it in new thread.
 #+NAME: ad-libitum.ss
 #+BEGIN_SRC scheme :tangle ad-libitum.ss :noweb yes :mkdirp yes :paddle no
   <<add-library-directories>>
+
+  (import (ad-libitum common))
+
+  (voodoo)
+
   (import (chezscheme)
           (srfi s1 lists)
           (srfi s26 cut)
           (srfi s42 eager-comprehensions)
-          (prefix (sound) sound:)
-          (prefix (scheduler) scheduler:)
-          (prefix (repl) repl:))
+          (ad-libitum signal)
+          (prefix (ad-libitum oscillator) osc:)
+          (prefix (ad-libitum envelope) env:)
+          (prefix (ad-libitum noise) noise:)
+          (prefix (ad-libitum sound) sound:)
+          (prefix (ad-libitum scheduler) scheduler:)
+          (prefix (ad-libitum repl) repl:)
+          )
+
   <<ad-libitum-init>>
-  <<compose>>
-  <<basic-math>>
   <<tuner-constants>>
   <<test-tuner>>
-  <<signal>>
-  <<constant>>
-  <<silence>>
-  <<deref-signal>>
-  <<phasor>>
-  <<waveforms>>
-  <<live-signal>>
-  <<live-value>>
-  <<signal-operators>>
-  <<oscillator>>
-  <<adsr>>
-  <<impulse>>
 #+END_SRC
 
-#+NAME: violet.ss
-#+BEGIN_SRC scheme :tangle violet.ss :noweb yes :mkdirp yes :paddle no
-  (load "ad-libitum.ss")
+#+NAME: common.ss
+#+BEGIN_SRC scheme :tangle ad-libitum/common.ss :noweb yes :mkdirp yes :paddle no
+  (library (ad-libitum common (1))
+    (export voodoo λ id >>> >> -> ->> compose ∘ pi two-pi mod1 random-amplitude)
+    (import (chezscheme)
+            (only (srfi s1 lists) reduce)
+            (srfi s26 cut))
 
-  <<simplest-oscillator>>
-  <<sandbox>>
-  <<play-note>>
+    (define (voodoo)
+      (collect-maximum-generation 254)
+      (collect-generation-radix 2)
+      (optimize-level 3))
+
+    ;; symbols
+    (alias λ lambda)
+
+    ;; can't live without
+    (define (id x) x)
+
+    <<compose>>
+    <<basic-math>>
+
+    ;; threading
+
+    (define-syntax (>>> stx)
+      (syntax-case stx ()
+        [(_ it x) #'x]
+        [(_ it x (y ...) rest ...)
+         #'(let ([it x])
+             (>>> it (y ...) rest ...))]))
+
+    (define-syntax (>> stx)
+      (syntax-case stx ()
+        [(k rest ...)
+         (with-syntax ([^ (datum->syntax #'k '^)])
+           #'(>>> ^ rest ...))]))
+
+    (define-syntax ->
+      (syntax-rules ()
+        [(_ x) x]
+        [(_ x (y z ...) rest ...)
+         (-> (y x z ...) rest ...)]))
+
+    (define-syntax ->>
+      (syntax-rules ()
+        [(_ x) x]
+        [(_ x (y ...) rest ...)
+         (->> (y ... x) rest ...)])))
+#+END_SRC
+
+#+NAME: signal.ss
+#+BEGIN_SRC scheme :tangle ad-libitum/signal.ss :noweb yes :mkdirp yes :paddle no
+  #!chezscheme
+  (library (ad-libitum signal (1))
+    (export signal ~< <~ define-signal define~ constant silence ∅ live-signal live-value
+            signal-sum signal-prod signal-diff signal-div
+            +~ *~ -~ /~ ∑ ∏ mix pan)
+    (import (chezscheme)
+            (srfi s26 cut)
+            (ad-libitum common))
+    <<signal>>
+    <<constant>>
+    <<silence>>
+    <<deref-signal>>
+    <<live-signal>>
+    <<live-value>>
+    <<signal-operators>>
+    )
+#+END_SRC
+
+#+NAME: oscillator.ss
+#+BEGIN_SRC scheme :tangle ad-libitum/oscillator.ss :noweb yes :mkdirp yes :paddle no
+  (library (ad-libitum oscillator (1))
+    (export phasor phasor*
+            sine cosine square pulse tri saw sampler
+            sine* cosine* square* pulse* tri* saw* sampler*
+            sine** cosine** square** pulse** tri** saw** sampler**
+            )
+    (import (chezscheme)
+            (ad-libitum common)
+            (ad-libitum signal))
+
+    ;; TODO make actual
+    (define *channels* 2)
+
+    <<phasor>>
+    <<waveforms>>
+    )
+#+END_SRC
+
+#+NAME: noise.ss
+#+BEGIN_SRC scheme :tangle ad-libitum/noise.ss :noweb yes :mkdirp yes :paddle no
+  (library (ad-libitum noise (1))
+    (export white)
+    (import (chezscheme)
+            (ad-libitum common)
+            (ad-libitum signal))
+
+    (define~ white (random-amplitude))
+    )
+#+END_SRC
+
+#+NAME: envelope.ss
+#+BEGIN_SRC scheme :tangle ad-libitum/envelope.ss :noweb yes :mkdirp yes :paddle no
+  (library (ad-libitum envelope (1))
+    (export adsr impulse)
+    (import (chezscheme)
+            (ad-libitum common)
+            (ad-libitum signal))
+    <<adsr>>
+    <<impulse>>
+    )
 #+END_SRC
 
 #+NAME: sound.ss
-#+BEGIN_SRC scheme :tangle sound.ss :noweb yes :mkdirp yes :paddle no
-  (library (sound (1))
+#+BEGIN_SRC scheme :tangle ad-libitum/sound.ss :noweb yes :mkdirp yes :paddle no
+  (library (ad-libitum sound (1))
     (export start set-dsp! hush! now)
     (import (chezscheme) (prefix (soundio) soundio:))
     <<try>>
@@ -1255,8 +1313,8 @@ accepting new connection we'll proceed it in new thread.
 #+END_SRC
 
 #+NAME: scheduler.ss
-#+BEGIN_SRC scheme :tangle scheduler.ss :noweb yes :mkdirp yes :paddle no
-  (library (scheduler)
+#+BEGIN_SRC scheme :tangle ad-libitum/scheduler.ss :noweb yes :mkdirp yes :paddle no
+  (library (ad-libitum scheduler (1))
     (export start stop init
             (rename (*schedule* schedule) (*now* now)))
     (import (chezscheme))
@@ -1267,8 +1325,8 @@ accepting new connection we'll proceed it in new thread.
     )
 #+END_SRC
 
-#+BEGIN_SRC scheme :tangle repl.ss :noweb yes :mkdirp yes :paddle no
-  (library (repl (1))
+#+BEGIN_SRC scheme :tangle ad-libitum/repl.ss :noweb yes :mkdirp yes :paddle no
+  (library (ad-libitum repl (1))
     (export start-repl-server)
     (import (chezscheme)
             (prefix (bsd-sockets) sock:))
@@ -1278,4 +1336,13 @@ accepting new connection we'll proceed it in new thread.
     <<accept-connections>>
     <<start-repl-server>>
     )
+#+END_SRC
+
+#+NAME: violet.ss
+#+BEGIN_SRC scheme :tangle violet.ss :noweb yes :mkdirp yes :paddle no
+  (load "ad-libitum.ss")
+
+  <<simplest-oscillator>>
+  <<sandbox>>
+  <<play-note>>
 #+END_SRC

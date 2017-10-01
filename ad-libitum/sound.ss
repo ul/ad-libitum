@@ -1,4 +1,4 @@
-(library (sound (1))
+(library (ad-libitum sound (1))
   (export start set-dsp! hush! now)
   (import (chezscheme) (prefix (soundio) soundio:))
   (define (try thunk default)

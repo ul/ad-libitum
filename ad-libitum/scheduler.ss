@@ -1,4 +1,4 @@
-(library (scheduler)
+(library (ad-libitum scheduler (1))
   (export start stop init
           (rename (*schedule* schedule) (*now* now)))
   (import (chezscheme))

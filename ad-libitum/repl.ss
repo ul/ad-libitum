@@ -1,4 +1,4 @@
-(library (repl (1))
+(library (ad-libitum repl (1))
   (export start-repl-server)
   (import (chezscheme)
           (prefix (bsd-sockets) sock:))

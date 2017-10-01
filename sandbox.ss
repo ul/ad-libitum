@@ -6,9 +6,9 @@
 (define (~ m)
   (make-overtone
    (map constant '(0.4 0.2 0.1 0.2))
-   (random-choice (list sine-wave square-wave tri-wave saw-wave))
+   (random-choice (list osc:sine osc:square osc:tri osc:saw))
    (*~ (/~ (~< m) wave-base~) my-freq~)
-   silence))
+   ∅))
 
 (define my-dsp
   (-~
@@ -20,6 +20,76 @@
 (my-dsp 3.1234 0)
 
 (sound:set-dsp! (live-signal 'my-dsp))
+(h!)
+
+;;;
+
+(define start 0.0)
+(define apex 1.0)
+(define frequency 440.0)
+
+(begin
+  (define (make-instrument start apex frequency)
+    (let ([start (live-value start)]
+          [apex (live-value apex)]
+          [frequency (live-value frequency)]
+          [lfo (osc:sine** (~< 220.0))])
+      (*~ (pan lfo) (live-signal 'my-dsp) (env:impulse start apex))
+      ;; (*~ #;(pan lfo) (live-signal 'my-dsp) #;(adsr start apex (~< 0.1) (~< 0.03) (~< 1.0) (~< 0.02)))
+      ))
+  (define inst (make-instrument 'start 'apex 'frequency)))
+
+(define (make-play-note start apex frequency)
+  (λ (freq dur)
+    (set-top-level-value! frequency freq)
+    (set-top-level-value! start (now))
+    (set-top-level-value! apex (+ (now) dur))))
+
+(define play-note (make-play-note 'start 'apex 'frequency))
+
+(sound:set-dsp! (live-signal 'inst))
+
+(play-note 440.0 1/16-second)
+
+(define my-dsp (mix (osc:sine** (live-value 'frequency))
+                    (osc:sine** (*~ (~< 2.0) (live-value 'frequency)))
+                    (osc:sine** (+~ (~< 2.0) (live-value 'frequency)))
+                    (osc:sine** (~< 220.0))
+                    (osc:sine** (~< 110.0))
+                    (osc:sine** (~< 50.0))
+                    (osc:sine** (~< 432.0))
+                    ;; (osc:sine** (~< 441.0))
+                    ))
+
+(define my-dsp (make-overtone (map constant '(0.4 0.2 0.1 0.1))
+                              osc:sine
+                              (constant 440.0)
+                              silence))
+
+(sound:set-dsp! (live-signal 'my-dsp))
+(sound:set-dsp! tuner)
+(h!)
+
+;;;;;;;
+
+(define (make-overlap wave freq shift)
+  (mix
+   (wave (osc:phasor (constant freq) silence))
+   (wave (osc:phasor (constant freq) (constant shift)))))
+
+(define my-dsp
+  (make-overlap osc:saw frequency 0.0123))
+(h!)
+
+(define my-dsp (osc:pulse (osc:phasor (~< 440.0) ∅)
+                           (*~ (~< 0.5)
+                               (+~ (osc:pulse*
+                                    (osc:phasor* (~< 432.0))
+                                    (osc:sine** (~< 1.0)))
+                                   (~< 1.0)))))
+(define my-dsp (osc:sine* (~< 440.0) (osc:square** (~< 220.0))))
+(sound:set-dsp! (live-signal 'my-dsp))
+(h!)
 
 ;;;
 
@@ -76,83 +146,3 @@
 (be-playful-with-frequency)
 
 ;;;;
-
-(define start 0.0)
-(define apex 1.0)
-(define frequency 440.0)
-
-(define (make-instrument start apex frequency)
-  (let ([start (live-value start)]
-        [apex (live-value apex)]
-        [frequency (live-value frequency)]
-        [lfo (sine-wave (phasor* (~< 1.5)))])
-    (*~ (pan lfo) (tri-wave (phasor* frequency)) (impulse start apex))))
-
-(begin
-  (define (make-instrument start apex frequency)
-    (let ([start (live-value start)]
-          [apex (live-value apex)]
-          [frequency (live-value frequency)]
-          [lfo (sine-wave (phasor* (~< 220.0)))])
-      (*~ (pan lfo) (live-signal 'my-dsp) (impulse start apex))
-      ;; (*~ #;(pan lfo) (live-signal 'my-dsp) #;(adsr start apex (~< 0.1) (~< 0.03) (~< 1.0) (~< 0.02)))
-      ))
-  (define inst (make-instrument 'start 'apex 'frequency)))
-
-(define (make-play-note start apex frequency)
-  (λ (freq dur)
-    (set-top-level-value! frequency freq)
-    (set-top-level-value! start (now))
-    (set-top-level-value! apex (+ (now) dur))))
-
-(define play-note (make-play-note 'start 'apex 'frequency))
-
-(sound:set-dsp! (live-signal 'inst))
-(sound:set-dsp! (live-signal 'my-dsp))
-(sound:set-dsp! tuner)
-(play-note 440.0 1/16-second)
-
-
-(define my-dsp (mix (sine-wave (phasor* (live-value 'frequency)))
-                    (sine-wave (phasor* (*~ (~< 2.0) (live-value 'frequency))))
-                    (sine-wave (phasor* (+~ (~< 2.0) (live-value 'frequency))))
-                    (simple-osc 220.0)
-                    (simple-osc 110.0)
-                    (simple-osc 50.0)
-                    (simple-osc 432.0)
-                    ;; (simple-osc 441.0)
-                    ))
-
-
-(define my-dsp (make-overtone (map constant '(0.4 0.2 0.1 0.1))
-                              sine-wave
-                              (constant 440.0)
-                              silence))
-
-(sound:set-dsp! (live-signal 'my-dsp))
-(sound:set-dsp! tuner)
-(h!)
-
-;;;;;;;
-
-(define (make-overlap wave freq shift)
-  (mix
-   (wave (phasor (constant freq) silence))
-   (wave (phasor (constant freq) (constant shift)))))
-
-(define my-dsp
-  (make-overlap saw-wave frequency 0.0123))
-(h!)
-
-(alias ∅ silence)
-(define my-dsp (pulse-wave (phasor (~< 440.0) ∅)
-                           (*~ (~< 0.5)
-                               (+~ (pulse-wave
-                                    (phasor* (~< 432.0))
-                                    (simple-osc 1.0))
-                                   (~< 1.0)))))
-(define my-dsp (sine-wave (phasor (~< 440.0)
-                                  (square-wave (phasor (~< 220.0) ∅)
-                                               ))))
-(sound:set-dsp! (live-signal 'my-dsp))
-(h!)

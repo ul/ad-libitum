@@ -4,36 +4,6 @@
   (if (> (mod time tuner-period) tuner-half-period)
       1.0
       -1.0))
-(define~ (pan p)
-  (let ([p (* 0.5 (+ 1.0 (<~ p)))])
-    (if (zero? channel)
-        (- 1.0 p)
-        p)))
-
-;; normalizing +~
-(define (mix . args)
-  (*~ (apply +~ args) (constant (inexact (/ (length args))))))
-
-(define (midi2frq pitch)
-  (if (<= pitch 0.0) 0.0
-      (* 440.0 (expt 2.0 (/ (- pitch 69.0) 12.0)))))
-
-(define (frq2midi freq)
-  (if (<= freq 0.0) 0.0
-      (+ (* 12.0 (log (/ freq 440.0) 2.0)) 69.0)))
-
-(define (bpm2hz bpm)
-  (/ 60.0 bpm))
-
-(define (hz2bpm hz)
-  (* 60.0 hz))
-
-(define (amp2db x)
-  (* 20.0 (log10 x)))
-
-(define (db2amp x)
-  (expt 10.0 (/ x 20.0)))
-
 (define second 1.0)
 (define half-second 0.5)
 (define quarter-second 0.25)
@@ -78,7 +48,7 @@
     (do ([i 0 (+ i 1)])
         ((= i n))
       (vector-set! table i (inexact (signal (/ i sample-rate) 0))))
-    (cut table-wave table <>)))
+    (cut sampler table <>)))
 
 ;; (define table-sine-wave (unroll (simple-osc 0.1) 10 96000))
 
@@ -89,7 +59,7 @@
   (∑ (map
       (λ (amplitude factor)
         (*~ amplitude
-            (wave (phasor (*~ (~< factor) frequency) phase0))))
+            (wave (osc:phasor (*~ (~< factor) frequency) phase0))))
       amplitudes
       (range (length amplitudes)))))
 (define (simple-instrument start end freq a d s r)
