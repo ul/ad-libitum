@@ -1,0 +1,61 @@
+(import
+ (chezscheme)
+ (srfi s42 eager-comprehensions)
+ (srfi s64 testing)
+ (ad-libitum common)
+ (ad-libitum signal)
+ )
+
+
+(define (test-on-test-end-simple runner)
+  (let ((log (test-runner-aux-value runner))
+        (kind (test-result-ref runner 'result-kind)))
+    (if (memq kind '(fail xpass))
+        (let* ((results (test-result-alist runner))
+               (source-file (assq 'source-file results))
+               (source-line (assq 'source-line results))
+               (test-name (assq 'test-name results))
+               (expected-value (assq 'expected-value results))
+               (actual-value (assq 'actual-value results))
+               )
+          (if (or source-file source-line)
+              (begin
+                (if source-file (display (cdr source-file)))
+                (display ":")
+                (if source-line (display (cdr source-line)))
+                (display ": ")))
+          (display (if (eq? kind 'xpass) "XPASS" "FAIL"))
+          (if test-name
+              (begin
+                (display " ")
+                (display (cdr test-name))))
+          (newline)
+          (printf "Expected: ~s\r\nActual: ~s\r\n"
+                  (cdr expected-value)
+                  (cdr actual-value))))
+    (if (output-port? log)
+        (begin
+          (display "Test end:" log)
+          (newline log)
+          (let loop ((list (test-result-alist runner)))
+            (if (pair? list)
+                (let ((pair (car list)))
+                  ;; Write out properties not written out by on-test-begin.
+                  (if (not (memq (car pair)
+                                 '(test-name source-file source-line source-form)))
+                      (%test-write-result1 pair log))
+                  (loop (cdr list)))))))))
+
+(define (my-test-runner)
+  (let ((runner (test-runner-simple)))
+    (test-runner-reset runner)
+    ;; (test-runner-on-group-begin! runner test-on-group-begin-simple)
+    ;; (test-runner-on-group-end! runner test-on-group-end-simple)
+    ;; (test-runner-on-final! runner test-on-final-simple)
+    ;; (test-runner-on-test-begin! runner test-on-test-begin-simple)
+    (test-runner-on-test-end! runner test-on-test-end-simple)
+    ;; (test-runner-on-bad-count! runner test-on-bad-count-simple)
+    ;; (test-runner-on-bad-end-name! runner test-on-bad-end-name-simple)
+    runner))
+
+(test-runner-current (my-test-runner))
