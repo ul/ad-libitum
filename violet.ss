@@ -66,7 +66,7 @@
   (let* ([start (live-value start)]
          [end (live-value end)]
          [freq (live-value freq)]
-         [osc (sine-wave (phasor* freq))]
+         [osc (sine-wave (phasor freq))]
          [env (adsr start end (~< a) (~< d) (~< s) (~< r))])
     (*~ env osc)))
 

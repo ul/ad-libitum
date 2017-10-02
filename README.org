@@ -757,9 +757,6 @@ accepting new connection we'll proceed it in new thread.
          (vector-set! previous-time channel time)
          (vector-set! previous-phase channel next-phase)
          (mod1 (+ next-phase (phase0 time channel)))))))
-
-  (define (phasor* frequency)
-    (phasor frequency ∅))
 #+END_SRC
 
    Here we have an opportunity for a small syntactic improvement. The use-case
@@ -780,19 +777,19 @@ accepting new connection we'll proceed it in new thread.
 
 #+NAME: phasor
 #+BEGIN_SRC scheme
-  (define (phasor frequency phase0)
-    (let ([previous-time (make-vector *channels* 0.0)]
-          [previous-phase (make-vector *channels* 0.0)])
-      (~<
-        (let* ([time-delta (- time (vector-ref previous-time channel))]
-               [phase-delta (* time-delta (<~ frequency))]
-               [next-phase (mod1 (+ (vector-ref previous-phase channel) phase-delta))])
-          (vector-set! previous-time channel time)
-          (vector-set! previous-phase channel next-phase)
-          (mod1 (+ next-phase (<~ phase0)))))))
-
-  (define (phasor* frequency)
-    (phasor frequency ∅))
+  (define phasor
+    (case-lambda
+      [(frequency phase0)
+       (let ([previous-time (make-vector *channels* 0.0)]
+             [previous-phase (make-vector *channels* 0.0)])
+         (~<
+          (let* ([time-delta (- time (vector-ref previous-time channel))]
+                 [phase-delta (* time-delta (<~ frequency))]
+                 [next-phase (mod1 (+ (vector-ref previous-phase channel) phase-delta))])
+            (vector-set! previous-time channel time)
+            (vector-set! previous-phase channel next-phase)
+            (mod1 (+ next-phase (<~ phase0))))))]
+      [(frequency) (phasor frequency ∅)]))
 #+END_SRC
 
    Then basic waveforms are defined in very clean way:
@@ -832,20 +829,14 @@ accepting new connection we'll proceed it in new thread.
   (define sine* (∘ sine phasor))
   (define cosine* (∘ cosine phasor))
   (define square* (∘ square phasor))
-  (define pulse* (∘ pulse phasor))
+  (define pulse*
+    (case-lambda
+      [(pulse-width frequency phase0)
+       (pulse pulse-width (phasor frequency phase0))]
+      [(pulse-width frequency)
+       (pulse* pulse-width frequency ∅)]))
   (define tri* (∘ tri phasor))
   (define saw* (∘ saw phasor))
-  (define (sampler* table frequency phase)
-    (sampler table (phasor frequency phase)))
-
-  (define sine** (∘ sine phasor*))
-  (define cosine** (∘ cosine phasor*))
-  (define square** (∘ square phasor*))
-  (define pulse** (∘ pulse phasor*))
-  (define tri** (∘ tri phasor*))
-  (define saw** (∘ saw phasor*))
-  (define (sampler** table frequency)
-    (sampler table (phasor* frequency)))
 #+END_SRC
 
    Before we play something interesting with stuff we already defined we need
@@ -973,7 +964,7 @@ accepting new connection we'll proceed it in new thread.
     (let* ([start (live-value start)]
            [end (live-value end)]
            [freq (live-value freq)]
-           [osc (sine-wave (phasor* freq))]
+           [osc (sine-wave (phasor freq))]
            [env (adsr start end (~< a) (~< d) (~< s) (~< r))])
       (*~ env osc)))
 
@@ -1261,10 +1252,9 @@ accepting new connection we'll proceed it in new thread.
 #+NAME: oscillator.ss
 #+BEGIN_SRC scheme :tangle ad-libitum/oscillator.ss :noweb yes :mkdirp yes :paddle no
   (library (ad-libitum oscillator (1))
-    (export phasor phasor*
+    (export phasor
             sine cosine square pulse tri saw sampler
-            sine* cosine* square* pulse* tri* saw* sampler*
-            sine** cosine** square** pulse** tri** saw** sampler**
+            sine* cosine* square* pulse* tri* saw*
             )
     (import (chezscheme)
             (ad-libitum common)

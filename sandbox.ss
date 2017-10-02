@@ -33,8 +33,8 @@
     (let ([start (live-value start)]
           [apex (live-value apex)]
           [frequency (live-value frequency)]
-          [lfo (osc:sine** (~< 220.0))])
-      (*~ (pan lfo) (live-signal 'my-dsp) (env:impulse start apex))
+          [lfo (osc:sine* (~< 220.0))])
+      (*~ #;(pan lfo) (live-signal 'my-dsp) (env:impulse start apex))
       ;; (*~ #;(pan lfo) (live-signal 'my-dsp) #;(adsr start apex (~< 0.1) (~< 0.03) (~< 1.0) (~< 0.02)))
       ))
   (define inst (make-instrument 'start 'apex 'frequency)))
@@ -51,20 +51,25 @@
 
 (play-note 440.0 1/16-second)
 
-(define my-dsp (mix (osc:sine** (live-value 'frequency))
-                    (osc:sine** (*~ (~< 2.0) (live-value 'frequency)))
-                    (osc:sine** (+~ (~< 2.0) (live-value 'frequency)))
-                    (osc:sine** (~< 220.0))
-                    (osc:sine** (~< 110.0))
-                    (osc:sine** (~< 50.0))
-                    (osc:sine** (~< 432.0))
-                    ;; (osc:sine** (~< 441.0))
+(define my-dsp (mix (osc:sine* (live-value 'frequency))
+                    (osc:sine* (*~ (~< 2.0) (live-value 'frequency)))
+                    (osc:sine* (+~ (~< 2.0) (live-value 'frequency)))
+                    (osc:sine* (~< 220.0))
+                    (osc:sine* (~< 110.0))
+                    (osc:sine* (~< 50.0))
+                    (osc:sine* (~< 432.0))
+                    (osc:sine* (~< 441.0))
                     ))
 
-(define my-dsp (make-overtone (map constant '(0.4 0.2 0.1 0.1))
-                              osc:sine
-                              (constant 440.0)
-                              silence))
+(define~ (amp2phase s)
+  (* 0.5 (+ 1.0 (<~ s))))
+
+(define my-dsp (*~
+                (pan (osc:sine* (~< 5.0)))
+                (make-overtone (map constant '(0.2 0.1 0.2 0.1 0.4))
+                               (cut osc:pulse (amp2phase (osc:sine* (~< 2.0))) <>)
+                               my-freq~
+                               silence)))
 
 (sound:set-dsp! (live-signal 'my-dsp))
 (sound:set-dsp! tuner)
@@ -82,23 +87,22 @@
 (h!)
 
 (define my-dsp (osc:pulse (osc:phasor (~< 440.0) ∅)
-                           (*~ (~< 0.5)
-                               (+~ (osc:pulse*
-                                    (osc:phasor* (~< 432.0))
-                                    (osc:sine** (~< 1.0)))
-                                   (~< 1.0)))))
-(define my-dsp (osc:sine* (~< 440.0) (osc:square** (~< 220.0))))
+                          (*~ (~< 0.5)
+                              (+~ (osc:pulse*
+                                   (osc:phasor (~< 432.0))
+                                   (osc:sine* (~< 1.0)))
+                                  (~< 1.0)))))
 (sound:set-dsp! (live-signal 'my-dsp))
 (h!)
 
 ;;;
 
 (define (be-playful-with-frequency)
-  (play-note (random-choice (make-scale 440.0 pentatonic-scale))
+  (play-note (random-choice (make-scale 220.0 pentatonic-scale))
              (random-choice
               (list
                second
-               ;; half-second
+               half-second
                ;; quarter-second
                ;; quarter-second
                ;; quarter-second
@@ -107,24 +111,29 @@
                ;; 1/8-second
                ;; 1/8-second
                ;; 1/8-second
-               1/16-second
-               1/16-second
-               1/16-second
-               1/16-second
-               1/32-second
-               1/32-second
-               1/32-second
-               1/32-second
-               1/32-second
-               1/32-second
-               1/32-second
-               1/32-second
+               ;; 1/16-second
+               ;; 1/16-second
+               ;; 1/16-second
+               ;; 1/16-second
+               ;; 1/32-second
+               ;; 1/32-second
+               ;; 1/32-second
+               ;; 1/32-second
+               ;; 1/32-second
+               ;; 1/32-second
+               ;; 1/32-second
+               ;; 1/32-second
                )))
   (schedule
    (+ (now)
       (random-choice
        (list
+        (* 2.0 second)
         second
+        second
+        half-second
+        half-second
+        half-second
         half-second
         ;; quarter-second
         ;; quarter-second

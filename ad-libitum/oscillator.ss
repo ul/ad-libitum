@@ -1,8 +1,7 @@
 (library (ad-libitum oscillator (1))
-  (export phasor phasor*
+  (export phasor
           sine cosine square pulse tri saw sampler
-          sine* cosine* square* pulse* tri* saw* sampler*
-          sine** cosine** square** pulse** tri** saw** sampler**
+          sine* cosine* square* pulse* tri* saw*
           )
   (import (chezscheme)
           (ad-libitum common)
@@ -11,19 +10,19 @@
   ;; TODO make actual
   (define *channels* 2)
 
-  (define (phasor frequency phase0)
-    (let ([previous-time (make-vector *channels* 0.0)]
-          [previous-phase (make-vector *channels* 0.0)])
-      (~<
-        (let* ([time-delta (- time (vector-ref previous-time channel))]
-               [phase-delta (* time-delta (<~ frequency))]
-               [next-phase (mod1 (+ (vector-ref previous-phase channel) phase-delta))])
-          (vector-set! previous-time channel time)
-          (vector-set! previous-phase channel next-phase)
-          (mod1 (+ next-phase (<~ phase0)))))))
-  
-  (define (phasor* frequency)
-    (phasor frequency ∅))
+  (define phasor
+    (case-lambda
+      [(frequency phase0)
+       (let ([previous-time (make-vector *channels* 0.0)]
+             [previous-phase (make-vector *channels* 0.0)])
+         (~<
+          (let* ([time-delta (- time (vector-ref previous-time channel))]
+                 [phase-delta (* time-delta (<~ frequency))]
+                 [next-phase (mod1 (+ (vector-ref previous-phase channel) phase-delta))])
+            (vector-set! previous-time channel time)
+            (vector-set! previous-phase channel next-phase)
+            (mod1 (+ next-phase (<~ phase0))))))]
+      [(frequency) (phasor frequency ∅)]))
   (define~ (sine phase)
     (sin (* two-pi (<~ phase))))
   
@@ -57,18 +56,12 @@
   (define sine* (∘ sine phasor))
   (define cosine* (∘ cosine phasor))
   (define square* (∘ square phasor))
-  (define pulse* (∘ pulse phasor))
+  (define pulse*
+    (case-lambda
+      [(pulse-width frequency phase0)
+       (pulse pulse-width (phasor frequency phase0))]
+      [(pulse-width frequency)
+       (pulse* pulse-width frequency ∅)]))
   (define tri* (∘ tri phasor))
   (define saw* (∘ saw phasor))
-  (define (sampler* table frequency phase)
-    (sampler table (phasor frequency phase)))
-  
-  (define sine** (∘ sine phasor*))
-  (define cosine** (∘ cosine phasor*))
-  (define square** (∘ square phasor*))
-  (define pulse** (∘ pulse phasor*))
-  (define tri** (∘ tri phasor*))
-  (define saw** (∘ saw phasor*))
-  (define (sampler** table frequency)
-    (sampler table (phasor* frequency)))
   )
