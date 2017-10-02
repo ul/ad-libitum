@@ -69,7 +69,7 @@
   
   ;; normalizing +~
   (define (mix . args)
-    (*~ (apply +~ args) (constant (inexact (/ (length args))))))
+    (*~ (∑ args) (constant (inexact (/ (length args))))))
   
   (define~ (pan p)
     (let ([p (* 0.5 (+ 1.0 (<~ p)))])

@@ -7,7 +7,9 @@
   (define (voodoo)
     (collect-maximum-generation 254)
     (collect-generation-radix 2)
-    (optimize-level 3))
+    ;; (eval-when (compile) (optimize-level 3))
+    (optimize-level 2)
+    )
 
   ;; symbols
   (alias λ lambda)

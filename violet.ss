@@ -62,6 +62,27 @@
             (wave (osc:phasor (*~ (~< factor) frequency) phase0))))
       amplitudes
       (range (length amplitudes)))))
+
+(define (fix-duration duration)
+  (let* ([start (now)]
+         [end (+ start duration)])
+    (values (~< start) (~< end))))
+
+(define~ (amp2phase s)
+  (* 0.5 (+ 1.0 (<~ s))))
+
+(define (make-polyphony n make-voice)
+  (let ([voices (make-vector n ∅)]
+        [cursor 0])
+    (let ([signal
+           (apply mix (list-ec (: i n) (~< (<~ (vector-ref voices i)))))]
+          [play-note
+           (λ args
+             (let ([voice (apply make-voice args)])
+               (vector-set! voices cursor voice)
+               (set! cursor (mod (+ cursor 1) n))
+               voice))])
+      (values signal play-note))))
 (define (simple-instrument start end freq a d s r)
   (let* ([start (live-value start)]
          [end (live-value end)]
