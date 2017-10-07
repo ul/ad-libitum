@@ -7,22 +7,31 @@
           (ad-libitum common)
           (ad-libitum signal))
 
-  ;; TODO make actual
-  (define *channels* 2)
-
+  (define (dynamic-phasor frequency phase0)
+    (let ([previous-phase (make-vector *channels* 0.0)])
+      (~<
+       (let* ([phase-delta (/ (<~ frequency) *sample-rate*)]
+              [next-phase (-> (vector-ref previous-phase channel)
+                              (+ phase-delta)
+                              (mod 1.0))])
+         (vector-set! previous-phase channel next-phase)
+         (-> (<~ phase0)
+             (+ next-phase)
+             (mod 1.0))))))
+  
+  (define~ (static-phasor frequency phase0)
+    (-> time (* frequency) (+ phase0) (mod 1.0)))
+  
   (define phasor
     (case-lambda
       [(frequency phase0)
-       (let ([previous-time (make-vector *channels* 0.0)]
-             [previous-phase (make-vector *channels* 0.0)])
-         (~<
-          (let* ([time-delta (- time (vector-ref previous-time channel))]
-                 [phase-delta (* time-delta (<~ frequency))]
-                 [next-phase (mod1 (+ (vector-ref previous-phase channel) phase-delta))])
-            (vector-set! previous-time channel time)
-            (vector-set! previous-phase channel next-phase)
-            (mod1 (+ next-phase (<~ phase0))))))]
-      [(frequency) (phasor frequency ∅)]))
+       (if (number? frequency)
+           (static-phasor frequency phase0)
+           (dynamic-phasor frequency phase0))]
+      [(frequency)
+       (if (number? frequency)
+           (static-phasor frequency 0.0)
+           (dynamic-phasor frequency ∅))]))
   (define~ (sine phase)
     (sin (* two-pi (<~ phase))))
   

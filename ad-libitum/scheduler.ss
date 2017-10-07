@@ -46,11 +46,11 @@
   
   (define (simple-scheduler now)
     (make-scheduler
-     now                                  ; now
-     heap/empty                           ; queue
-     (make-time 'time-duration 1000000 0) ; resolution
-     #f                                   ; thread
-     (make-mutex)                         ; mutex
+     now                                   ; now
+     heap/empty                            ; queue
+     (make-time 'time-duration 10000000 0) ; resolution
+     #f                                    ; thread
+     (make-mutex)                          ; mutex
      ))
   (define-record-type event
     (fields time f args))

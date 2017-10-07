@@ -1,8 +1,17 @@
 (library (ad-libitum common (1))
-  (export voodoo λ id >>> >> -> ->> compose ∘ pi two-pi mod1 random-amplitude)
+  (export voodoo λ id >>> >> -> ->>
+          compose ∘ pi two-pi
+          random-amplitude
+          midi2frq frq2midi
+          amp2db db2amp
+          *channels* *sample-rate*)
   (import (chezscheme)
           (only (srfi s1 lists) reduce)
-          (srfi s26 cut))
+          (srfi s26 cut)
+          (prefix (ad-libitum sound) sound:))
+
+  (alias *sample-rate* sound:*sample-rate*)
+  (alias *channels* sound:*channels*)
 
   (define (voodoo)
     (collect-maximum-generation 254)
@@ -39,12 +48,6 @@
   (define (frq2midi freq)
     (if (<= freq 0.0) 0.0
         (+ (* 12.0 (log (/ freq 440.0) 2.0)) 69.0)))
-  
-  (define (bpm2hz bpm)
-    (/ 60.0 bpm))
-  
-  (define (hz2bpm hz)
-    (* 60.0 hz))
   
   (define (amp2db x)
     (* 20.0 (log x 10)))

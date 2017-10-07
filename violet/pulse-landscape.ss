@@ -10,9 +10,9 @@
 
 (define my-dsp
   (*~
-   (pan (osc:sine* (~< 5000.0))) ;; PLAY
+   (pan (osc:sine* 5000.0)) ;; PLAY
    (make-overtone (map constant '(0.2 0.1 0.2 0.1 0.4)) ;; PLAY
-                  (cut osc:pulse (amp2phase (osc:sine* (~< 200.0))) <>) ;; PLAY
+                  (cut osc:pulse (amp2phase (osc:sine* 200.0)) <>) ;; PLAY
                   frequency~
                   silence)))
 

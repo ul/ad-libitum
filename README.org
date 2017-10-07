@@ -139,6 +139,8 @@ licensing.
   (define (silence time channel) 0.0)
 
   (define *sound-out* (soundio:open-default-out-stream silence))
+  (define *sample-rate* (soundio:sound-out-sample-rate *sound-out*))
+  (define *channels* (soundio:sound-out-channel-count *sound-out*))
 
   (define (now) (soundio:sound-out-time *sound-out*))
 
@@ -197,11 +199,11 @@ licensing.
 
   (define (simple-scheduler now)
     (make-scheduler
-     now                                  ; now
-     heap/empty                           ; queue
-     (make-time 'time-duration 1000000 0) ; resolution
-     #f                                   ; thread
-     (make-mutex)                         ; mutex
+     now                                   ; now
+     heap/empty                            ; queue
+     (make-time 'time-duration 10000000 0) ; resolution
+     #f                                    ; thread
+     (make-mutex)                          ; mutex
      ))
 #+END_SRC
 
@@ -603,12 +605,6 @@ accepting new connection we'll proceed it in new thread.
     (if (<= freq 0.0) 0.0
         (+ (* 12.0 (log (/ freq 440.0) 2.0)) 69.0)))
 
-  (define (bpm2hz bpm)
-    (/ 60.0 bpm))
-
-  (define (hz2bpm hz)
-    (* 60.0 hz))
-
   (define (amp2db x)
     (* 20.0 (log x 10)))
 
@@ -777,19 +773,31 @@ accepting new connection we'll proceed it in new thread.
 
 #+NAME: phasor
 #+BEGIN_SRC scheme
+  (define (dynamic-phasor frequency phase0)
+    (let ([previous-phase (make-vector *channels* 0.0)])
+      (~<
+       (let* ([phase-delta (/ (<~ frequency) *sample-rate*)]
+              [next-phase (-> (vector-ref previous-phase channel)
+                              (+ phase-delta)
+                              (mod 1.0))])
+         (vector-set! previous-phase channel next-phase)
+         (-> (<~ phase0)
+             (+ next-phase)
+             (mod 1.0))))))
+
+  (define~ (static-phasor frequency phase0)
+    (-> time (* frequency) (+ phase0) (mod 1.0)))
+
   (define phasor
     (case-lambda
       [(frequency phase0)
-       (let ([previous-time (make-vector *channels* 0.0)]
-             [previous-phase (make-vector *channels* 0.0)])
-         (~<
-          (let* ([time-delta (- time (vector-ref previous-time channel))]
-                 [phase-delta (* time-delta (<~ frequency))]
-                 [next-phase (mod1 (+ (vector-ref previous-phase channel) phase-delta))])
-            (vector-set! previous-time channel time)
-            (vector-set! previous-phase channel next-phase)
-            (mod1 (+ next-phase (<~ phase0))))))]
-      [(frequency) (phasor frequency ∅)]))
+       (if (number? frequency)
+           (static-phasor frequency phase0)
+           (dynamic-phasor frequency phase0))]
+      [(frequency)
+       (if (number? frequency)
+           (static-phasor frequency 0.0)
+           (dynamic-phasor frequency ∅))]))
 #+END_SRC
 
    Then basic waveforms are defined in very clean way:
@@ -1094,13 +1102,6 @@ accepting new connection we'll proceed it in new thread.
 
 #+NAME: sandbox
 #+BEGIN_SRC scheme
-  (define second 1.0)
-  (define half-second 0.5)
-  (define quarter-second 0.25)
-  (define 1/8-second 0.125)
-  (define 1/16-second 0.0625)
-  (define 1/32-second 0.03125)
-
   (define (random-choice list)
     (list-ref list (random (length list))))
 
@@ -1142,16 +1143,13 @@ accepting new connection we'll proceed it in new thread.
 
   ;; (define table-sine-wave (unroll (simple-osc 0.1) 10 96000))
 
-  (define (range n)
-    (list-ec (: i n) i))
-
   (define (make-overtone amplitudes wave frequency phase0)
     (∑ (map
         (λ (amplitude factor)
           (*~ amplitude
               (wave (osc:phasor (*~ (~< factor) frequency) phase0))))
         amplitudes
-        (range (length amplitudes)))))
+        (iota (length amplitudes)))))
 
   (define (fix-duration duration)
     (let* ([start (now)]
@@ -1173,6 +1171,60 @@ accepting new connection we'll proceed it in new thread.
                  (set! cursor (mod (+ cursor 1) n))
                  voice))])
         (values signal play-note))))
+
+  (define (time->beat time bpm)
+    (-> time (* bpm) (/ 60) (round)))
+
+  (define (beat->time beat bpm)
+    (-> beat (* 60) (/ bpm)))
+
+  (define (next-beat time bpm)
+    (beat->time (+ 1 (time->beat time bpm)) bpm))
+
+  (define (metro bpm . args)
+    (apply schedule (next-beat (now) bpm) args))
+
+  (define *bpm* 60.0)
+
+  (define (*metro* . args)
+    (apply metro *bpm* args))
+
+  (define (play-pattern pattern sound beat)
+    (let ([n (length pattern)])
+      (when (positive? (list-ref pattern (mod (exact beat) n)))
+        (sound))))
+
+  (define~ (delay t s)
+    (let ([t (<~ t)])
+      (s  (- time t) channel)))
+
+  (define *max-line-duration* 1)
+
+  (define (feedback delay feedback signal)
+    (let ([line-size (* *max-line-duration* *sample-rate*)]
+          [lines (make-vector *channels*)]
+          [cursor -1])
+      (do ([i 0 (+ i 1)])
+          ((= i *channels*) 0)
+        (vector-set! lines i (make-vector line-size 0.0)))
+      (~<
+       (when(zero? channel)
+         (set! cursor (mod (+ cursor 1) line-size)))
+       (let ([line (vector-ref lines channel)]
+             [x (<~ signal)]
+             [delay (flonum->fixnum (round (* (<~ delay) *sample-rate*)))]
+             [feedback (<~ feedback)])
+         (let* ([i (mod (+ line-size (- cursor delay)) line-size)]
+                [y (vector-ref line i)]
+                [z (+ x (* feedback y))])
+           (vector-set! line cursor z)
+           z)))))
+
+  (define (simple-lpf s)
+    (let ([values (make-vector *channels* 0.0)])
+      (~<
+       (vector-set! values channel (* 0.5 (+ (<~ s) (vector-ref values channel))))
+       (vector-ref values channel))))
 #+END_SRC
 
 * Files :noexport:
@@ -1206,10 +1258,19 @@ accepting new connection we'll proceed it in new thread.
 #+NAME: common.ss
 #+BEGIN_SRC scheme :tangle ad-libitum/common.ss :noweb yes :mkdirp yes :paddle no
   (library (ad-libitum common (1))
-    (export voodoo λ id >>> >> -> ->> compose ∘ pi two-pi mod1 random-amplitude)
+    (export voodoo λ id >>> >> -> ->>
+            compose ∘ pi two-pi
+            random-amplitude
+            midi2frq frq2midi
+            amp2db db2amp
+            *channels* *sample-rate*)
     (import (chezscheme)
             (only (srfi s1 lists) reduce)
-            (srfi s26 cut))
+            (srfi s26 cut)
+            (prefix (ad-libitum sound) sound:))
+
+    (alias *sample-rate* sound:*sample-rate*)
+    (alias *channels* sound:*channels*)
 
     (define (voodoo)
       (collect-maximum-generation 254)
@@ -1286,9 +1347,6 @@ accepting new connection we'll proceed it in new thread.
             (ad-libitum common)
             (ad-libitum signal))
 
-    ;; TODO make actual
-    (define *channels* 2)
-
     <<phasor>>
     <<waveforms>>
     )
@@ -1321,7 +1379,7 @@ accepting new connection we'll proceed it in new thread.
 #+NAME: sound.ss
 #+BEGIN_SRC scheme :tangle ad-libitum/sound.ss :noweb yes :mkdirp yes :paddle no
   (library (ad-libitum sound (1))
-    (export start set-dsp! hush! now)
+    (export start set-dsp! hush! now *sample-rate* *channels*)
     (import (chezscheme) (prefix (soundio) soundio:))
     <<try>>
     <<sound>>

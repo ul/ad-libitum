@@ -4,13 +4,6 @@
   (if (> (mod time tuner-period) tuner-half-period)
       1.0
       -1.0))
-(define second 1.0)
-(define half-second 0.5)
-(define quarter-second 0.25)
-(define 1/8-second 0.125)
-(define 1/16-second 0.0625)
-(define 1/32-second 0.03125)
-
 (define (random-choice list)
   (list-ref list (random (length list))))
 
@@ -52,16 +45,13 @@
 
 ;; (define table-sine-wave (unroll (simple-osc 0.1) 10 96000))
 
-(define (range n)
-  (list-ec (: i n) i))
-
 (define (make-overtone amplitudes wave frequency phase0)
   (∑ (map
       (λ (amplitude factor)
         (*~ amplitude
             (wave (osc:phasor (*~ (~< factor) frequency) phase0))))
       amplitudes
-      (range (length amplitudes)))))
+      (iota (length amplitudes)))))
 
 (define (fix-duration duration)
   (let* ([start (now)]
@@ -83,6 +73,60 @@
                (set! cursor (mod (+ cursor 1) n))
                voice))])
       (values signal play-note))))
+
+(define (time->beat time bpm)
+  (-> time (* bpm) (/ 60) (round)))
+
+(define (beat->time beat bpm)
+  (-> beat (* 60) (/ bpm)))
+
+(define (next-beat time bpm)
+  (beat->time (+ 1 (time->beat time bpm)) bpm))
+
+(define (metro bpm . args)
+  (apply schedule (next-beat (now) bpm) args))
+
+(define *bpm* 60.0)
+
+(define (*metro* . args)
+  (apply metro *bpm* args))
+
+(define (play-pattern pattern sound beat)
+  (let ([n (length pattern)])
+    (when (positive? (list-ref pattern (mod (exact beat) n)))
+      (sound))))
+
+(define~ (delay t s)
+  (let ([t (<~ t)])
+    (s  (- time t) channel)))
+
+(define *max-line-duration* 1)
+
+(define (feedback delay feedback signal)
+  (let ([line-size (* *max-line-duration* *sample-rate*)]
+        [lines (make-vector *channels*)]
+        [cursor -1])
+    (do ([i 0 (+ i 1)])
+        ((= i *channels*) 0)
+      (vector-set! lines i (make-vector line-size 0.0)))
+    (~<
+     (when(zero? channel)
+       (set! cursor (mod (+ cursor 1) line-size)))
+     (let ([line (vector-ref lines channel)]
+           [x (<~ signal)]
+           [delay (flonum->fixnum (round (* (<~ delay) *sample-rate*)))]
+           [feedback (<~ feedback)])
+       (let* ([i (mod (+ line-size (- cursor delay)) line-size)]
+              [y (vector-ref line i)]
+              [z (+ x (* feedback y))])
+         (vector-set! line cursor z)
+         z)))))
+
+(define (simple-lpf s)
+  (let ([values (make-vector *channels* 0.0)])
+    (~<
+     (vector-set! values channel (* 0.5 (+ (<~ s) (vector-ref values channel))))
+     (vector-ref values channel))))
 (define (simple-instrument start end freq a d s r)
   (let* ([start (live-value start)]
          [end (live-value end)]
