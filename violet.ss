@@ -102,7 +102,7 @@
 
 (define *max-line-duration* 1)
 
-(define (feedback delay feedback signal)
+(define (echo delay feedback signal)
   (let ([line-size (* *max-line-duration* *sample-rate*)]
         [lines (make-vector *channels*)]
         [cursor -1])
@@ -122,11 +122,89 @@
          (vector-set! line cursor z)
          z)))))
 
-(define (simple-lpf s)
-  (let ([values (make-vector *channels* 0.0)])
+(define (lpf-frequency->α frequency)
+  (let ([k (* frequency *sample-angular-period*)])
+    (/ k (+ k 1))))
+
+(define (hpf-frequency->α frequency)
+  (let ([k (* frequency *sample-angular-period*)])
+    (/ (+ k 1))))
+
+(define (lpf frequency x)
+  (let ([ys (make-vector *channels* 0.0)])
     (~<
-     (vector-set! values channel (* 0.5 (+ (<~ s) (vector-ref values channel))))
-     (vector-ref values channel))))
+     (let* ([y-1 (vector-ref ys channel)]
+            [α (lpf-frequency->α (<~ frequency))])
+       (let ([y (+ y-1 (* α (- (<~ x) y-1)))])
+         (vector-set! ys channel y)
+         y)))))
+
+(define (hpf frequency x)
+  (let ([xs (make-vector *channels* 0.0)]
+        [ys (make-vector *channels* 0.0)])
+    (~<
+     (let ([x-1 (vector-ref xs channel)]
+           [y-1 (vector-ref ys channel)]
+           [x (<~ x)]
+           [α (hpf-frequency->α (<~ frequency))])
+       (let ([y (* α (+ y-1 (- x x-1)))])
+         (vector-set! xs channel x)
+         (vector-set! ys channel y)
+         y)))))
+
+(define (make-lpf-coefficients sin-ω cos-ω α)
+  (let ([b0 (* 0.5 (- 1.0 cos-ω))])
+    (values
+     b0             ;; b0
+     (- 1.0 cos-ω)  ;; b1
+     b0             ;; b2
+     (+ 1.0 α)      ;; a0
+     (* -2.0 cos-ω) ;; a1
+     (- 1.0 α)      ;; a2
+     )))
+
+(define (make-hpf-coefficients sin-ω cos-ω α)
+  (let ([b0 (* 0.5 (+ 1.0 cos-ω))])
+    (values
+     b0             ;; b0
+     (- -1.0 cos-ω) ;; b1
+     b0             ;; b2
+     (+ 1.0 α)      ;; a0
+     (* -2.0 cos-ω) ;; a1
+     (- 1.0 α)      ;; a2
+     )))
+
+(define (make-biquad-filter make-coefficients)
+  (λ (Q frequency x)
+    (let ([xs-1 (make-vector *channels* 0.0)]
+          [xs-2 (make-vector *channels* 0.0)]
+          [ys-1 (make-vector *channels* 0.0)]
+          [ys-2 (make-vector *channels* 0.0)])
+      (~<
+       (let ([x-1 (vector-ref xs-1 channel)]
+             [x-2 (vector-ref xs-2 channel)]
+             [y-1 (vector-ref ys-1 channel)]
+             [y-2 (vector-ref ys-2 channel)]
+             [x (<~ x)]
+             [Q (<~ Q)]
+             [frequency (<~ frequency)])
+         (let* ([ω (* frequency *sample-angular-period*)]
+                [sin-ω (sin ω)]
+                [cos-ω (cos ω)]
+                [α (/ sin-ω (* 2.0 Q))])
+           (let-values ([(b0 b1 b2 a0 a1 a2) (make-coefficients sin-ω cos-ω α)])
+             (let ([y (-
+                       (+
+                        (* (/ b0 a0) x)
+                        (* (/ b1 a0) x-1)
+                        (* (/ b2 a0) x-2))
+                       (* (/ a1 a0) y-1)
+                       (* (/ a2 a0) y-2))])
+               (vector-set! xs-1 channel x)
+               (vector-set! xs-2 channel x-1)
+               (vector-set! ys-1 channel y)
+               (vector-set! ys-2 channel y-1)
+               y))))))))
 (define (simple-instrument start end freq a d s r)
   (let* ([start (live-value start)]
          [end (live-value end)]

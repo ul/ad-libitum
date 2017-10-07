@@ -1,10 +1,11 @@
+#!chezscheme
 (library (ad-libitum common (1))
   (export voodoo λ id >>> >> -> ->>
-          compose ∘ pi two-pi
+          compose ∘ pi two-pi π 2π
           random-amplitude
           midi2frq frq2midi
           amp2db db2amp
-          *channels* *sample-rate*)
+          *channels* *sample-rate* *sample-angular-period*)
   (import (chezscheme)
           (only (srfi s1 lists) reduce)
           (srfi s26 cut)
@@ -34,6 +35,8 @@
   (alias ∘ compose)
   (define pi (inexact (* (asin 1.0) 2)))
   (define two-pi (fl* 2.0 pi))
+  (alias π pi)
+  (alias 2π two-pi)
   
   (define (mod1 x)
     (mod x 1.0))
@@ -54,6 +57,8 @@
   
   (define (db2amp x)
     (expt 10.0 (/ x 20.0)))
+
+  (define *sample-angular-period* (/ 2π *sample-rate*))
 
   ;; threading
 

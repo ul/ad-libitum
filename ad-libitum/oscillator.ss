@@ -1,3 +1,4 @@
+#!chezscheme
 (library (ad-libitum oscillator (1))
   (export phasor
           sine cosine square pulse tri saw sampler
@@ -33,10 +34,10 @@
            (static-phasor frequency 0.0)
            (dynamic-phasor frequency ∅))]))
   (define~ (sine phase)
-    (sin (* two-pi (<~ phase))))
+    (sin (* 2π (<~ phase))))
   
   (define~ (cosine phase)
-    (cos (* two-pi (<~ phase))))
+    (cos (* 2π (<~ phase))))
   
   (define~ (square phase)
     (if (< (<~ phase) 0.5)

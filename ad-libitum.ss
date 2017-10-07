@@ -43,6 +43,6 @@
 (define tuner-period (/ 1.0 tuner-frequency))
 (define tuner-half-period (/ tuner-period 2.0))
 (define (tuner time channel)
-  (sin (* two-pi time tuner-frequency)))
+  (sin (* 2π time tuner-frequency)))
 
 ;; (sound:set-dsp! tuner)
