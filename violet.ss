@@ -74,6 +74,17 @@
                voice))])
       (values signal play-note))))
 
+(define (make-static-polyphony n make-voice)
+  ;; (make-voice) -> (list signal play-note)
+  (let ([voices (list-ec (: i n) (make-voice))]
+        [cursor 0])
+    (let ([signal (apply mix (map first voices))]
+          [play-note
+           (λ args
+             (apply (second (vector-ref voices cursor)) args)
+             (set! cursor (mod (+ cursor 1) n)))])
+      (values signal play-note))))
+
 (define (time->beat time bpm)
   (-> time (* bpm) (/ 60) (round)))
 

@@ -201,7 +201,7 @@ licensing.
     (make-scheduler
      now                                   ; now
      heap/empty                            ; queue
-     (make-time 'time-duration 10000000 0) ; resolution
+     (make-time 'time-duration 5000000 0)  ; resolution
      #f                                    ; thread
      (make-mutex)                          ; mutex
      ))
@@ -231,9 +231,13 @@ licensing.
 
 #+NAME: schedule
 #+BEGIN_SRC scheme
-  (define (schedule scheduler event)
-    (with-mutex (scheduler-mutex scheduler)
-                (scheduler-queue-set! scheduler (heap/insert event-time event (scheduler-queue scheduler)))))
+  (define schedule
+    (case-lambda
+      [(scheduler event)
+       (with-mutex (scheduler-mutex scheduler)
+                   (scheduler-queue-set! scheduler (heap/insert event-time event (scheduler-queue scheduler))))]
+      [(scheduler t f . args)
+       (schedule scheduler (make-event t f args))]))
 #+END_SRC
 
   Processing events is just executing any expired events' functions and removing
@@ -257,7 +261,11 @@ licensing.
            (scheduler-queue-set! scheduler (heap/delete-min event-time (scheduler-queue scheduler)))
            (try
             (lambda ()
-              (apply (top-level-value (event-f event)) (event-args event)))
+              (let ([f (event-f event)])
+                (apply (if (symbol? f)
+                           (top-level-value f)
+                           f)
+                       (event-args event))))
             #f)
            (next-event))))))
 #+END_SRC
@@ -283,7 +291,7 @@ licensing.
     (fork-thread
      (lambda ()
        (scheduler-thread-set! scheduler (get-thread-id))
-       (let* ([zero-duration (make-time 'time-duration 0 0)]
+       (let* ([zero-duration (make-time 'time-duration 1000 0)]
               [resolution (scheduler-resolution scheduler)]
               [fl-resolution (inexact (+ (time-second resolution)
                                          (* 1e-9 (time-nanosecond resolution))))])
@@ -295,7 +303,7 @@ licensing.
                (let* ([day (time-difference (current-time) clock)]
                       [night (time-difference resolution day)])
                  (when (time<? zero-duration night)
-                   (sleep night))
+                   (usleep 0 (div (time-nanosecond night) 1000)))
                  (loop)))))))))
 #+END_SRC
 
@@ -431,7 +439,7 @@ accepting new connection we'll proceed it in new thread.
     (fork-thread
      (lambda ()
        (let loop ()
-         (sleep polling-cycle)
+         (usleep 0 polling-usec)
          (let-values ([(socket address) (sock:accept-socket repl-server-socket)])
            (when socket
              (printf "New REPL @ ~s\r\n" (sock:internet-address->string address))
@@ -450,7 +458,7 @@ accepting new connection we'll proceed it in new thread.
 
 #+NAME: spawn-remote-repl-options
 #+BEGIN_SRC scheme
-  (define polling-cycle (make-time 'time-duration 50000000 0))
+  (define polling-usec 50000)
   (define max-chunk-length 65536)
   (define code-tx (make-transcoder (utf-8-codec) (eol-style lf) (error-handling-mode replace)))
 #+END_SRC
@@ -494,7 +502,7 @@ accepting new connection we'll proceed it in new thread.
 #+NAME: repl-loop
 #+BEGIN_SRC scheme
   (let loop ()
-    (sleep polling-cycle)
+    (usleep 0 polling-usec)
     (let-values ([(request address)
                   (sock:receive-from-socket socket max-chunk-length)])
       (if (and request (positive? (bytevector-length request)))
@@ -744,19 +752,6 @@ accepting new connection we'll proceed it in new thread.
    =frequency= signal and =phase0= signal and return signal of phase in =[0, 1)=
    half-interval.
 
-#+BEGIN_SRC scheme
-  (define (phasor frequency phase0)
-    (let ([previous-time (make-vector *channels* 0.0)]
-          [previous-phase (make-vector *channels* 0.0)])
-      (~<
-       (let* ([time-delta (- time (vector-ref previous-time channel))]
-              [phase-delta (* time-delta (frequency time channel))]
-              [next-phase (mod1 (+ (vector-ref previous-phase channel) phase-delta))])
-         (vector-set! previous-time channel time)
-         (vector-set! previous-phase channel next-phase)
-         (mod1 (+ next-phase (phase0 time channel)))))))
-#+END_SRC
-
    Here we have an opportunity for a small syntactic improvement. The use-case
    when signal is applied to parameters named exactly time and channel in
    current scope is very common. Let's create a special syntax for it.
@@ -775,6 +770,7 @@ accepting new connection we'll proceed it in new thread.
 
 #+NAME: phasor
 #+BEGIN_SRC scheme
+  ;; TODO make it robust to multiple calls per sample?
   (define (dynamic-phasor frequency phase0)
     (let ([previous-phase (make-vector *channels* 0.0)])
       (~<
@@ -1026,6 +1022,61 @@ accepting new connection we'll proceed it in new thread.
 ** Scales
 ** Rhythm
 ** MIDI
+
+#+NAME: midi
+#+BEGIN_SRC scheme
+  <<try>>
+
+  (define (*on-note-on* timestamp data1 data2 channel)
+    (printf "~s:~s:~s:~s\r\n" timestamp data1 data2 channel))
+
+  (define (*on-note-off* timestamp data1 data2 channel)
+    (printf "~s:~s:~s:~s\r\n" timestamp data1 data2 channel))
+
+  (define (*on-cc* timestamp data1 data2 channel)
+    (printf "~s:~s:~s:~s\r\n" timestamp data1 data2 channel))
+
+  (define (set-note-on! f) (set! *on-note-on* f))
+  (define (set-note-off! f) (set! *on-note-off* f))
+  (define (set-cc! f) (set! *on-cc* f))
+
+  (define *polling-cycle* 5e-3)
+
+  (define *stream* #f)
+  (define *scheduler* #f)
+
+  (define (process-event timestamp type data1 data2 channel)
+    (cond
+      [(= type pm:*midi-note-on*) (*on-note-on* timestamp data1 data2 channel)]
+      [(= type pm:*midi-note-off*) (*on-note-off* timestamp data1 data2 channel)]
+      [(= type pm:*midi-cc*) (*on-cc* timestamp data1 data2 channel)]
+      [else (printf "Unsupported event type: ~s\r\n" type)]))
+
+  (define (make-safe-process-event timestamp)
+    (lambda args
+      (try
+       (lambda () (apply process-event timestamp args))
+       #f)))
+
+  (define (process-events)
+    (let ([timestamp (scheduler:now *scheduler*)])
+      (pm:read *stream* (make-safe-process-event timestamp))
+      (scheduler:schedule *scheduler*
+                          (+ timestamp *polling-cycle*)
+                          process-events)))
+
+  (define (start now)
+    (pm:init)
+    (set! *stream* (pm:open-input 0))
+    (set! *scheduler* (scheduler:simple-scheduler now))
+    (scheduler:start-scheduler *scheduler*)
+    (process-events))
+
+  (define (stop)
+    (scheduler:stop-scheduler *scheduler*)
+    (pm:close *stream*)
+    (pm:terminate))
+#+END_SRC
 * Misc
 
   =try= is a little helper to guard function calls in vital loops: dsp,
@@ -1069,6 +1120,7 @@ accepting new connection we'll proceed it in new thread.
 
   (add-library-directories
    "./chez-soundio"
+   "./chez-portmidi"
    "./chez-sockets")
 #+END_SRC
 
@@ -1077,11 +1129,13 @@ accepting new connection we'll proceed it in new thread.
 #+NAME: ad-libitum-init
 #+BEGIN_SRC scheme
   (alias now sound:now)
-  (alias schedule scheduler:schedule)
+  (alias schedule scheduler:*schedule*)
   (alias callback schedule)
 
   ;; in case of emergency ☺
   (alias h! sound:hush!)
+
+  (alias play! sound:set-dsp!)
 
   (sound:start)
   (scheduler:init now)
@@ -1172,6 +1226,17 @@ accepting new connection we'll proceed it in new thread.
                  (vector-set! voices cursor voice)
                  (set! cursor (mod (+ cursor 1) n))
                  voice))])
+        (values signal play-note))))
+
+  (define (make-static-polyphony n make-voice)
+    ;; (make-voice) -> (list signal play-note)
+    (let ([voices (list-ec (: i n) (make-voice))]
+          [cursor 0])
+      (let ([signal (apply mix (map first voices))]
+            [play-note
+             (λ args
+               (apply (second (vector-ref voices cursor)) args)
+               (set! cursor (mod (+ cursor 1) n)))])
         (values signal play-note))))
 
   (define (time->beat time bpm)
@@ -1328,6 +1393,7 @@ accepting new connection we'll proceed it in new thread.
           (prefix (ad-libitum sound) sound:)
           (prefix (ad-libitum scheduler) scheduler:)
           (prefix (ad-libitum repl) repl:)
+          (prefix (ad-libitum midi) midi:)
           )
 
   <<ad-libitum-init>>
@@ -1474,8 +1540,11 @@ accepting new connection we'll proceed it in new thread.
 #+BEGIN_SRC scheme :tangle ad-libitum/scheduler.ss :noweb yes :mkdirp yes :paddle no
   (library (ad-libitum scheduler (1))
     (export start stop init
-            (rename (*schedule* schedule) (*now* now)))
-    (import (chezscheme))
+            start-scheduler stop-scheduler schedule now
+            simple-scheduler
+            *schedule* *now*)
+    (import (chezscheme)
+            (only (soundio) usleep))
     <<try>>
     <<pairing-heap>>
     <<scheduler>>
@@ -1487,6 +1556,7 @@ accepting new connection we'll proceed it in new thread.
   (library (ad-libitum repl (1))
     (export start-repl-server)
     (import (chezscheme)
+            (only (soundio) usleep)
             (prefix (bsd-sockets) sock:))
     <<try-display>>
     <<open-socket>>
@@ -1503,6 +1573,17 @@ accepting new connection we'll proceed it in new thread.
   <<simplest-oscillator>>
   <<sandbox>>
   <<play-note>>
+#+END_SRC
+
+#+NAME: midi.ss
+#+BEGIN_SRC scheme :tangle ad-libitum/midi.ss :noweb yes :paddle no
+  (library (ad-libitum midi (1))
+    (export start stop set-note-on! set-note-off! set-cc!)
+    (import (chezscheme)
+            (prefix (ad-libitum scheduler) scheduler:)
+            (prefix (portmidi) pm:))
+    <<midi>>
+    )
 #+END_SRC
 
 ** Tests

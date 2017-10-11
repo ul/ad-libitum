@@ -1,6 +1,7 @@
 (library (ad-libitum repl (1))
   (export start-repl-server)
   (import (chezscheme)
+          (only (soundio) usleep)
           (prefix (bsd-sockets) sock:))
   (define (try-display thunk default)
     (call/cc
@@ -19,7 +20,7 @@
       (sock:listen-socket socket 1024)
       socket
       ))
-  (define polling-cycle (make-time 'time-duration 50000000 0))
+  (define polling-usec 50000)
   (define max-chunk-length 65536)
   (define code-tx (make-transcoder (utf-8-codec) (eol-style lf) (error-handling-mode replace)))
   (define (spawn-remote-repl socket address)
@@ -36,7 +37,7 @@
               )
          (send-prompt)
          (let loop ()
-           (sleep polling-cycle)
+           (usleep 0 polling-usec)
            (let-values ([(request address)
                          (sock:receive-from-socket socket max-chunk-length)])
              (if (and request (positive? (bytevector-length request)))
@@ -72,7 +73,7 @@
     (fork-thread
      (lambda ()
        (let loop ()
-         (sleep polling-cycle)
+         (usleep 0 polling-usec)
          (let-values ([(socket address) (sock:accept-socket repl-server-socket)])
            (when socket
              (printf "New REPL @ ~s\r\n" (sock:internet-address->string address))

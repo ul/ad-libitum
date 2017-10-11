@@ -1,7 +1,10 @@
 (library (ad-libitum scheduler (1))
   (export start stop init
-          (rename (*schedule* schedule) (*now* now)))
-  (import (chezscheme))
+          start-scheduler stop-scheduler schedule now
+          simple-scheduler
+          *schedule* *now*)
+  (import (chezscheme)
+          (only (soundio) usleep))
   (define (try thunk default)
     (call/cc
      (lambda (k)
@@ -48,7 +51,7 @@
     (make-scheduler
      now                                   ; now
      heap/empty                            ; queue
-     (make-time 'time-duration 10000000 0) ; resolution
+     (make-time 'time-duration 5000000 0) ; resolution
      #f                                    ; thread
      (make-mutex)                          ; mutex
      ))
@@ -63,18 +66,26 @@
            (scheduler-queue-set! scheduler (heap/delete-min event-time (scheduler-queue scheduler)))
            (try
             (lambda ()
-              (apply (top-level-value (event-f event)) (event-args event)))
+              (let ([f (event-f event)])
+                (apply (if (symbol? f)
+                           (top-level-value f)
+                           f)
+                       (event-args event))))
             #f)
            (next-event))))))
   (define (now scheduler) ((scheduler-now scheduler)))
-  (define (schedule scheduler event)
-    (with-mutex (scheduler-mutex scheduler)
-                (scheduler-queue-set! scheduler (heap/insert event-time event (scheduler-queue scheduler)))))
+  (define schedule
+    (case-lambda
+      [(scheduler event)
+       (with-mutex (scheduler-mutex scheduler)
+                   (scheduler-queue-set! scheduler (heap/insert event-time event (scheduler-queue scheduler))))]
+      [(scheduler t f . args)
+       (schedule scheduler (make-event t f args))]))
   (define (start-scheduler scheduler)
     (fork-thread
      (lambda ()
        (scheduler-thread-set! scheduler (get-thread-id))
-       (let* ([zero-duration (make-time 'time-duration 0 0)]
+       (let* ([zero-duration (make-time 'time-duration 1000 0)]
               [resolution (scheduler-resolution scheduler)]
               [fl-resolution (inexact (+ (time-second resolution)
                                          (* 1e-9 (time-nanosecond resolution))))])
@@ -86,7 +97,7 @@
                (let* ([day (time-difference (current-time) clock)]
                       [night (time-difference resolution day)])
                  (when (time<? zero-duration night)
-                   (sleep night))
+                   (usleep 0 (div (time-nanosecond night) 1000)))
                  (loop)))))))))
   (define (stop-scheduler scheduler)
     (scheduler-thread-set! scheduler #f))

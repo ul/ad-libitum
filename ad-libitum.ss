@@ -9,6 +9,7 @@
 
 (add-library-directories
  "./chez-soundio"
+ "./chez-portmidi"
  "./chez-sockets")
 
 (import (ad-libitum common))
@@ -26,14 +27,17 @@
         (prefix (ad-libitum sound) sound:)
         (prefix (ad-libitum scheduler) scheduler:)
         (prefix (ad-libitum repl) repl:)
+        (prefix (ad-libitum midi) midi:)
         )
 
 (alias now sound:now)
-(alias schedule scheduler:schedule)
+(alias schedule scheduler:*schedule*)
 (alias callback schedule)
 
 ;; in case of emergency ☺
 (alias h! sound:hush!)
+
+(alias play! sound:set-dsp!)
 
 (sound:start)
 (scheduler:init now)

@@ -8,6 +8,7 @@
           (ad-libitum common)
           (ad-libitum signal))
 
+  ;; TODO make it robust to multiple calls per sample?
   (define (dynamic-phasor frequency phase0)
     (let ([previous-phase (make-vector *channels* 0.0)])
       (~<

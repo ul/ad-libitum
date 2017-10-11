@@ -4,3 +4,6 @@
 [submodule "chez-sockets"]
 	path = chez-sockets
 	url = https://github.com/ul/chez-sockets
+[submodule "chez-portmidi"]
+	path = chez-portmidi
+	url = https://github.com/ul/chez-portmidi.git
