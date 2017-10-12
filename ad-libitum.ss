@@ -30,7 +30,15 @@
         (prefix (ad-libitum midi) midi:)
         )
 
-(alias now sound:now)
+(sound:start)
+
+(define *sound-start-time* (current-time))
+
+(define (now)
+  (let ([Δt (time-difference (current-time) *sound-start-time*)])
+    (inexact (+ (time-second Δt)
+                (* 1e-9 (time-nanosecond Δt))))))
+
 (alias schedule scheduler:*schedule*)
 (alias callback schedule)
 
@@ -39,7 +47,6 @@
 
 (alias play! sound:set-dsp!)
 
-(sound:start)
 (scheduler:init now)
 (scheduler:start)
 (repl:start-repl-server)

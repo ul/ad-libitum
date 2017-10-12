@@ -5,12 +5,17 @@
           *schedule* *now*)
   (import (chezscheme)
           (only (soundio) usleep))
-  (define (try thunk default)
-    (call/cc
-     (lambda (k)
-       (with-exception-handler
-           (lambda (x) (k default))
-         thunk))))
+  ;; (define (try thunk default)
+  ;;   (call/cc
+  ;;    (lambda (k)
+  ;;      (with-exception-handler
+  ;;          (lambda (x) (k default))
+  ;;        thunk))))
+  
+  (define-syntax try
+    (syntax-rules ()
+      [(_ default e1 e2 ...)
+       (guard (x [else default]) e1 e2 ...)]))
   ;; we do some #f-punning and don't throw on empty heaps
   
   (define heap/empty '())
@@ -51,7 +56,7 @@
     (make-scheduler
      now                                   ; now
      heap/empty                            ; queue
-     (make-time 'time-duration 5000000 0) ; resolution
+     (make-time 'time-duration 5000000 0)  ; resolution
      #f                                    ; thread
      (make-mutex)                          ; mutex
      ))
@@ -65,13 +70,12 @@
          (when (and event (<= (event-time event) t))
            (scheduler-queue-set! scheduler (heap/delete-min event-time (scheduler-queue scheduler)))
            (try
-            (lambda ()
-              (let ([f (event-f event)])
-                (apply (if (symbol? f)
-                           (top-level-value f)
-                           f)
-                       (event-args event))))
-            #f)
+            #f
+            (let ([f (event-f event)])
+              (apply (if (symbol? f)
+                         (top-level-value f)
+                         f)
+                     (event-args event))))
            (next-event))))))
   (define (now scheduler) ((scheduler-now scheduler)))
   (define schedule

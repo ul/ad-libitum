@@ -1,26 +1,14 @@
 (library (ad-libitum sound (1))
-  (export start set-dsp! hush! now *sample-rate* *channels*)
+  (export start set-dsp! hush! *sample-rate* *channels*)
   (import (chezscheme) (prefix (soundio) soundio:))
-  (define (try thunk default)
-    (call/cc
-     (lambda (k)
-       (with-exception-handler
-           (lambda (x) (k default))
-         thunk))))
-  (define (safe-function f)
-    (lambda args
-      (try (lambda () (apply f args)) 0.0)))
-  
   (define (silence time channel) 0.0)
   
   (define *sound-out* (soundio:open-default-out-stream silence))
   (define *sample-rate* (soundio:sound-out-sample-rate *sound-out*))
   (define *channels* (soundio:sound-out-channel-count *sound-out*))
   
-  (define (now) (soundio:sound-out-time *sound-out*))
-  
   (define (set-dsp! f)
-    (soundio:sound-out-write-callback-set! *sound-out* (safe-function f)))
+    (soundio:sound-out-write-callback-set! *sound-out* f))
   
   (define (hush!) (set-dsp! silence))
   

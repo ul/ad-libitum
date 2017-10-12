@@ -3,12 +3,17 @@
   (import (chezscheme)
           (prefix (ad-libitum scheduler) scheduler:)
           (prefix (portmidi) pm:))
-  (define (try thunk default)
-    (call/cc
-     (lambda (k)
-       (with-exception-handler
-           (lambda (x) (k default))
-         thunk))))
+  ;; (define (try thunk default)
+  ;;   (call/cc
+  ;;    (lambda (k)
+  ;;      (with-exception-handler
+  ;;          (lambda (x) (k default))
+  ;;        thunk))))
+  
+  (define-syntax try
+    (syntax-rules ()
+      [(_ default e1 e2 ...)
+       (guard (x [else default]) e1 e2 ...)]))
   
   (define (*on-note-on* timestamp data1 data2 channel)
     (printf "~s:~s:~s:~s\r\n" timestamp data1 data2 channel))
@@ -37,9 +42,7 @@
   
   (define (make-safe-process-event timestamp)
     (lambda args
-      (try
-       (lambda () (apply process-event timestamp args))
-       #f)))
+      (try #f (apply process-event timestamp args))))
   
   (define (process-events)
     (let ([timestamp (scheduler:now *scheduler*)])

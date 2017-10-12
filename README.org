@@ -132,20 +132,14 @@ licensing.
 
 #+NAME: sound
 #+BEGIN_SRC scheme
-  (define (safe-function f)
-    (lambda args
-      (try (lambda () (apply f args)) 0.0)))
-
   (define (silence time channel) 0.0)
 
   (define *sound-out* (soundio:open-default-out-stream silence))
   (define *sample-rate* (soundio:sound-out-sample-rate *sound-out*))
   (define *channels* (soundio:sound-out-channel-count *sound-out*))
 
-  (define (now) (soundio:sound-out-time *sound-out*))
-
   (define (set-dsp! f)
-    (soundio:sound-out-write-callback-set! *sound-out* (safe-function f)))
+    (soundio:sound-out-write-callback-set! *sound-out* f))
 
   (define (hush!) (set-dsp! silence))
 
@@ -260,13 +254,12 @@ licensing.
          (when (and event (<= (event-time event) t))
            (scheduler-queue-set! scheduler (heap/delete-min event-time (scheduler-queue scheduler)))
            (try
-            (lambda ()
-              (let ([f (event-f event)])
-                (apply (if (symbol? f)
-                           (top-level-value f)
-                           f)
-                       (event-args event))))
-            #f)
+            #f
+            (let ([f (event-f event)])
+              (apply (if (symbol? f)
+                         (top-level-value f)
+                         f)
+                     (event-args event))))
            (next-event))))))
 #+END_SRC
 
@@ -556,7 +549,7 @@ accepting new connection we'll proceed it in new thread.
   [output
    (with-output-to-string
      (lambda ()
-       (set! result (try-display (lambda () (eval x)) #f))))]
+       (set! result (try-display #f (eval x)))))]
 #+END_SRC
 
   On the other hand, sending is quite straightforward, because we need just to
@@ -1054,9 +1047,7 @@ accepting new connection we'll proceed it in new thread.
 
   (define (make-safe-process-event timestamp)
     (lambda args
-      (try
-       (lambda () (apply process-event timestamp args))
-       #f)))
+      (try #f (apply process-event timestamp args))))
 
   (define (process-events)
     (let ([timestamp (scheduler:now *scheduler*)])
@@ -1084,24 +1075,37 @@ accepting new connection we'll proceed it in new thread.
 
 #+NAME: try
 #+BEGIN_SRC scheme
-  (define (try thunk default)
-    (call/cc
-     (lambda (k)
-       (with-exception-handler
-           (lambda (x) (k default))
-         thunk))))
+  ;; (define (try thunk default)
+  ;;   (call/cc
+  ;;    (lambda (k)
+  ;;      (with-exception-handler
+  ;;          (lambda (x) (k default))
+  ;;        thunk))))
+
+  (define-syntax try
+    (syntax-rules ()
+      [(_ default e1 e2 ...)
+       (guard (x [else default]) e1 e2 ...)]))
 #+END_SRC
 
 #+NAME: try-display
 #+BEGIN_SRC scheme
-  (define (try-display thunk default)
-    (call/cc
-     (lambda (k)
-       (with-exception-handler
-           (lambda (x)
-             (display-condition x)
-             (k default))
-         thunk))))
+  ;; (define (try-display thunk default)
+  ;;   (call/cc
+  ;;    (lambda (k)
+  ;;      (with-exception-handler
+  ;;          (lambda (x)
+  ;;            (display-condition x)
+  ;;            (k default))
+  ;;        thunk))))
+
+  (define-syntax try-display
+    (syntax-rules ()
+      [(_ default e1 e2 ...)
+       (guard (x [else (begin
+                         (display-condition x)
+                         default)])
+         e1 e2 ...)]))
 #+END_SRC
 
   To import =chez-soundio= and =chez-sockets= we must add respective folders to =library-directories=
@@ -1128,7 +1132,15 @@ accepting new connection we'll proceed it in new thread.
 
 #+NAME: ad-libitum-init
 #+BEGIN_SRC scheme
-  (alias now sound:now)
+  (sound:start)
+
+  (define *sound-start-time* (current-time))
+
+  (define (now)
+    (let ([Δt (time-difference (current-time) *sound-start-time*)])
+      (inexact (+ (time-second Δt)
+                  (* 1e-9 (time-nanosecond Δt))))))
+
   (alias schedule scheduler:*schedule*)
   (alias callback schedule)
 
@@ -1137,7 +1149,6 @@ accepting new connection we'll proceed it in new thread.
 
   (alias play! sound:set-dsp!)
 
-  (sound:start)
   (scheduler:init now)
   (scheduler:start)
   (repl:start-repl-server)
@@ -1529,9 +1540,8 @@ accepting new connection we'll proceed it in new thread.
 #+NAME: sound.ss
 #+BEGIN_SRC scheme :tangle ad-libitum/sound.ss :noweb yes :mkdirp yes :paddle no
   (library (ad-libitum sound (1))
-    (export start set-dsp! hush! now *sample-rate* *channels*)
+    (export start set-dsp! hush! *sample-rate* *channels*)
     (import (chezscheme) (prefix (soundio) soundio:))
-    <<try>>
     <<sound>>
     )
 #+END_SRC
