@@ -97,7 +97,7 @@
        (values
         (~< (transition (- time start) x y))
         (λ args
-          (set! x y)
+          (set! x (transition (- (now) start) x y))
           (set! y (apply f args))
           (set! start (now)))))]))
 
