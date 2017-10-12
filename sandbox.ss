@@ -124,9 +124,8 @@
 ;;;;
 (midi:start now)
 
-(define freq 440.0)
-(define freq~ (live-value 'freq))
-(play! (osc:sine* freq~))
+(define-values (freq~ set-freq!) (control-signal id 440.0 (linear-transition 0.3)))
+(play! (osc:sine* (live-signal 'freq~)))
 
 (midi:set-cc! (λ (t knob value chan)
-                (set! freq (midi2frq value))))
+                (set-freq! (midi->frq value))))

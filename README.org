@@ -134,12 +134,21 @@ licensing.
 #+BEGIN_SRC scheme
   (define (silence time channel) 0.0)
 
-  (define *sound-out* (soundio:open-default-out-stream silence))
+  (define *dsp* silence)
+  (define *time* 0.0)
+
+  (define (write-callback time channel)
+    (set! *time* time)
+    (*dsp* time channel))
+
+  (define (now) *time*)
+
+  (define *sound-out* (soundio:open-default-out-stream write-callback))
   (define *sample-rate* (soundio:sound-out-sample-rate *sound-out*))
   (define *channels* (soundio:sound-out-channel-count *sound-out*))
 
   (define (set-dsp! f)
-    (soundio:sound-out-write-callback-set! *sound-out* f))
+    (set! *dsp* f))
 
   (define (hush!) (set-dsp! silence))
 
@@ -600,18 +609,18 @@ accepting new connection we'll proceed it in new thread.
   (define (random-amplitude)
     (- (random 2.0) 1.0))
 
-  (define (midi2frq pitch)
+  (define (midi->frq pitch)
     (if (<= pitch 0.0) 0.0
         (* 440.0 (expt 2.0 (/ (- pitch 69.0) 12.0)))))
 
-  (define (frq2midi freq)
+  (define (frq->midi freq)
     (if (<= freq 0.0) 0.0
         (+ (* 12.0 (log (/ freq 440.0) 2.0)) 69.0)))
 
-  (define (amp2db x)
-    (* 20.0 (log x 10)))
+  (define (amp->db x)
+    (* 20.0 (log x 10.0)))
 
-  (define (db2amp x)
+  (define (db->amp x)
     (expt 10.0 (/ x 20.0)))
 #+END_SRC
 
@@ -1132,15 +1141,7 @@ accepting new connection we'll proceed it in new thread.
 
 #+NAME: ad-libitum-init
 #+BEGIN_SRC scheme
-  (sound:start)
-
-  (define *sound-start-time* (current-time))
-
-  (define (now)
-    (let ([Δt (time-difference (current-time) *sound-start-time*)])
-      (inexact (+ (time-second Δt)
-                  (* 1e-9 (time-nanosecond Δt))))))
-
+  (alias now sound:now)
   (alias schedule scheduler:*schedule*)
   (alias callback schedule)
 
@@ -1149,6 +1150,7 @@ accepting new connection we'll proceed it in new thread.
 
   (alias play! sound:set-dsp!)
 
+  (sound:start)
   (scheduler:init now)
   (scheduler:start)
   (repl:start-repl-server)
@@ -1419,8 +1421,8 @@ accepting new connection we'll proceed it in new thread.
     (export voodoo λ id >>> >> -> ->>
             compose ∘ pi two-pi π 2π
             random-amplitude
-            midi2frq frq2midi
-            amp2db db2amp
+            midi->frq frq->midi
+            amp->db db->amp
             *channels* *sample-rate* *sample-angular-period*)
     (import (chezscheme)
             (only (srfi s1 lists) reduce)
@@ -1540,7 +1542,7 @@ accepting new connection we'll proceed it in new thread.
 #+NAME: sound.ss
 #+BEGIN_SRC scheme :tangle ad-libitum/sound.ss :noweb yes :mkdirp yes :paddle no
   (library (ad-libitum sound (1))
-    (export start set-dsp! hush! *sample-rate* *channels*)
+    (export start set-dsp! hush! *sample-rate* *channels* now)
     (import (chezscheme) (prefix (soundio) soundio:))
     <<sound>>
     )

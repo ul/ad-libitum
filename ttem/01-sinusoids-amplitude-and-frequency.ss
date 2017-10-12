@@ -38,6 +38,21 @@
 
 ;;; 1.1 Measures of Amplitude
 
+;; Convert amplitude to decibels, with a0 = 1e-5 as suggested in TTEM
+(define (amp->db x)
+  (* 20.0 (log (* x 1e5) 10.0)))
+
+(amp->db 1.0)
+(amp->db 0.5)
+
+;; But setting a0 to 1.0 is also very convenient — maximum amplitude is then 0dB
+;; and any one below is just negative. All relations stays the same.
+(define (amp->db x)
+  (* 20.0 (log x 10.0)))
+
+(amp->db 0.5)
+(amp->db 1e-5)
+
 ;; This is not a blood pact, but many of Ad Libitum code relies on fact that
 ;; audiosignal is called sample by sample, without skips. Making that assumption
 ;; we are able to write RMS amplitude measurement even in continuous
