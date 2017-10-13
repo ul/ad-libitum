@@ -147,13 +147,14 @@ licensing.
 
   (define (write-callback time channel)
     (set! *time* time)
-    (*dsp* time channel))
+    (guard (_ [else 0.0])
+      (*dsp* time channel)))
 
   (define (now) *time*)
 
   (define *sound-out* (soundio:open-default-out-stream write-callback))
-  (define *sample-rate* (soundio:sound-out-sample-rate *sound-out*))
-  (define *channels* (soundio:sound-out-channel-count *sound-out*))
+  (define *sample-rate* (soundio:sample-rate *sound-out*))
+  (define *channels* (soundio:channel-count *sound-out*))
 
   (define (set-dsp! f)
     (set! *dsp* f))
