@@ -74,6 +74,14 @@ Copyright 1984-2017 Cisco Systems, Inc.
 brew install libsoundio
 #+END_SRC
 
+** PortMidi
+
+   You need it if you plan to use MIDI controller.
+
+#+BEGIN_SRC shell
+brew install portmidi
+#+END_SRC
+
 ** Ad Libitum itself
 
 *** Install
@@ -202,11 +210,11 @@ licensing.
 
   (define (simple-scheduler now)
     (make-scheduler
-     now                                   ; now
-     heap/empty                            ; queue
-     (make-time 'time-duration 5000000 0)  ; resolution
-     #f                                    ; thread
-     (make-mutex)                          ; mutex
+     now           ; now
+     heap/empty    ; queue
+     0.001         ; resolution
+     #f            ; thread
+     (make-mutex)  ; mutex
      ))
 #+END_SRC
 
@@ -251,7 +259,7 @@ licensing.
   resolved in a function, not as an immediate function value.
 
   Of course, live events are error prone, but we don't want flawed event to blow
-  entire thread. Thus =f= execution is secured with =try=.
+  entire thread. Thus =f= execution is secured with =guard=.
 
 #+NAME: process-events
 #+BEGIN_SRC scheme
@@ -262,13 +270,12 @@ licensing.
        (let ([event (heap/find-min (scheduler-queue scheduler))])
          (when (and event (<= (event-time event) t))
            (scheduler-queue-set! scheduler (heap/delete-min event-time (scheduler-queue scheduler)))
-           (try
-            #f
-            (let ([f (event-f event)])
-              (apply (if (symbol? f)
-                         (top-level-value f)
-                         f)
-                     (event-args event))))
+           (guard (_ [else #f])
+             (let ([f (event-f event)])
+               (apply (if (symbol? f)
+                          (top-level-value f)
+                          f)
+                      (event-args event))))
            (next-event))))))
 #+END_SRC
 
@@ -293,20 +300,13 @@ licensing.
     (fork-thread
      (lambda ()
        (scheduler-thread-set! scheduler (get-thread-id))
-       (let* ([zero-duration (make-time 'time-duration 1000 0)]
-              [resolution (scheduler-resolution scheduler)]
-              [fl-resolution (inexact (+ (time-second resolution)
-                                         (* 1e-9 (time-nanosecond resolution))))])
+       (let* ([resolution (scheduler-resolution scheduler)]
+              [polling-usec (exact (floor (* resolution 1e6)))])
          (let loop ()
            (when (scheduler-thread scheduler)
-             (let ([clock (current-time)]
-                   [t (+ (now scheduler) fl-resolution)])
-               (process-events scheduler t)
-               (let* ([day (time-difference (current-time) clock)]
-                      [night (time-difference resolution day)])
-                 (when (time<? zero-duration night)
-                   (usleep 0 (div (time-nanosecond night) 1000)))
-                 (loop)))))))))
+             (process-events scheduler (+ (now scheduler) resolution))
+             (usleep 0 polling-usec)
+             (loop)))))))
 #+END_SRC
 
 #+NAME: scheduler
@@ -558,7 +558,7 @@ accepting new connection we'll proceed it in new thread.
   [output
    (with-output-to-string
      (lambda ()
-       (set! result (try-display #f (eval x)))))]
+       (set! result (guard (x [else (display-condition x)]) (eval x)))))]
 #+END_SRC
 
   On the other hand, sending is quite straightforward, because we need just to
@@ -608,20 +608,6 @@ accepting new connection we'll proceed it in new thread.
 
   (define (random-amplitude)
     (- (random 2.0) 1.0))
-
-  (define (midi->frq pitch)
-    (if (<= pitch 0.0) 0.0
-        (* 440.0 (expt 2.0 (/ (- pitch 69.0) 12.0)))))
-
-  (define (frq->midi freq)
-    (if (<= freq 0.0) 0.0
-        (+ (* 12.0 (log (/ freq 440.0) 2.0)) 69.0)))
-
-  (define (amp->db x)
-    (* 20.0 (log x 10.0)))
-
-  (define (db->amp x)
-    (expt 10.0 (/ x 20.0)))
 #+END_SRC
 
 ** Generators
@@ -1027,8 +1013,6 @@ accepting new connection we'll proceed it in new thread.
 
 #+NAME: midi
 #+BEGIN_SRC scheme
-  <<try>>
-
   (define (*on-note-on* timestamp data1 data2 channel)
     (printf "~s:~s:~s:~s\r\n" timestamp data1 data2 channel))
 
@@ -1042,7 +1026,7 @@ accepting new connection we'll proceed it in new thread.
   (define (set-note-off! f) (set! *on-note-off* f))
   (define (set-cc! f) (set! *on-cc* f))
 
-  (define *polling-cycle* 5e-3)
+  (define *polling-cycle* 0.005)
 
   (define *stream* #f)
   (define *scheduler* #f)
@@ -1056,66 +1040,33 @@ accepting new connection we'll proceed it in new thread.
 
   (define (make-safe-process-event timestamp)
     (lambda args
-      (try #f (apply process-event timestamp args))))
+      (guard (_ [else #f]) (apply process-event timestamp args))))
 
   (define (process-events)
     (let ([timestamp (scheduler:now *scheduler*)])
-      (pm:read *stream* (make-safe-process-event timestamp))
+      (when (pm:poll *stream*)
+        (pm:read *stream* (make-safe-process-event timestamp)))
       (scheduler:schedule *scheduler*
                           (+ timestamp *polling-cycle*)
                           process-events)))
 
   (define (start now)
-    (pm:init)
-    (set! *stream* (pm:open-input 0))
-    (set! *scheduler* (scheduler:simple-scheduler now))
-    (scheduler:start-scheduler *scheduler*)
-    (process-events))
+    (unless *stream*
+      (pm:init)
+      (set! *stream* (pm:open-input 0))
+      (set! *scheduler* (scheduler:simple-scheduler now))
+      (scheduler:start-scheduler *scheduler*)
+      (process-events)))
 
   (define (stop)
-    (scheduler:stop-scheduler *scheduler*)
-    (pm:close *stream*)
-    (pm:terminate))
+    (when *stream*
+      (scheduler:stop-scheduler *scheduler*)
+      (pm:close *stream*)
+      (pm:terminate)
+      (set! *stream* #f)
+      (set! *scheduler* #f)))
 #+END_SRC
 * Misc
-
-  =try= is a little helper to guard function calls in vital loops: dsp,
-  scheduler, remote repl.
-
-#+NAME: try
-#+BEGIN_SRC scheme
-  ;; (define (try thunk default)
-  ;;   (call/cc
-  ;;    (lambda (k)
-  ;;      (with-exception-handler
-  ;;          (lambda (x) (k default))
-  ;;        thunk))))
-
-  (define-syntax try
-    (syntax-rules ()
-      [(_ default e1 e2 ...)
-       (guard (x [else default]) e1 e2 ...)]))
-#+END_SRC
-
-#+NAME: try-display
-#+BEGIN_SRC scheme
-  ;; (define (try-display thunk default)
-  ;;   (call/cc
-  ;;    (lambda (k)
-  ;;      (with-exception-handler
-  ;;          (lambda (x)
-  ;;            (display-condition x)
-  ;;            (k default))
-  ;;        thunk))))
-
-  (define-syntax try-display
-    (syntax-rules ()
-      [(_ default e1 e2 ...)
-       (guard (x [else (begin
-                         (display-condition x)
-                         default)])
-         e1 e2 ...)]))
-#+END_SRC
 
   To import =chez-soundio= and =chez-sockets= we must add respective folders to =library-directories=
   To do that let's create a couple of helpers:
@@ -1383,6 +1334,39 @@ accepting new connection we'll proceed it in new thread.
                  (vector-set! ys-1 channel y)
                  (vector-set! ys-2 channel y-1)
                  y))))))))
+
+  (define *sound-barrier* 0.03)
+
+  (define (linear-transition Δt)
+    (λ (δt x y)
+      (if (< δt Δt)
+          (+ x (* (- y x) (/ δt Δt)))
+          y)))
+
+  (define instant-transition
+    (λ (δt x y)
+      y))
+
+  (define *linear-transition* (linear-transition *sound-barrier*))
+
+  (define control-signal
+    (case-lambda
+      [(x)
+       (if (number? x)
+           (control-signal id x *linear-transition*)
+           (control-signal x 0.0 *linear-transition*))]
+      [(f x)
+       (control-signal f x *linear-transition*)]
+      [(f x transition)
+       (let ([start (now)]
+             [x x]
+             [y x])
+         (values
+          (~< (transition (- time start) x y))
+          (λ args
+            (set! x (transition (- (now) start) x y))
+            (set! y (apply f args))
+            (set! start (now)))))]))
 #+END_SRC
 
 * Files :noexport:
@@ -1421,8 +1405,6 @@ accepting new connection we'll proceed it in new thread.
     (export voodoo λ id >>> >> -> ->>
             compose ∘ pi two-pi π 2π
             random-amplitude
-            midi->frq frq->midi
-            amp->db db->amp
             *channels* *sample-rate* *sample-angular-period*)
     (import (chezscheme)
             (only (srfi s1 lists) reduce)
@@ -1557,7 +1539,6 @@ accepting new connection we'll proceed it in new thread.
             *schedule* *now*)
     (import (chezscheme)
             (only (soundio) usleep))
-    <<try>>
     <<pairing-heap>>
     <<scheduler>>
     <<easy-scheduler>>
@@ -1570,7 +1551,6 @@ accepting new connection we'll proceed it in new thread.
     (import (chezscheme)
             (only (soundio) usleep)
             (prefix (bsd-sockets) sock:))
-    <<try-display>>
     <<open-socket>>
     <<spawn-remote-repl>>
     <<accept-connections>>

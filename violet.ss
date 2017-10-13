@@ -216,6 +216,39 @@
                (vector-set! ys-1 channel y)
                (vector-set! ys-2 channel y-1)
                y))))))))
+
+(define *sound-barrier* 0.03)
+
+(define (linear-transition Δt)
+  (λ (δt x y)
+    (if (< δt Δt)
+        (+ x (* (- y x) (/ δt Δt)))
+        y)))
+
+(define instant-transition
+  (λ (δt x y)
+    y))
+
+(define *linear-transition* (linear-transition *sound-barrier*))
+
+(define control-signal
+  (case-lambda
+    [(x)
+     (if (number? x)
+         (control-signal id x *linear-transition*)
+         (control-signal x 0.0 *linear-transition*))]
+    [(f x)
+     (control-signal f x *linear-transition*)]
+    [(f x transition)
+     (let ([start (now)]
+           [x x]
+           [y x])
+       (values
+        (~< (transition (- time start) x y))
+        (λ args
+          (set! x (transition (- (now) start) x y))
+          (set! y (apply f args))
+          (set! start (now)))))]))
 (define (simple-instrument start end freq a d s r)
   (let* ([start (live-value start)]
          [end (live-value end)]

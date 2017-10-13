@@ -3,22 +3,6 @@
   (import (chezscheme)
           (only (soundio) usleep)
           (prefix (bsd-sockets) sock:))
-  ;; (define (try-display thunk default)
-  ;;   (call/cc
-  ;;    (lambda (k)
-  ;;      (with-exception-handler
-  ;;          (lambda (x)
-  ;;            (display-condition x)
-  ;;            (k default))
-  ;;        thunk))))
-  
-  (define-syntax try-display
-    (syntax-rules ()
-      [(_ default e1 e2 ...)
-       (guard (x [else (begin
-                         (display-condition x)
-                         default)])
-         e1 e2 ...)]))
   (define (open-socket)
     (let ([socket (sock:create-socket
                    sock:socket-domain/internet
@@ -62,7 +46,7 @@
                                 [output
                                  (with-output-to-string
                                    (lambda ()
-                                     (set! result (try-display #f (eval x)))))]
+                                     (set! result (guard (x [else (display-condition x)]) (eval x)))))]
                                 )
                            (printf "| ~s\r\n" output)
                            (printf "< ~s\r\n" result)

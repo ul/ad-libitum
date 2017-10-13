@@ -3,8 +3,6 @@
   (export voodoo λ id >>> >> -> ->>
           compose ∘ pi two-pi π 2π
           random-amplitude
-          midi->frq frq->midi
-          amp->db db->amp
           *channels* *sample-rate* *sample-angular-period*)
   (import (chezscheme)
           (only (srfi s1 lists) reduce)
@@ -43,20 +41,6 @@
   
   (define (random-amplitude)
     (- (random 2.0) 1.0))
-  
-  (define (midi->frq pitch)
-    (if (<= pitch 0.0) 0.0
-        (* 440.0 (expt 2.0 (/ (- pitch 69.0) 12.0)))))
-  
-  (define (frq->midi freq)
-    (if (<= freq 0.0) 0.0
-        (+ (* 12.0 (log (/ freq 440.0) 2.0)) 69.0)))
-  
-  (define (amp->db x)
-    (* 20.0 (log x 10.0)))
-  
-  (define (db->amp x)
-    (expt 10.0 (/ x 20.0)))
 
   (define *sample-angular-period* (/ 2π *sample-rate*))
 

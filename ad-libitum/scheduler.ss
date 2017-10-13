@@ -5,17 +5,6 @@
           *schedule* *now*)
   (import (chezscheme)
           (only (soundio) usleep))
-  ;; (define (try thunk default)
-  ;;   (call/cc
-  ;;    (lambda (k)
-  ;;      (with-exception-handler
-  ;;          (lambda (x) (k default))
-  ;;        thunk))))
-  
-  (define-syntax try
-    (syntax-rules ()
-      [(_ default e1 e2 ...)
-       (guard (x [else default]) e1 e2 ...)]))
   ;; we do some #f-punning and don't throw on empty heaps
   
   (define heap/empty '())
@@ -54,11 +43,11 @@
   
   (define (simple-scheduler now)
     (make-scheduler
-     now                                   ; now
-     heap/empty                            ; queue
-     (make-time 'time-duration 5000000 0)  ; resolution
-     #f                                    ; thread
-     (make-mutex)                          ; mutex
+     now           ; now
+     heap/empty    ; queue
+     0.001         ; resolution
+     #f            ; thread
+     (make-mutex)  ; mutex
      ))
   (define-record-type event
     (fields time f args))
@@ -69,13 +58,12 @@
        (let ([event (heap/find-min (scheduler-queue scheduler))])
          (when (and event (<= (event-time event) t))
            (scheduler-queue-set! scheduler (heap/delete-min event-time (scheduler-queue scheduler)))
-           (try
-            #f
-            (let ([f (event-f event)])
-              (apply (if (symbol? f)
-                         (top-level-value f)
-                         f)
-                     (event-args event))))
+           (guard (_ [else #f])
+             (let ([f (event-f event)])
+               (apply (if (symbol? f)
+                          (top-level-value f)
+                          f)
+                      (event-args event))))
            (next-event))))))
   (define (now scheduler) ((scheduler-now scheduler)))
   (define schedule
@@ -89,20 +77,13 @@
     (fork-thread
      (lambda ()
        (scheduler-thread-set! scheduler (get-thread-id))
-       (let* ([zero-duration (make-time 'time-duration 1000 0)]
-              [resolution (scheduler-resolution scheduler)]
-              [fl-resolution (inexact (+ (time-second resolution)
-                                         (* 1e-9 (time-nanosecond resolution))))])
+       (let* ([resolution (scheduler-resolution scheduler)]
+              [polling-usec (exact (floor (* resolution 1e6)))])
          (let loop ()
            (when (scheduler-thread scheduler)
-             (let ([clock (current-time)]
-                   [t (+ (now scheduler) fl-resolution)])
-               (process-events scheduler t)
-               (let* ([day (time-difference (current-time) clock)]
-                      [night (time-difference resolution day)])
-                 (when (time<? zero-duration night)
-                   (usleep 0 (div (time-nanosecond night) 1000)))
-                 (loop)))))))))
+             (process-events scheduler (+ (now scheduler) resolution))
+             (usleep 0 polling-usec)
+             (loop)))))))
   (define (stop-scheduler scheduler)
     (scheduler-thread-set! scheduler #f))
   (define *scheduler* #f)

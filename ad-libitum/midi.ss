@@ -3,18 +3,6 @@
   (import (chezscheme)
           (prefix (ad-libitum scheduler) scheduler:)
           (prefix (portmidi) pm:))
-  ;; (define (try thunk default)
-  ;;   (call/cc
-  ;;    (lambda (k)
-  ;;      (with-exception-handler
-  ;;          (lambda (x) (k default))
-  ;;        thunk))))
-  
-  (define-syntax try
-    (syntax-rules ()
-      [(_ default e1 e2 ...)
-       (guard (x [else default]) e1 e2 ...)]))
-  
   (define (*on-note-on* timestamp data1 data2 channel)
     (printf "~s:~s:~s:~s\r\n" timestamp data1 data2 channel))
   
@@ -28,7 +16,7 @@
   (define (set-note-off! f) (set! *on-note-off* f))
   (define (set-cc! f) (set! *on-cc* f))
   
-  (define *polling-cycle* 5e-3)
+  (define *polling-cycle* 0.005)
   
   (define *stream* #f)
   (define *scheduler* #f)
@@ -42,24 +30,29 @@
   
   (define (make-safe-process-event timestamp)
     (lambda args
-      (try #f (apply process-event timestamp args))))
+      (guard (_ [else #f]) (apply process-event timestamp args))))
   
   (define (process-events)
     (let ([timestamp (scheduler:now *scheduler*)])
-      (pm:read *stream* (make-safe-process-event timestamp))
+      (when (pm:poll *stream*)
+        (pm:read *stream* (make-safe-process-event timestamp)))
       (scheduler:schedule *scheduler*
                           (+ timestamp *polling-cycle*)
                           process-events)))
   
   (define (start now)
-    (pm:init)
-    (set! *stream* (pm:open-input 0))
-    (set! *scheduler* (scheduler:simple-scheduler now))
-    (scheduler:start-scheduler *scheduler*)
-    (process-events))
+    (unless *stream*
+      (pm:init)
+      (set! *stream* (pm:open-input 0))
+      (set! *scheduler* (scheduler:simple-scheduler now))
+      (scheduler:start-scheduler *scheduler*)
+      (process-events)))
   
   (define (stop)
-    (scheduler:stop-scheduler *scheduler*)
-    (pm:close *stream*)
-    (pm:terminate))
+    (when *stream*
+      (scheduler:stop-scheduler *scheduler*)
+      (pm:close *stream*)
+      (pm:terminate)
+      (set! *stream* #f)
+      (set! *scheduler* #f)))
   )
