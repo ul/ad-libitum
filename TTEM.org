@@ -73,7 +73,7 @@
              [x 0.0])
          (vector-set! window cursor (<~ s))
          (vector-for-each (λ (y) (set! x (+ x (* y y)))) window)
-         (/ x N)))))
+         (sqrt (/ x N))))))
 #+END_SRC
 
    Let's make sinusoid amplitude a signal, and set it to rms amplitude measured
@@ -123,14 +123,14 @@
             channel
             (let ([x 0.0])
               (vector-for-each (λ (y) (set! x (+ x (* y y)))) window)
-              (/ x N)))))
+              (sqrt (/ x N))))))
        (vector-ref amplitudes channel))))
 
   (play! (sinusoid (rms-amplitude 1 (+~ (sinusoid (~< 1.0) 440.0 0.0))) 440.0 0.0))
   (h!)
 #+END_SRC
 
-   Chez Scheme Gℂ is so cool that though we produce a lot of garbage every
+   Chez Scheme GC is so cool that though we produce a lot of garbage every
    second it doesn't interrupt sound! But we still have a noticeable lag on
    window initialization. Take it into account if you are going to spawn
    capacitive =rms-amplitude= signals frequently.
@@ -281,6 +281,86 @@
 #+END_SRC
 
 ** Superposing Signals
+
+   To superpose signals in Ad Libitum signal sum operator =+~= is available.
+
+#+BEGIN_SRC scheme
+  (play! (+~ (*~ (~< 0.5) (osc:sine/// (midi-pitch->frequency 69)))
+             (*~ (~< 0.5) (osc:sine/// (midi-pitch->frequency 72)))))
+  (h!)
+#+END_SRC
+
+   Let's measure how peak and rms amplitude of sinusoids superposition relates
+   to sum of their amplitudes.
+
+   For that we need to define =peak-amplitude= signal.
+
+#+BEGIN_SRC scheme
+  (define (peak-amplitude signal)
+    (let ([peaks (make-vector *channels* 0.0)])
+      (~<
+       (let* ([sample (<~ signal)]
+              [peak (max sample (vector-ref peaks channel))])
+         (vector-set! peaks channel peak)
+         peak))))
+#+END_SRC
+
+   Because Ad Libitum signals are kind of pull FRP, we can't just wrap our
+   signal with =rms-amplitude= and then play initial signal and have RMS one
+   updated. Let's define useful signal which keep signals given to it updated,
+   but plays only first one.
+
+#+BEGIN_SRC scheme
+  (define (solo audio . muted)
+    (~<
+     (for-each (cut <> time channel) muted)
+     (<~ audio)))
+#+END_SRC
+
+   Uncorrelated signals.
+
+#+BEGIN_SRC scheme
+  (define signal-1 (*~ (~< 0.5) (osc:sine/// (midi-pitch->frequency 69))))
+  (define signal-2 (*~ (~< 0.5) (osc:sine/// (midi-pitch->frequency 72))))
+
+  (define superposed-signal (+~ signal-1 signal-2))
+
+  ;; signal-1 and signal-2 peaks are obviously 0.5
+  (define measure-peak (peak-amplitude superposed-signal))
+
+  (define measure-rms-signal-1-2 (rms-amplitude 0.1 signal-1))
+  (define measure-rms (rms-amplitude 0.1 superposed-signal))
+
+  (play! (solo superposed-signal measure-peak measure-rms measure-rms-signal-1-2))
+  (h!)
+
+  (measure-peak 0.0 0) ;; => 0.9999931184993082
+  (measure-rms 0.0 0) ;; => 0.5038381755150125
+  (measure-rms-signal-1-2 0.0 0) ;; => 0.3535533905956031
+#+END_SRC
+
+   Correlated signals.
+
+#+BEGIN_SRC scheme
+  (define signal-1 (*~ (~< 0.5) (osc:sine/// 440.0)))
+  (define signal-2 (*~ (~< 0.5) (osc:sine/// 440.0)))
+
+  (define superposed-signal (+~ signal-1 signal-2))
+
+  ;; signal-1 and signal-2 peaks are obviously 0.5
+  (define measure-peak (peak-amplitude superposed-signal))
+
+  (define measure-rms-signal-1-2 (rms-amplitude 0.1 signal-1))
+  (define measure-rms (rms-amplitude 0.1 superposed-signal))
+
+  (play! (solo superposed-signal measure-peak measure-rms measure-rms-signal-1-2))
+  (h!)
+
+  (measure-peak 0.0 0) ;; => 1.0
+  (measure-rms 0.0 0) ;; => 0.7071067811829478
+  (measure-rms-signal-1-2 0.0 0) ;; => 0.3535533905914739
+#+END_SRC
+
 ** Periodic Signals
 ** About the Software Examples
 ** Examples

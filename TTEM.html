@@ -3,7 +3,7 @@
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
-<!-- 2017-10-14 Sat 12:50 -->
+<!-- 2017-10-14 Sat 20:11 -->
 <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>The Theory and Technique of Electronic Music Exercises in Ad Libitum</title>
@@ -240,29 +240,29 @@ for the JavaScript code in this tag.
 <h2>Table of Contents</h2>
 <div id="text-table-of-contents">
 <ul>
-<li><a href="#org2c58c2c">1. Sinusoids, amplitude and frequency</a>
+<li><a href="#orgf069902">1. Sinusoids, amplitude and frequency</a>
 <ul>
-<li><a href="#orgb39f8d7">1.1. Measures of Amplitude</a></li>
-<li><a href="#orgec8f17f">1.2. Units of Amplitude</a></li>
-<li><a href="#orgfca2211">1.3. Controlling Amplitude</a></li>
-<li><a href="#orge6d1f4a">1.4. Frequency</a></li>
-<li><a href="#org6433321">1.5. Synthesizing a sinusoid</a></li>
-<li><a href="#orgd92eaa7">1.6. Superposing Signals</a></li>
-<li><a href="#org4a2bfbc">1.7. Periodic Signals</a></li>
-<li><a href="#org6981746">1.8. About the Software Examples</a></li>
-<li><a href="#orga2a738e">1.9. Examples</a></li>
-<li><a href="#org71ce93e">1.10. Exercises</a></li>
+<li><a href="#orge5ad41f">1.1. Measures of Amplitude</a></li>
+<li><a href="#org22ceade">1.2. Units of Amplitude</a></li>
+<li><a href="#org51623e4">1.3. Controlling Amplitude</a></li>
+<li><a href="#org5754892">1.4. Frequency</a></li>
+<li><a href="#org4eed3ff">1.5. Synthesizing a sinusoid</a></li>
+<li><a href="#org32ed233">1.6. Superposing Signals</a></li>
+<li><a href="#org3cf55d6">1.7. Periodic Signals</a></li>
+<li><a href="#orgcaaf932">1.8. About the Software Examples</a></li>
+<li><a href="#org626456d">1.9. Examples</a></li>
+<li><a href="#org8819eb4">1.10. Exercises</a></li>
 </ul>
 </li>
-<li><a href="#org4aca7ae">2. Wavetables and samplers</a>
+<li><a href="#org2d009f4">2. Wavetables and samplers</a>
 <ul>
-<li><a href="#orgf181efc">2.1. The Wavetable Oscillator</a></li>
-<li><a href="#org5bfac7d">2.2. Sampling</a></li>
-<li><a href="#org7bed29e">2.3. Enveloping samplers</a></li>
-<li><a href="#org62bbc70">2.4. Timbre stretching</a></li>
-<li><a href="#orgb127768">2.5. Interpolation</a></li>
-<li><a href="#org2653937">2.6. Examples</a></li>
-<li><a href="#org1d99557">2.7. Exercises</a></li>
+<li><a href="#orgff1d264">2.1. The Wavetable Oscillator</a></li>
+<li><a href="#orge7bc713">2.2. Sampling</a></li>
+<li><a href="#org16e6d08">2.3. Enveloping samplers</a></li>
+<li><a href="#org2f9d536">2.4. Timbre stretching</a></li>
+<li><a href="#org3aa19fa">2.5. Interpolation</a></li>
+<li><a href="#orgfd2c24f">2.6. Examples</a></li>
+<li><a href="#orgd791e34">2.7. Exercises</a></li>
 </ul>
 </li>
 </ul>
@@ -274,8 +274,8 @@ Music" by Miller Puckette. Work is done in Ad Libitum instead of PureData, and
 some pieces of code migrate back to Ad Libitum standard library.
 </p>
 
-<div id="outline-container-org2c58c2c" class="outline-2">
-<h2 id="org2c58c2c"><span class="section-number-2">1</span> Sinusoids, amplitude and frequency</h2>
+<div id="outline-container-orgf069902" class="outline-2">
+<h2 id="orgf069902"><span class="section-number-2">1</span> Sinusoids, amplitude and frequency</h2>
 <div class="outline-text-2" id="text-1">
 <p>
 Ad Libitum deals with continous representation of time, it's expressed as a
@@ -337,8 +337,8 @@ Let's make sinusoid to receive regular frequency instead of angular one.
 </div>
 </div>
 
-<div id="outline-container-orgb39f8d7" class="outline-3">
-<h3 id="orgb39f8d7"><span class="section-number-3">1.1</span> Measures of Amplitude</h3>
+<div id="outline-container-orge5ad41f" class="outline-3">
+<h3 id="orge5ad41f"><span class="section-number-3">1.1</span> Measures of Amplitude</h3>
 <div class="outline-text-3" id="text-1-1">
 <p>
 This is not a blood pact, but many of Ad Libitum code relies on fact that
@@ -361,7 +361,7 @@ representation of time.
            <span style="color: #94BFF3;">[</span>x <span style="color: #BFEBBF;">0.0</span><span style="color: #94BFF3;">]</span><span style="color: #9FC59F;">)</span>
        <span style="color: #9FC59F;">(</span>vector-set! window cursor <span style="color: #94BFF3;">(</span>&lt;~ s<span style="color: #94BFF3;">)</span><span style="color: #9FC59F;">)</span>
        <span style="color: #9FC59F;">(</span>vector-for-each <span style="color: #94BFF3;">(</span><span style="color: #F0DFAF; font-weight: bold;">&#955;</span> <span style="color: #E0CF9F;">(</span>y<span style="color: #E0CF9F;">)</span> <span style="color: #E0CF9F;">(</span><span style="color: #F0DFAF; font-weight: bold;">set!</span> x <span style="color: #8FB28F;">(</span>+ x <span style="color: #6CA0A3;">(</span>* y y<span style="color: #6CA0A3;">)</span><span style="color: #8FB28F;">)</span><span style="color: #E0CF9F;">)</span><span style="color: #94BFF3;">)</span> window<span style="color: #9FC59F;">)</span>
-       <span style="color: #9FC59F;">(</span>/ x N<span style="color: #9FC59F;">)</span><span style="color: #93E0E3;">)</span><span style="color: #D0BF8F;">)</span><span style="color: #BFEBBF;">)</span><span style="color: #DCDCCC;">)</span>
+       <span style="color: #9FC59F;">(</span>sqrt <span style="color: #94BFF3;">(</span>/ x N<span style="color: #94BFF3;">)</span><span style="color: #9FC59F;">)</span><span style="color: #93E0E3;">)</span><span style="color: #D0BF8F;">)</span><span style="color: #BFEBBF;">)</span><span style="color: #DCDCCC;">)</span>
 </pre>
 </div>
 
@@ -423,7 +423,7 @@ Let's throttle <code>rms-amplitude</code> to make it less hungry
           channel
           <span style="color: #E0CF9F;">(</span><span style="color: #F0DFAF; font-weight: bold;">let</span> <span style="color: #8FB28F;">(</span><span style="color: #6CA0A3;">[</span>x <span style="color: #BFEBBF;">0.0</span><span style="color: #6CA0A3;">]</span><span style="color: #8FB28F;">)</span>
             <span style="color: #8FB28F;">(</span>vector-for-each <span style="color: #6CA0A3;">(</span><span style="color: #F0DFAF; font-weight: bold;">&#955;</span> <span style="color: #DCDCCC;">(</span>y<span style="color: #DCDCCC;">)</span> <span style="color: #DCDCCC;">(</span><span style="color: #F0DFAF; font-weight: bold;">set!</span> x <span style="color: #BFEBBF;">(</span>+ x <span style="color: #D0BF8F;">(</span>* y y<span style="color: #D0BF8F;">)</span><span style="color: #BFEBBF;">)</span><span style="color: #DCDCCC;">)</span><span style="color: #6CA0A3;">)</span> window<span style="color: #8FB28F;">)</span>
-            <span style="color: #8FB28F;">(</span>/ x N<span style="color: #8FB28F;">)</span><span style="color: #E0CF9F;">)</span><span style="color: #94BFF3;">)</span><span style="color: #9FC59F;">)</span><span style="color: #93E0E3;">)</span>
+            <span style="color: #8FB28F;">(</span>sqrt <span style="color: #6CA0A3;">(</span>/ x N<span style="color: #6CA0A3;">)</span><span style="color: #8FB28F;">)</span><span style="color: #E0CF9F;">)</span><span style="color: #94BFF3;">)</span><span style="color: #9FC59F;">)</span><span style="color: #93E0E3;">)</span>
      <span style="color: #93E0E3;">(</span>vector-ref amplitudes channel<span style="color: #93E0E3;">)</span><span style="color: #D0BF8F;">)</span><span style="color: #BFEBBF;">)</span><span style="color: #DCDCCC;">)</span>
 
 <span style="color: #DCDCCC;">(</span>play! <span style="color: #BFEBBF;">(</span>sinusoid <span style="color: #D0BF8F;">(</span>rms-amplitude <span style="color: #BFEBBF;">1</span> <span style="color: #93E0E3;">(</span>+~ <span style="color: #9FC59F;">(</span>sinusoid <span style="color: #94BFF3;">(</span>~&lt; <span style="color: #BFEBBF;">1.0</span><span style="color: #94BFF3;">)</span> <span style="color: #BFEBBF;">440.0</span> <span style="color: #BFEBBF;">0.0</span><span style="color: #9FC59F;">)</span><span style="color: #93E0E3;">)</span><span style="color: #D0BF8F;">)</span> <span style="color: #BFEBBF;">440.0</span> <span style="color: #BFEBBF;">0.0</span><span style="color: #BFEBBF;">)</span><span style="color: #DCDCCC;">)</span>
@@ -432,7 +432,7 @@ Let's throttle <code>rms-amplitude</code> to make it less hungry
 </div>
 
 <p>
-Chez Scheme Gℂ is so cool that though we produce a lot of garbage every
+Chez Scheme GC is so cool that though we produce a lot of garbage every
 second it doesn't interrupt sound! But we still have a noticeable lag on
 window initialization. Take it into account if you are going to spawn
 capacitive <code>rms-amplitude</code> signals frequently.
@@ -452,8 +452,8 @@ as <code>osc:sine</code> (takes phasor signal as input, we'll cover it later) an
 </div>
 </div>
 
-<div id="outline-container-orgec8f17f" class="outline-3">
-<h3 id="orgec8f17f"><span class="section-number-3">1.2</span> Units of Amplitude</h3>
+<div id="outline-container-org22ceade" class="outline-3">
+<h3 id="org22ceade"><span class="section-number-3">1.2</span> Units of Amplitude</h3>
 <div class="outline-text-3" id="text-1-2">
 <p>
 Convert amplitude to decibels, with a0 = 1e-5 as suggested in TTEM
@@ -528,8 +528,8 @@ Try to change step. For that wave personally I hear 2dB difference.
 </div>
 </div>
 
-<div id="outline-container-orgfca2211" class="outline-3">
-<h3 id="orgfca2211"><span class="section-number-3">1.3</span> Controlling Amplitude</h3>
+<div id="outline-container-org51623e4" class="outline-3">
+<h3 id="org51623e4"><span class="section-number-3">1.3</span> Controlling Amplitude</h3>
 <div class="outline-text-3" id="text-1-3">
 <p>
 We already controlled amplitude by multiplying every sample by <code>a</code>
@@ -545,8 +545,8 @@ Let's do it by multiplying sinusoid by constant signal.
 </div>
 </div>
 
-<div id="outline-container-orge6d1f4a" class="outline-3">
-<h3 id="orge6d1f4a"><span class="section-number-3">1.4</span> Frequency</h3>
+<div id="outline-container-org5754892" class="outline-3">
+<h3 id="org5754892"><span class="section-number-3">1.4</span> Frequency</h3>
 <div class="outline-text-3" id="text-1-4">
 <div class="org-src-container">
 <pre class="src src-scheme"><span style="color: #DCDCCC;">(</span><span style="color: #F0DFAF; font-weight: bold;">define</span> <span style="color: #BFEBBF;">(</span><span style="color: #93E0E3;">midi-pitch-&gt;frequency</span> m<span style="color: #BFEBBF;">)</span>
@@ -604,8 +604,8 @@ Notice that abrupt change of frequency cause "pops" discussed in TTEM 1.5
 </div>
 </div>
 
-<div id="outline-container-org6433321" class="outline-3">
-<h3 id="org6433321"><span class="section-number-3">1.5</span> Synthesizing a sinusoid</h3>
+<div id="outline-container-org4eed3ff" class="outline-3">
+<h3 id="org4eed3ff"><span class="section-number-3">1.5</span> Synthesizing a sinusoid</h3>
 <div class="outline-text-3" id="text-1-5">
 <p>
 To make transition smooth we could use built-in <b>linear-transition</b>
@@ -638,53 +638,151 @@ Any function could schedule itself. It is called temporal recursion.
 </div>
 </div>
 
-<div id="outline-container-orgd92eaa7" class="outline-3">
-<h3 id="orgd92eaa7"><span class="section-number-3">1.6</span> Superposing Signals</h3>
+<div id="outline-container-org32ed233" class="outline-3">
+<h3 id="org32ed233"><span class="section-number-3">1.6</span> Superposing Signals</h3>
+<div class="outline-text-3" id="text-1-6">
+<p>
+To superpose signals in Ad Libitum signal sum operator <code>+~</code> is available.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-scheme"><span style="color: #DCDCCC;">(</span>play! <span style="color: #BFEBBF;">(</span>+~ <span style="color: #D0BF8F;">(</span>*~ <span style="color: #93E0E3;">(</span>~&lt; <span style="color: #BFEBBF;">0.5</span><span style="color: #93E0E3;">)</span> <span style="color: #93E0E3;">(</span>osc:sine/// <span style="color: #9FC59F;">(</span>midi-pitch-&gt;frequency <span style="color: #BFEBBF;">69</span><span style="color: #9FC59F;">)</span><span style="color: #93E0E3;">)</span><span style="color: #D0BF8F;">)</span>
+           <span style="color: #D0BF8F;">(</span>*~ <span style="color: #93E0E3;">(</span>~&lt; <span style="color: #BFEBBF;">0.5</span><span style="color: #93E0E3;">)</span> <span style="color: #93E0E3;">(</span>osc:sine/// <span style="color: #9FC59F;">(</span>midi-pitch-&gt;frequency <span style="color: #BFEBBF;">72</span><span style="color: #9FC59F;">)</span><span style="color: #93E0E3;">)</span><span style="color: #D0BF8F;">)</span><span style="color: #BFEBBF;">)</span><span style="color: #DCDCCC;">)</span>
+<span style="color: #DCDCCC;">(</span>h!<span style="color: #DCDCCC;">)</span>
+</pre>
 </div>
-<div id="outline-container-org4a2bfbc" class="outline-3">
-<h3 id="org4a2bfbc"><span class="section-number-3">1.7</span> Periodic Signals</h3>
+
+<p>
+Let's measure how peak and rms amplitude of sinusoids superposition relates
+to sum of their amplitudes.
+</p>
+
+<p>
+For that we need to define <code>peak-amplitude</code> signal.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-scheme"><span style="color: #DCDCCC;">(</span><span style="color: #F0DFAF; font-weight: bold;">define</span> <span style="color: #BFEBBF;">(</span><span style="color: #93E0E3;">peak-amplitude</span> signal<span style="color: #BFEBBF;">)</span>
+  <span style="color: #BFEBBF;">(</span><span style="color: #F0DFAF; font-weight: bold;">let</span> <span style="color: #D0BF8F;">(</span><span style="color: #93E0E3;">[</span>peaks <span style="color: #9FC59F;">(</span>make-vector *channels* <span style="color: #BFEBBF;">0.0</span><span style="color: #9FC59F;">)</span><span style="color: #93E0E3;">]</span><span style="color: #D0BF8F;">)</span>
+    <span style="color: #D0BF8F;">(</span>~&lt;
+     <span style="color: #93E0E3;">(</span><span style="color: #F0DFAF; font-weight: bold;">let*</span> <span style="color: #9FC59F;">(</span><span style="color: #94BFF3;">[</span>sample <span style="color: #E0CF9F;">(</span>&lt;~ signal<span style="color: #E0CF9F;">)</span><span style="color: #94BFF3;">]</span>
+            <span style="color: #94BFF3;">[</span>peak <span style="color: #E0CF9F;">(</span>max sample <span style="color: #8FB28F;">(</span>vector-ref peaks channel<span style="color: #8FB28F;">)</span><span style="color: #E0CF9F;">)</span><span style="color: #94BFF3;">]</span><span style="color: #9FC59F;">)</span>
+       <span style="color: #9FC59F;">(</span>vector-set! peaks channel peak<span style="color: #9FC59F;">)</span>
+       peak<span style="color: #93E0E3;">)</span><span style="color: #D0BF8F;">)</span><span style="color: #BFEBBF;">)</span><span style="color: #DCDCCC;">)</span>
+</pre>
 </div>
-<div id="outline-container-org6981746" class="outline-3">
-<h3 id="org6981746"><span class="section-number-3">1.8</span> About the Software Examples</h3>
+
+<p>
+Because Ad Libitum signals are kind of pull FRP, we can't just wrap our
+signal with <code>rms-amplitude</code> and then play initial signal and have RMS one
+updated. Let's define useful signal which keep signals given to it updated,
+but plays only first one.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-scheme"><span style="color: #DCDCCC;">(</span><span style="color: #F0DFAF; font-weight: bold;">define</span> <span style="color: #BFEBBF;">(</span><span style="color: #93E0E3;">solo</span> audio . muted<span style="color: #BFEBBF;">)</span>
+  <span style="color: #BFEBBF;">(</span>~&lt;
+   <span style="color: #D0BF8F;">(</span><span style="color: #F0DFAF; font-weight: bold;">for-each</span> <span style="color: #93E0E3;">(</span><span style="color: #F0DFAF; font-weight: bold;">cut</span> &lt;&gt; time channel<span style="color: #93E0E3;">)</span> muted<span style="color: #D0BF8F;">)</span>
+   <span style="color: #D0BF8F;">(</span>&lt;~ audio<span style="color: #D0BF8F;">)</span><span style="color: #BFEBBF;">)</span><span style="color: #DCDCCC;">)</span>
+</pre>
 </div>
-<div id="outline-container-orga2a738e" class="outline-3">
-<h3 id="orga2a738e"><span class="section-number-3">1.9</span> Examples</h3>
+
+<p>
+Uncorrelated signals.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-scheme"><span style="color: #DCDCCC;">(</span><span style="color: #F0DFAF; font-weight: bold;">define</span> <span style="color: #93E0E3;">signal-1</span> <span style="color: #BFEBBF;">(</span>*~ <span style="color: #D0BF8F;">(</span>~&lt; <span style="color: #BFEBBF;">0.5</span><span style="color: #D0BF8F;">)</span> <span style="color: #D0BF8F;">(</span>osc:sine/// <span style="color: #93E0E3;">(</span>midi-pitch-&gt;frequency <span style="color: #BFEBBF;">69</span><span style="color: #93E0E3;">)</span><span style="color: #D0BF8F;">)</span><span style="color: #BFEBBF;">)</span><span style="color: #DCDCCC;">)</span>
+<span style="color: #DCDCCC;">(</span><span style="color: #F0DFAF; font-weight: bold;">define</span> <span style="color: #93E0E3;">signal-2</span> <span style="color: #BFEBBF;">(</span>*~ <span style="color: #D0BF8F;">(</span>~&lt; <span style="color: #BFEBBF;">0.5</span><span style="color: #D0BF8F;">)</span> <span style="color: #D0BF8F;">(</span>osc:sine/// <span style="color: #93E0E3;">(</span>midi-pitch-&gt;frequency <span style="color: #BFEBBF;">72</span><span style="color: #93E0E3;">)</span><span style="color: #D0BF8F;">)</span><span style="color: #BFEBBF;">)</span><span style="color: #DCDCCC;">)</span>
+
+<span style="color: #DCDCCC;">(</span><span style="color: #F0DFAF; font-weight: bold;">define</span> <span style="color: #93E0E3;">superposed-signal</span> <span style="color: #BFEBBF;">(</span>+~ signal-1 signal-2<span style="color: #BFEBBF;">)</span><span style="color: #DCDCCC;">)</span>
+
+<span style="color: #5F7F5F;">;; </span><span style="color: #7F9F7F;">signal-1 and signal-2 peaks are obviously 0.5</span>
+<span style="color: #DCDCCC;">(</span><span style="color: #F0DFAF; font-weight: bold;">define</span> <span style="color: #93E0E3;">measure-peak</span> <span style="color: #BFEBBF;">(</span>peak-amplitude superposed-signal<span style="color: #BFEBBF;">)</span><span style="color: #DCDCCC;">)</span>
+
+<span style="color: #DCDCCC;">(</span><span style="color: #F0DFAF; font-weight: bold;">define</span> <span style="color: #93E0E3;">measure-rms-signal-1-2</span> <span style="color: #BFEBBF;">(</span>rms-amplitude <span style="color: #BFEBBF;">0.1</span> signal-1<span style="color: #BFEBBF;">)</span><span style="color: #DCDCCC;">)</span>
+<span style="color: #DCDCCC;">(</span><span style="color: #F0DFAF; font-weight: bold;">define</span> <span style="color: #93E0E3;">measure-rms</span> <span style="color: #BFEBBF;">(</span>rms-amplitude <span style="color: #BFEBBF;">0.1</span> superposed-signal<span style="color: #BFEBBF;">)</span><span style="color: #DCDCCC;">)</span>
+
+<span style="color: #DCDCCC;">(</span>play! <span style="color: #BFEBBF;">(</span>solo superposed-signal measure-peak measure-rms measure-rms-signal-1-2<span style="color: #BFEBBF;">)</span><span style="color: #DCDCCC;">)</span>
+<span style="color: #DCDCCC;">(</span>h!<span style="color: #DCDCCC;">)</span>
+
+<span style="color: #DCDCCC;">(</span>measure-peak <span style="color: #BFEBBF;">0.0</span> <span style="color: #BFEBBF;">0</span><span style="color: #DCDCCC;">)</span> <span style="color: #5F7F5F;">;; </span><span style="color: #7F9F7F;">=&gt; 0.9999931184993082</span>
+<span style="color: #DCDCCC;">(</span>measure-rms <span style="color: #BFEBBF;">0.0</span> <span style="color: #BFEBBF;">0</span><span style="color: #DCDCCC;">)</span> <span style="color: #5F7F5F;">;; </span><span style="color: #7F9F7F;">=&gt; 0.5038381755150125</span>
+<span style="color: #DCDCCC;">(</span>measure-rms-signal-1-2 <span style="color: #BFEBBF;">0.0</span> <span style="color: #BFEBBF;">0</span><span style="color: #DCDCCC;">)</span> <span style="color: #5F7F5F;">;; </span><span style="color: #7F9F7F;">=&gt; 0.3535533905956031</span>
+</pre>
 </div>
-<div id="outline-container-org71ce93e" class="outline-3">
-<h3 id="org71ce93e"><span class="section-number-3">1.10</span> Exercises</h3>
+
+<p>
+Correlated signals.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-scheme"><span style="color: #DCDCCC;">(</span><span style="color: #F0DFAF; font-weight: bold;">define</span> <span style="color: #93E0E3;">signal-1</span> <span style="color: #BFEBBF;">(</span>*~ <span style="color: #D0BF8F;">(</span>~&lt; <span style="color: #BFEBBF;">0.5</span><span style="color: #D0BF8F;">)</span> <span style="color: #D0BF8F;">(</span>osc:sine/// <span style="color: #BFEBBF;">440.0</span><span style="color: #D0BF8F;">)</span><span style="color: #BFEBBF;">)</span><span style="color: #DCDCCC;">)</span>
+<span style="color: #DCDCCC;">(</span><span style="color: #F0DFAF; font-weight: bold;">define</span> <span style="color: #93E0E3;">signal-2</span> <span style="color: #BFEBBF;">(</span>*~ <span style="color: #D0BF8F;">(</span>~&lt; <span style="color: #BFEBBF;">0.5</span><span style="color: #D0BF8F;">)</span> <span style="color: #D0BF8F;">(</span>osc:sine/// <span style="color: #BFEBBF;">440.0</span><span style="color: #D0BF8F;">)</span><span style="color: #BFEBBF;">)</span><span style="color: #DCDCCC;">)</span>
+
+<span style="color: #DCDCCC;">(</span><span style="color: #F0DFAF; font-weight: bold;">define</span> <span style="color: #93E0E3;">superposed-signal</span> <span style="color: #BFEBBF;">(</span>+~ signal-1 signal-2<span style="color: #BFEBBF;">)</span><span style="color: #DCDCCC;">)</span>
+
+<span style="color: #5F7F5F;">;; </span><span style="color: #7F9F7F;">signal-1 and signal-2 peaks are obviously 0.5</span>
+<span style="color: #DCDCCC;">(</span><span style="color: #F0DFAF; font-weight: bold;">define</span> <span style="color: #93E0E3;">measure-peak</span> <span style="color: #BFEBBF;">(</span>peak-amplitude superposed-signal<span style="color: #BFEBBF;">)</span><span style="color: #DCDCCC;">)</span>
+
+<span style="color: #DCDCCC;">(</span><span style="color: #F0DFAF; font-weight: bold;">define</span> <span style="color: #93E0E3;">measure-rms-signal-1-2</span> <span style="color: #BFEBBF;">(</span>rms-amplitude <span style="color: #BFEBBF;">0.1</span> signal-1<span style="color: #BFEBBF;">)</span><span style="color: #DCDCCC;">)</span>
+<span style="color: #DCDCCC;">(</span><span style="color: #F0DFAF; font-weight: bold;">define</span> <span style="color: #93E0E3;">measure-rms</span> <span style="color: #BFEBBF;">(</span>rms-amplitude <span style="color: #BFEBBF;">0.1</span> superposed-signal<span style="color: #BFEBBF;">)</span><span style="color: #DCDCCC;">)</span>
+
+<span style="color: #DCDCCC;">(</span>play! <span style="color: #BFEBBF;">(</span>solo superposed-signal measure-peak measure-rms measure-rms-signal-1-2<span style="color: #BFEBBF;">)</span><span style="color: #DCDCCC;">)</span>
+<span style="color: #DCDCCC;">(</span>h!<span style="color: #DCDCCC;">)</span>
+
+<span style="color: #DCDCCC;">(</span>measure-peak <span style="color: #BFEBBF;">0.0</span> <span style="color: #BFEBBF;">0</span><span style="color: #DCDCCC;">)</span> <span style="color: #5F7F5F;">;; </span><span style="color: #7F9F7F;">=&gt; 1.0</span>
+<span style="color: #DCDCCC;">(</span>measure-rms <span style="color: #BFEBBF;">0.0</span> <span style="color: #BFEBBF;">0</span><span style="color: #DCDCCC;">)</span> <span style="color: #5F7F5F;">;; </span><span style="color: #7F9F7F;">=&gt; 0.7071067811829478</span>
+<span style="color: #DCDCCC;">(</span>measure-rms-signal-1-2 <span style="color: #BFEBBF;">0.0</span> <span style="color: #BFEBBF;">0</span><span style="color: #DCDCCC;">)</span> <span style="color: #5F7F5F;">;; </span><span style="color: #7F9F7F;">=&gt; 0.3535533905914739</span>
+</pre>
+</div>
 </div>
 </div>
 
-<div id="outline-container-org4aca7ae" class="outline-2">
-<h2 id="org4aca7ae"><span class="section-number-2">2</span> Wavetables and samplers</h2>
+<div id="outline-container-org3cf55d6" class="outline-3">
+<h3 id="org3cf55d6"><span class="section-number-3">1.7</span> Periodic Signals</h3>
+</div>
+<div id="outline-container-orgcaaf932" class="outline-3">
+<h3 id="orgcaaf932"><span class="section-number-3">1.8</span> About the Software Examples</h3>
+</div>
+<div id="outline-container-org626456d" class="outline-3">
+<h3 id="org626456d"><span class="section-number-3">1.9</span> Examples</h3>
+</div>
+<div id="outline-container-org8819eb4" class="outline-3">
+<h3 id="org8819eb4"><span class="section-number-3">1.10</span> Exercises</h3>
+</div>
+</div>
+
+<div id="outline-container-org2d009f4" class="outline-2">
+<h2 id="org2d009f4"><span class="section-number-2">2</span> Wavetables and samplers</h2>
 <div class="outline-text-2" id="text-2">
 </div>
-<div id="outline-container-orgf181efc" class="outline-3">
-<h3 id="orgf181efc"><span class="section-number-3">2.1</span> The Wavetable Oscillator</h3>
+<div id="outline-container-orgff1d264" class="outline-3">
+<h3 id="orgff1d264"><span class="section-number-3">2.1</span> The Wavetable Oscillator</h3>
 </div>
-<div id="outline-container-org5bfac7d" class="outline-3">
-<h3 id="org5bfac7d"><span class="section-number-3">2.2</span> Sampling</h3>
+<div id="outline-container-orge7bc713" class="outline-3">
+<h3 id="orge7bc713"><span class="section-number-3">2.2</span> Sampling</h3>
 </div>
-<div id="outline-container-org7bed29e" class="outline-3">
-<h3 id="org7bed29e"><span class="section-number-3">2.3</span> Enveloping samplers</h3>
+<div id="outline-container-org16e6d08" class="outline-3">
+<h3 id="org16e6d08"><span class="section-number-3">2.3</span> Enveloping samplers</h3>
 </div>
-<div id="outline-container-org62bbc70" class="outline-3">
-<h3 id="org62bbc70"><span class="section-number-3">2.4</span> Timbre stretching</h3>
+<div id="outline-container-org2f9d536" class="outline-3">
+<h3 id="org2f9d536"><span class="section-number-3">2.4</span> Timbre stretching</h3>
 </div>
-<div id="outline-container-orgb127768" class="outline-3">
-<h3 id="orgb127768"><span class="section-number-3">2.5</span> Interpolation</h3>
+<div id="outline-container-org3aa19fa" class="outline-3">
+<h3 id="org3aa19fa"><span class="section-number-3">2.5</span> Interpolation</h3>
 </div>
-<div id="outline-container-org2653937" class="outline-3">
-<h3 id="org2653937"><span class="section-number-3">2.6</span> Examples</h3>
+<div id="outline-container-orgfd2c24f" class="outline-3">
+<h3 id="orgfd2c24f"><span class="section-number-3">2.6</span> Examples</h3>
 </div>
-<div id="outline-container-org1d99557" class="outline-3">
-<h3 id="org1d99557"><span class="section-number-3">2.7</span> Exercises</h3>
+<div id="outline-container-orgd791e34" class="outline-3">
+<h3 id="orgd791e34"><span class="section-number-3">2.7</span> Exercises</h3>
 </div>
 </div>
 </div>
 <div id="postamble" class="status">
 <p class="author">Author: Ruslan Prakapchuk</p>
-<p class="date">Created: 2017-10-14 Sat 12:50</p>
+<p class="date">Created: 2017-10-14 Sat 20:11</p>
 <p class="validation"><a href="http://validator.w3.org/check?uri=referer">Validate</a></p>
 </div>
 </body>
