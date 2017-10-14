@@ -5,6 +5,7 @@
           *schedule* *now*)
   (import (chezscheme)
           (only (soundio) usleep))
+  ;; <pairing-heap>
   ;; we do some #f-punning and don't throw on empty heaps
   
   (define heap/empty '())
@@ -38,6 +39,9 @@
     (if (null? heap)
         heap/empty
         (heap/merge-pairs comparator (cdr heap))))
+  ;; </pairing-heap>
+  ;; <scheduler>
+  ;; <scheduler-record>
   (define-record-type scheduler
     (fields now (mutable queue) resolution (mutable thread) mutex))
   
@@ -45,19 +49,25 @@
     (make-scheduler
      now           ; now
      heap/empty    ; queue
-     0.001         ; resolution
+     250           ; resolution
      #f            ; thread
      (make-mutex)  ; mutex
      ))
+  ;; </scheduler-record>
+  ;; <event-record>
   (define-record-type event
     (fields time f args))
-  (define (process-events scheduler t)
+  ;; </event-record>
+  ;; <scheduler-process-events>
+  (define (process-events scheduler time)
     (with-mutex
      (scheduler-mutex scheduler)
      (let next-event ()
        (let ([event (heap/find-min (scheduler-queue scheduler))])
-         (when (and event (<= (event-time event) t))
-           (scheduler-queue-set! scheduler (heap/delete-min event-time (scheduler-queue scheduler)))
+         (when (and event (<= (event-time event) time))
+           (scheduler-queue-set!
+            scheduler
+            (heap/delete-min event-time (scheduler-queue scheduler)))
            (guard (_ [else #f])
              (let ([f (event-f event)])
                (apply (if (symbol? f)
@@ -65,27 +75,42 @@
                           f)
                       (event-args event))))
            (next-event))))))
+  ;; </scheduler-process-events>
+  ;; <scheduler-interface>
+  ;; <now>
   (define (now scheduler) ((scheduler-now scheduler)))
+  ;; </now>
+  ;; <schedule>
   (define schedule
     (case-lambda
       [(scheduler event)
        (with-mutex (scheduler-mutex scheduler)
                    (scheduler-queue-set! scheduler (heap/insert event-time event (scheduler-queue scheduler))))]
       [(scheduler t f . args)
-       (schedule scheduler (make-event t f args))]))
+       (schedule scheduler (make-event (inexact t) f args))]))
+  ;; </schedule>
+  ;; </scheduler-interface>
+  ;; <scheduler-interface>
+  ;; <start-scheduler>
   (define (start-scheduler scheduler)
     (fork-thread
      (lambda ()
        (scheduler-thread-set! scheduler (get-thread-id))
        (let* ([resolution (scheduler-resolution scheduler)]
-              [polling-usec (exact (floor (* resolution 1e6)))])
+              [expired-horizon (/ 0.5 resolution)]
+              [microseconds-to-sleep (exact (floor (/ 1e6 resolution)))])
          (let loop ()
            (when (scheduler-thread scheduler)
-             (process-events scheduler (+ (now scheduler) resolution))
-             (usleep 0 polling-usec)
+             (process-events scheduler (+ (now scheduler) expired-horizon))
+             (usleep 0 microseconds-to-sleep)
              (loop)))))))
+  ;; </start-scheduler>
+  ;; <stop-scheduler>
   (define (stop-scheduler scheduler)
     (scheduler-thread-set! scheduler #f))
+  ;; </stop-scheduler>
+  ;; </scheduler-interface>
+  ;; </scheduler>
   (define *scheduler* #f)
   (define (init now) (set! *scheduler* (simple-scheduler now)))
   (define (start) (start-scheduler *scheduler*))

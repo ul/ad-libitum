@@ -3,6 +3,7 @@
   (import (chezscheme)
           (prefix (ad-libitum scheduler) scheduler:)
           (prefix (portmidi) pm:))
+  ;; <midi>
   (define (*on-note-on* timestamp data1 data2 channel)
     (printf "~s:~s:~s:~s\r\n" timestamp data1 data2 channel))
   
@@ -55,4 +56,5 @@
       (pm:terminate)
       (set! *stream* #f)
       (set! *scheduler* #f)))
+  ;; </midi>
   )

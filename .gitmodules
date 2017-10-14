@@ -7,3 +7,6 @@
 [submodule "chez-portmidi"]
 	path = chez-portmidi
 	url = https://github.com/ul/chez-portmidi.git
+[submodule "org-html-themes"]
+	path = org-html-themes
+	url = https://github.com/fniessen/org-html-themes.git

@@ -1,11 +1,9 @@
-(define *bpm* 120.0)
-(define my-bi-lpf (make-biquad-filter make-lpf-coefficients))
-(define my-bi-hpf (make-biquad-filter make-hpf-coefficients))
+(set-bpm! 120.0)
 
-(define my-lpf (cut lpf (*~ (~< 880.0) (amp2phase (osc:sine* 220.0))) <>))
-(define my-lpf (∘ (cut hpf (~< 110.0) <>) (cut lpf (~< 440.0) <>)))
-(define my-lpf (cut lpf (~< 110.0) <>))
-(define my-lpf (cut my-bi-lpf (~< 1.0) (~< (* 4 880.0)) <>))
+(define my-lpf (cut filter:lpf (*~ (~< 880.0) (amplitude->phase (osc:sine/// 220.0))) <>))
+(define my-lpf (∘ (cut filter:hpf (~< 110.0) <>) (cut filter:lpf (~< 440.0) <>)))
+(define my-lpf (cut filter:lpf (~< 110.0) <>))
+(define my-lpf (cut filter:biquad-lpf (~< 1.0) (~< (* 4 880.0)) <>))
 
 (begin
   (define (make-note1 frequency duration)
@@ -14,31 +12,30 @@
         (let ([s (*~
                   (~< 2.0)
                   ;; (make-overtone (map constant '(0.6 0.4)) ;; PLAY
-                  ;;                ;; (cut osc:pulse (amp2phase (osc:sine* (~< 200.0))) <>) ;; PLAY
+                  ;;                ;; (cut osc:pulse (amplitude->phase (osc:sine/// (~< 200.0))) <>) ;; PLAY
                   ;;                (λ (phase)
                   ;;                  (/~
-                  ;;                   (osc:sine* #;frequency 880.0)
+                  ;;                   (osc:sine/// #;frequency 880.0)
                   ;;                   (+~ (~< 2.0) (osc:sine phase))))
                   ;;                frequency
                   ;;                ∅)
                   (/~
-                   (osc:sine* #;frequency 1760.0)
+                   (osc:sine/// #;frequency 1760.0)
                    ;; noise:white
-                   (+~ (~< 2.0) (osc:sine* frequency))
-                   ;; (osc:sine* frequency)
+                   (+~ (~< 2.0) (osc:sine/// frequency))
+                   ;; (osc:sine/// frequency)
                    ;; (+~ (~< 2.0) noise:white)
                    )
                   (env:impulse start end))])
-          ;; (my-lpf (echo (*~ (~< 0.3) (amp2phase (osc:sine* 0.55))) (~< 0.9) s))
-          (*~ s (pan (osc:sine* 440.0)))
-          ;; (my-lpf (echo (~< 0.3) (~< 0.8) s))
-          ;; (my-lpf (echo (~< 0.05) (~< 0.5) s))
+          ;; (*~ s (pan (osc:sine/// 440.0)))
+          ;; (my-lpf (filter:echo (~< 0.3) (~< 0.8) s))
+          (my-lpf (filter:echo (~< 0.05) (~< 0.5) s))
           ;; s
           ))))
 
-  (define-values (my-dsp1 play-note1) (make-polyphony 12 make-note1))
+  (define-values (my-dsp1 play-note1) (inst:make-polyphony 12 make-note1))
 
-  (define my-dsp (my-lpf (echo (*~ (~< 0.1) (amp2phase (osc:sine* 0.001))) (~< 0.9) my-dsp1))))
+  (define my-dsp (my-lpf (filter:echo (*~ (~< 0.1) (amplitude->phase (osc:sine/// 0.001))) (~< 0.9) my-dsp1))))
 ;; (define my-dsp (my-lpf my-dsp1))
 
 
@@ -53,7 +50,7 @@
   (define my-pat4 '(0 0)))
 
 (define (play-my-perc)
-  (let ([beat (time->beat (now) *bpm*)])
+  (let ([beat (*beat*)])
     (play-pattern my-pat1 (cut play-note1 220.0 (/ 32.0)) beat)
     (play-pattern my-pat2 (cut play-note1 110.0 (/ 32.0)) beat)
     ;; (play-pattern my-pat3 (cut play-note1 110.0 (/ 32.0)) beat)
@@ -67,3 +64,15 @@
 (h!)
 
 ;;;;
+(define-values (frequency set-frequency!) (control-signal id 440.0 *linear-transition*))
+
+(define (swap-frequency i)
+  (if (zero? i)
+      (set-frequency! 440.0)
+      (set-frequency! 220.0))
+  (schedule (+ (now) 1/4) 'swap-frequency (- 1 i)))
+
+(swap-frequency 0)
+
+(play! (osc:sine/// frequency))
+(h!)

@@ -1,0 +1,297 @@
+#+TITLE: The Theory and Technique of Electronic Music Exercises in Ad Libitum
+#+SETUPFILE: org-html-themes/setup/theme-readtheorg.setup
+
+  It's my exercise book for studying "The Theory and Technique of Electronic
+  Music" by Miller Puckette. Work is done in Ad Libitum instead of PureData, and
+  some pieces of code migrate back to Ad Libitum standard library.
+
+* Sinusoids, amplitude and frequency
+
+  Ad Libitum deals with continous representation of time, it's expressed as a
+  float number of seconds passed from the stream start. For any signal either
+  continous or discrete feels more natural, and there is no clear measure of
+  their shares. Good news that conversion is relatively easy in both directions.
+
+  =~<= is a syntax sugar which wraps code into function of two parameters:
+  =time= and =channel=, which are thrown in scope. Such kind of function is how
+  Ad Libitum represents audio signals. Think about time as a continuous
+  counterpart of sample number =n= in TTEM. =channel= will be discussed later.
+  Think about =~<= as the thing which animates your formula to produce signal.
+
+#+BEGIN_SRC scheme
+  (define (sinusoid a ω φ) (~< (* a (cos (+ (* ω time) φ)))))
+#+END_SRC
+
+  =play!= connects your signal to audio output and you can hear it! Amplitude
+  range in Ad Libitum is [-1, 1], setting a=0.2 we are producing signal in 1/5
+  of it.
+
+#+BEGIN_SRC scheme
+  (play! (sinusoid 0.2 2000.0 0.0))
+#+END_SRC
+
+  And the most important function in Ad Libitum — =h!= hush!
+
+#+BEGIN_SRC scheme
+  (h!)
+#+END_SRC
+
+  Let's make sinusoid to receive regular frequency instead of angular one.
+
+#+BEGIN_SRC scheme
+  (define (ƒ→ω ƒ)
+    (* 2π ƒ))
+
+  (define (ω→ƒ ω)
+    (/ ω 2π))
+
+  (define (sinusoid a ƒ φ)
+    (~< (* a (cos (+ (* (ƒ→ω ƒ) time) φ)))))
+
+  (play! (sinusoid 0.2 440.0 0.0))
+  (h!)
+#+END_SRC
+
+** Measures of Amplitude
+
+   This is not a blood pact, but many of Ad Libitum code relies on fact that
+   audiosignal is called sample by sample, without skips. Making that assumption
+   we are able to write RMS amplitude measurement even in continuous
+   representation of time.
+
+#+BEGIN_SRC scheme
+  (define (rms-amplitude window-width s)
+    (let ([windows (make-vector *channels*)]
+          [N (-> window-width (* *sample-rate*) (ceiling) (exact))]
+          [cursor -1])
+      (do-ec (: i *channels*)
+             (vector-set! windows i (make-vector N 0.0)))
+      (~<
+       (when (zero? channel)
+         (set! cursor (mod (+ cursor 1) N)))
+       (let ([window (vector-ref windows channel)]
+             [x 0.0])
+         (vector-set! window cursor (<~ s))
+         (vector-for-each (λ (y) (set! x (+ x (* y y)))) window)
+         (/ x N)))))
+#+END_SRC
+
+   Let's make sinusoid amplitude a signal, and set it to rms amplitude measured
+   from sinusoid with peak amplitude 1.0
+   Note =<~= syntax sugar to apply audiosignal function to time and channel.
+   =(<~ a)= is equivalent to =(a time channel)=
+   Also note how we make constant signal with =(~< 1.0)=
+
+#+BEGIN_SRC scheme
+  (define (sinusoid a ƒ φ)
+    (~< (* (<~ a) (cos (+ (* (ƒ→ω ƒ) time) φ)))))
+#+END_SRC
+
+   Note that computing rms in realtime is very expensive.
+   Try to increase window width until you get audio buffer underflow glitches.
+
+#+BEGIN_SRC scheme
+  (play! (sinusoid (rms-amplitude 2/440 (sinusoid (~< 1.0) 440.0 0.0)) 440.0 0.0))
+  (h!)
+#+END_SRC
+
+   Compare with 1.0 peak itself, it's louder!
+
+#+BEGIN_SRC scheme
+  (play! (sinusoid (~< 1.0) 440.0 0.0))
+  (h!)
+#+END_SRC
+
+   Let's throttle =rms-amplitude= to make it less hungry
+
+#+BEGIN_SRC scheme
+  (define (rms-amplitude window-width s)
+    (let ([windows (make-vector *channels*)]
+          [N (-> window-width (* *sample-rate*) (ceiling) (exact))]
+          [cursor -1]
+          [amplitudes (make-vector *channels* 0.0)])
+      (do-ec (: i *channels*)
+             (vector-set! windows i (make-vector N 0.0)))
+      (~<
+       (when (zero? channel)
+         (set! cursor (mod (+ cursor 1) N)))
+       (let ([window (vector-ref windows channel)])
+         (vector-set! window cursor (<~ s))
+         (when (zero? cursor)
+           (vector-set!
+            amplitudes
+            channel
+            (let ([x 0.0])
+              (vector-for-each (λ (y) (set! x (+ x (* y y)))) window)
+              (/ x N)))))
+       (vector-ref amplitudes channel))))
+
+  (play! (sinusoid (rms-amplitude 1 (+~ (sinusoid (~< 1.0) 440.0 0.0))) 440.0 0.0))
+  (h!)
+#+END_SRC
+
+   Chez Scheme Gℂ is so cool that though we produce a lot of garbage every
+   second it doesn't interrupt sound! But we still have a noticeable lag on
+   window initialization. Take it into account if you are going to spawn
+   capacitive =rms-amplitude= signals frequently.
+
+   In future for sinusoid we will use built-in Ad Libitum oscillator available
+   as =osc:sine= (takes phasor signal as input, we'll cover it later) and
+   =osc:sine///= (takes frequency and optional initial phase).
+
+#+BEGIN_SRC scheme
+  (play! (osc:sine/// 440.0 0.0))
+  (h!)
+#+END_SRC
+
+** Units of Amplitude
+
+   Convert amplitude to decibels, with a0 = 1e-5 as suggested in TTEM
+
+#+BEGIN_SRC scheme
+  (define (amp->dB x)
+    (* 20.0 (log (* x 1e5) 10.0)))
+
+  (amp->dB 1.0)
+  (amp->dB 0.5)
+#+END_SRC
+
+   But setting a0 to 1.0 is also very convenient — maximum amplitude is then 0dB
+   and any one below is just negative. All relations stays the same.
+
+#+BEGIN_SRC scheme
+  (define (amp->dB x)
+    (* 20.0 (log x 10.0)))
+
+  (amp->dB 0.5)
+  (amp->dB 1e-5)
+#+END_SRC
+
+   And convert decibels back to amplitude:
+
+#+BEGIN_SRC scheme
+  (define (dB->amp x)
+    (expt 10.0 (/ x 20.0)))
+
+  (dB->amp -100.0)
+  (dB->amp -50.0)
+  (dB->amp -10.0)
+  (dB->amp 0.0)
+#+END_SRC
+
+   Amplitude is related in an inexact way to the perceived loudness of a sound.
+   In general, two signals with the same peak or RMS amplitude won’t necessarily
+   have the same loudness at all. But amplifying a signal by 3 dB, say, will
+   fairly reliably make it sound about one “step” louder.
+
+#+BEGIN_SRC scheme
+  (define *volume-step-dB* 3.0)
+#+END_SRC
+
+   Let's test it!
+
+#+BEGIN_SRC scheme
+  (define (sinusoid a ƒ φ)
+    (~< (* a (cos (+ (* (ƒ→ω ƒ) time) φ)))))
+  (play! (sinusoid (dB->amp -10.0) 440.0 0.0))
+  (play! (sinusoid (dB->amp (- 10.0 *volume-step-dB*)) 440.0 0.0))
+  (h!)
+#+END_SRC
+
+   Try to change step. For that wave personally I hear 2dB difference.
+
+** Controlling Amplitude
+
+   We already controlled amplitude by multiplying every sample by =a=
+   Let's do it by multiplying sinusoid by constant signal.
+
+#+BEGIN_SRC scheme
+  (play! (*~ (~< 0.5) (osc:sine/// 440.0)))
+  (play! (*~ (~< 0.2) (osc:sine/// 440.0)))
+  (h!)
+#+END_SRC
+
+** Frequency
+
+#+BEGIN_SRC scheme
+  (define (midi-pitch->frequency m)
+    (* 440.0 (expt 2.0 (/ (- m 69.0) 12.0))))
+
+  (define (frequency->midi-pitch f)
+    (+ 69 (exact (round (* 12.0 (log (/ f 440.0) 2.0))))))
+
+  (play! (osc:sine/// (midi-pitch->frequency 69)))
+  (play! (osc:sine/// (midi-pitch->frequency 72)))
+  (h!)
+#+END_SRC
+
+   Ad Libitum allows you to use MIDI controller. Support is still incomplete and
+   relies on many assumptions. Your MIDI input device should be connected and
+   identified as the first one.
+   =now= is Ad Libitum clock function. It's required for MIDI module to put
+   proper timestamps on events.
+
+#+BEGIN_SRC scheme
+  (midi:start now)
+#+END_SRC
+
+   Let's defined so called control signal for our frequency. We'll speak about
+   control signals later, but putting it simply, control signal is an audio
+   signal which is updated in non-audio rate by calling its setter.
+
+#+BEGIN_SRC scheme
+  (define-values (frequency set-frequency!) (control-signal id 440.0 instant-transition))
+#+END_SRC
+
+   Let's set callback which will be called for every control change MIDI event.
+
+#+BEGIN_SRC scheme
+  (midi:set-cc! (λ (t knob value channel)
+                  (set-frequency! (midi-pitch->frequency value))))
+
+  (play! (osc:sine/// frequency))
+  (h!)
+#+END_SRC
+
+   Notice that abrupt change of frequency cause "pops" discussed in TTEM 1.5
+
+** Synthesizing a sinusoid
+
+   To make transition smooth we could use built-in *linear-transition*
+
+#+BEGIN_SRC scheme
+  (define-values (frequency set-frequency!) (control-signal id 440.0 *linear-transition*))
+#+END_SRC
+
+   Besides of using MIDI input we could make frequency change programmatically.
+   =schedule= allows you to call any function later at given point of time.
+   Any function could schedule itself. It is called temporal recursion.
+
+#+BEGIN_SRC scheme
+  (define (swap-frequency i)
+    (if (zero? i)
+        (set-frequency! 440.0)
+        (set-frequency! 220.0))
+    (schedule (+ (now) 1/4) 'swap-frequency (- 1 i)))
+
+  (swap-frequency 0)
+
+  (play! (osc:sine/// frequency))
+  (h!)
+#+END_SRC
+
+** Superposing Signals
+** Periodic Signals
+** About the Software Examples
+** Examples
+** Exercises
+
+* Wavetables and samplers
+
+** The Wavetable Oscillator
+** Sampling
+** Enveloping samplers
+** Timbre stretching
+** Interpolation
+** Examples
+** Exercises

@@ -3,6 +3,7 @@
   (import (chezscheme)
           (ad-libitum common)
           (ad-libitum signal))
+  ;; <adsr>
   (define~ (adsr start end attack decay sustain release)
     (let ([end (<~ end)])
       (if (<= end time)
@@ -29,6 +30,8 @@
                             (- 1.0 (* (- 1.0 s) (/ Δt d)))
                             s))))
                 0.0)))))
+  ;; </adsr>
+  ;; <impulse>
   (define~ (impulse start apex)
     (let ([start (<~ start)])
       (if (<= start time)
@@ -36,4 +39,5 @@
                       (- (<~ apex) start))])
             (* h (exp (- 1.0 h))))
           0.0)))
+  ;; </impulse>
   )

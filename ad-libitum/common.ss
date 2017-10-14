@@ -2,6 +2,7 @@
 (library (ad-libitum common (1))
   (export voodoo λ id >>> >> -> ->>
           compose ∘ pi two-pi π 2π
+          choice random-choice
           random-amplitude
           *channels* *sample-rate* *sample-angular-period*)
   (import (chezscheme)
@@ -25,22 +26,30 @@
   ;; can't live without
   (define (id x) x)
 
+  ;; <compose>
   (define (compose . fns)
     (define (make-chain fn chain)
       (λ args (call-with-values (cut apply fn args) chain)))
     (reduce make-chain values fns))
   
   (alias ∘ compose)
+  ;; </compose>
+  ;; <basic-math>
   (define pi (inexact (* (asin 1.0) 2)))
-  (define two-pi (fl* 2.0 pi))
+  (define two-pi (* 2.0 pi))
   (alias π pi)
   (alias 2π two-pi)
   
-  (define (mod1 x)
-    (mod x 1.0))
-  
   (define (random-amplitude)
     (- (random 2.0) 1.0))
+  ;; </basic-math>
+  ;; <choice>
+  (define (choice list n)
+    (list-ref list (mod n (length list))))
+  
+  (define (random-choice list)
+    (list-ref list (random (length list))))
+  ;; </choice>
 
   (define *sample-angular-period* (/ 2π *sample-rate*))
 

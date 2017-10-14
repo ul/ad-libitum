@@ -1,6 +1,3 @@
-(define~ (amp2phase s)
-  (* 0.5 (+ 1.0 (<~ s))))
-
 (define start 0.0)
 (define start~ (live-value 'start))
 (define apex 1.0)
@@ -10,9 +7,9 @@
 
 (define my-dsp
   (*~
-   (pan (osc:sine* 5000.0)) ;; PLAY
+   (pan (osc:sine/// 5000.0)) ;; PLAY
    (make-overtone (map constant '(0.2 0.1 0.2 0.1 0.4)) ;; PLAY
-                  (cut osc:pulse (amp2phase (osc:sine* 200.0)) <>) ;; PLAY
+                  (cut osc:pulse (amplitude->phase (osc:sine/// 200.0)) <>) ;; PLAY
                   frequency~
                   silence)))
 
@@ -23,24 +20,27 @@
   (set! start (now))
   (set! apex (+ (now) dur)))
 
+(play-note 440.0 1/2)
+(inst 0.11123 0)
+
 (define (be-playful-with-frequency)
-  (play-note (random-choice (make-scale 22000.0 pentatonic-scale)) ;; PLAY
-             (random-choice (list second half-second)))
+  (play-note (random-choice (scale:make-scale 22000.0 scale:pentatonic-scale)) ;; PLAY
+             (random-choice (list 1 1/2)))
   (schedule
    (+ (now)
       (random-choice
        (list
-        (* 2.0 second)
-        second
-        second
-        half-second
-        half-second
-        half-second
-        half-second
+        2
+        1
+        1
+        1/2
+        1/2
+        1/2
+        1/2
         )))
    'be-playful-with-frequency))
 
 (be-playful-with-frequency)
 
-(sound:set-dsp! (live-signal 'inst))
+(play! (live-signal 'inst))
 (h!)

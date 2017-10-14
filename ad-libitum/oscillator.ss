@@ -1,22 +1,27 @@
 #!chezscheme
 (library (ad-libitum oscillator (1))
-  (export phasor
+  (export phasor ///
           sine cosine square pulse tri saw sampler
-          sine* cosine* square* pulse* tri* saw*
+          sine/// cosine/// square/// pulse/// tri/// saw/// sampler///
           )
   (import (chezscheme)
           (ad-libitum common)
           (ad-libitum signal))
 
-  ;; TODO make it robust to multiple calls per sample?
+  ;; <phasor>
   (define (dynamic-phasor frequency phase0)
-    (let ([previous-phase (make-vector *channels* 0.0)])
+    (let ([previous-times (make-vector *channels* 0.0)]
+          [previous-phases (make-vector *channels* 0.0)])
       (~<
-       (let* ([phase-delta (/ (<~ frequency) *sample-rate*)]
-              [next-phase (-> (vector-ref previous-phase channel)
+       (let* ([previous-time (vector-ref previous-times channel)]
+              [phase-delta (if (< previous-time time)
+                               (/ (<~ frequency) *sample-rate*)
+                               0.0)]
+              [next-phase (-> (vector-ref previous-phases channel)
                               (+ phase-delta)
                               (mod 1.0))])
-         (vector-set! previous-phase channel next-phase)
+         (vector-set! previous-times channel time)
+         (vector-set! previous-phases channel next-phase)
          (-> (<~ phase0)
              (+ next-phase)
              (mod 1.0))))))
@@ -34,6 +39,10 @@
        (if (number? frequency)
            (static-phasor frequency 0.0)
            (dynamic-phasor frequency ∅))]))
+  
+  (alias /// phasor)
+  ;; </phasor>
+  ;; <waveforms>
   (define~ (sine phase)
     (sin (* 2π (<~ phase))))
   
@@ -64,15 +73,20 @@
     (let ([n (fixnum->flonum (vector-length table))])
       (~< (vector-ref table (flonum->fixnum (fltruncate (fl* (<~ phase) n)))))))
   
-  (define sine* (∘ sine phasor))
-  (define cosine* (∘ cosine phasor))
-  (define square* (∘ square phasor))
-  (define pulse*
+  (define sine/// (∘ sine phasor))
+  (define cosine/// (∘ cosine phasor))
+  (define square/// (∘ square phasor))
+  (define pulse///
     (case-lambda
       [(pulse-width frequency phase0)
        (pulse pulse-width (phasor frequency phase0))]
       [(pulse-width frequency)
-       (pulse* pulse-width frequency ∅)]))
-  (define tri* (∘ tri phasor))
-  (define saw* (∘ saw phasor))
+       (pulse pulse-width (phasor frequency ∅))]))
+  (define tri/// (∘ tri phasor))
+  (define saw/// (∘ saw phasor))
+  (define sampler///
+    (case-lambda
+      [(table frequency) (sampler table (phasor frequency))]
+      [(table frequency phase0) (sampler table (phasor frequency phase0))]))
+  ;; </waveforms>
   )

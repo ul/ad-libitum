@@ -1,0 +1,691 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+<!-- 2017-10-14 Sat 12:50 -->
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>The Theory and Technique of Electronic Music Exercises in Ad Libitum</title>
+<meta name="generator" content="Org mode" />
+<meta name="author" content="Ruslan Prakapchuk" />
+<style type="text/css">
+ <!--/*--><![CDATA[/*><!--*/
+  .title  { text-align: center;
+             margin-bottom: .2em; }
+  .subtitle { text-align: center;
+              font-size: medium;
+              font-weight: bold;
+              margin-top:0; }
+  .todo   { font-family: monospace; color: red; }
+  .done   { font-family: monospace; color: green; }
+  .priority { font-family: monospace; color: orange; }
+  .tag    { background-color: #eee; font-family: monospace;
+            padding: 2px; font-size: 80%; font-weight: normal; }
+  .timestamp { color: #bebebe; }
+  .timestamp-kwd { color: #5f9ea0; }
+  .org-right  { margin-left: auto; margin-right: 0px;  text-align: right; }
+  .org-left   { margin-left: 0px;  margin-right: auto; text-align: left; }
+  .org-center { margin-left: auto; margin-right: auto; text-align: center; }
+  .underline { text-decoration: underline; }
+  #postamble p, #preamble p { font-size: 90%; margin: .2em; }
+  p.verse { margin-left: 3%; }
+  pre {
+    border: 1px solid #ccc;
+    box-shadow: 3px 3px 3px #eee;
+    padding: 8pt;
+    font-family: monospace;
+    overflow: auto;
+    margin: 1.2em;
+  }
+  pre.src {
+    position: relative;
+    overflow: visible;
+    padding-top: 1.2em;
+  }
+  pre.src:before {
+    display: none;
+    position: absolute;
+    background-color: white;
+    top: -10px;
+    right: 10px;
+    padding: 3px;
+    border: 1px solid black;
+  }
+  pre.src:hover:before { display: inline;}
+  /* Languages per Org manual */
+  pre.src-asymptote:before { content: 'Asymptote'; }
+  pre.src-awk:before { content: 'Awk'; }
+  pre.src-C:before { content: 'C'; }
+  /* pre.src-C++ doesn't work in CSS */
+  pre.src-clojure:before { content: 'Clojure'; }
+  pre.src-css:before { content: 'CSS'; }
+  pre.src-D:before { content: 'D'; }
+  pre.src-ditaa:before { content: 'ditaa'; }
+  pre.src-dot:before { content: 'Graphviz'; }
+  pre.src-calc:before { content: 'Emacs Calc'; }
+  pre.src-emacs-lisp:before { content: 'Emacs Lisp'; }
+  pre.src-fortran:before { content: 'Fortran'; }
+  pre.src-gnuplot:before { content: 'gnuplot'; }
+  pre.src-haskell:before { content: 'Haskell'; }
+  pre.src-hledger:before { content: 'hledger'; }
+  pre.src-java:before { content: 'Java'; }
+  pre.src-js:before { content: 'Javascript'; }
+  pre.src-latex:before { content: 'LaTeX'; }
+  pre.src-ledger:before { content: 'Ledger'; }
+  pre.src-lisp:before { content: 'Lisp'; }
+  pre.src-lilypond:before { content: 'Lilypond'; }
+  pre.src-lua:before { content: 'Lua'; }
+  pre.src-matlab:before { content: 'MATLAB'; }
+  pre.src-mscgen:before { content: 'Mscgen'; }
+  pre.src-ocaml:before { content: 'Objective Caml'; }
+  pre.src-octave:before { content: 'Octave'; }
+  pre.src-org:before { content: 'Org mode'; }
+  pre.src-oz:before { content: 'OZ'; }
+  pre.src-plantuml:before { content: 'Plantuml'; }
+  pre.src-processing:before { content: 'Processing.js'; }
+  pre.src-python:before { content: 'Python'; }
+  pre.src-R:before { content: 'R'; }
+  pre.src-ruby:before { content: 'Ruby'; }
+  pre.src-sass:before { content: 'Sass'; }
+  pre.src-scheme:before { content: 'Scheme'; }
+  pre.src-screen:before { content: 'Gnu Screen'; }
+  pre.src-sed:before { content: 'Sed'; }
+  pre.src-sh:before { content: 'shell'; }
+  pre.src-sql:before { content: 'SQL'; }
+  pre.src-sqlite:before { content: 'SQLite'; }
+  /* additional languages in org.el's org-babel-load-languages alist */
+  pre.src-forth:before { content: 'Forth'; }
+  pre.src-io:before { content: 'IO'; }
+  pre.src-J:before { content: 'J'; }
+  pre.src-makefile:before { content: 'Makefile'; }
+  pre.src-maxima:before { content: 'Maxima'; }
+  pre.src-perl:before { content: 'Perl'; }
+  pre.src-picolisp:before { content: 'Pico Lisp'; }
+  pre.src-scala:before { content: 'Scala'; }
+  pre.src-shell:before { content: 'Shell Script'; }
+  pre.src-ebnf2ps:before { content: 'ebfn2ps'; }
+  /* additional language identifiers per "defun org-babel-execute"
+       in ob-*.el */
+  pre.src-cpp:before  { content: 'C++'; }
+  pre.src-abc:before  { content: 'ABC'; }
+  pre.src-coq:before  { content: 'Coq'; }
+  pre.src-groovy:before  { content: 'Groovy'; }
+  /* additional language identifiers from org-babel-shell-names in
+     ob-shell.el: ob-shell is the only babel language using a lambda to put
+     the execution function name together. */
+  pre.src-bash:before  { content: 'bash'; }
+  pre.src-csh:before  { content: 'csh'; }
+  pre.src-ash:before  { content: 'ash'; }
+  pre.src-dash:before  { content: 'dash'; }
+  pre.src-ksh:before  { content: 'ksh'; }
+  pre.src-mksh:before  { content: 'mksh'; }
+  pre.src-posh:before  { content: 'posh'; }
+  /* Additional Emacs modes also supported by the LaTeX listings package */
+  pre.src-ada:before { content: 'Ada'; }
+  pre.src-asm:before { content: 'Assembler'; }
+  pre.src-caml:before { content: 'Caml'; }
+  pre.src-delphi:before { content: 'Delphi'; }
+  pre.src-html:before { content: 'HTML'; }
+  pre.src-idl:before { content: 'IDL'; }
+  pre.src-mercury:before { content: 'Mercury'; }
+  pre.src-metapost:before { content: 'MetaPost'; }
+  pre.src-modula-2:before { content: 'Modula-2'; }
+  pre.src-pascal:before { content: 'Pascal'; }
+  pre.src-ps:before { content: 'PostScript'; }
+  pre.src-prolog:before { content: 'Prolog'; }
+  pre.src-simula:before { content: 'Simula'; }
+  pre.src-tcl:before { content: 'tcl'; }
+  pre.src-tex:before { content: 'TeX'; }
+  pre.src-plain-tex:before { content: 'Plain TeX'; }
+  pre.src-verilog:before { content: 'Verilog'; }
+  pre.src-vhdl:before { content: 'VHDL'; }
+  pre.src-xml:before { content: 'XML'; }
+  pre.src-nxml:before { content: 'XML'; }
+  /* add a generic configuration mode; LaTeX export needs an additional
+     (add-to-list 'org-latex-listings-langs '(conf " ")) in .emacs */
+  pre.src-conf:before { content: 'Configuration File'; }
+
+  table { border-collapse:collapse; }
+  caption.t-above { caption-side: top; }
+  caption.t-bottom { caption-side: bottom; }
+  td, th { vertical-align:top;  }
+  th.org-right  { text-align: center;  }
+  th.org-left   { text-align: center;   }
+  th.org-center { text-align: center; }
+  td.org-right  { text-align: right;  }
+  td.org-left   { text-align: left;   }
+  td.org-center { text-align: center; }
+  dt { font-weight: bold; }
+  .footpara { display: inline; }
+  .footdef  { margin-bottom: 1em; }
+  .figure { padding: 1em; }
+  .figure p { text-align: center; }
+  .inlinetask {
+    padding: 10px;
+    border: 2px solid gray;
+    margin: 10px;
+    background: #ffffcc;
+  }
+  #org-div-home-and-up
+   { text-align: right; font-size: 70%; white-space: nowrap; }
+  textarea { overflow-x: auto; }
+  .linenr { font-size: smaller }
+  .code-highlighted { background-color: #ffff00; }
+  .org-info-js_info-navigation { border-style: none; }
+  #org-info-js_console-label
+    { font-size: 10px; font-weight: bold; white-space: nowrap; }
+  .org-info-js_search-highlight
+    { background-color: #ffff00; color: #000000; font-weight: bold; }
+  .org-svg { width: 90%; }
+  /*]]>*/-->
+</style>
+<link rel="stylesheet" type="text/css" href="http://www.pirilampo.org/styles/readtheorg/css/htmlize.css"/>
+<link rel="stylesheet" type="text/css" href="http://www.pirilampo.org/styles/readtheorg/css/readtheorg.css"/>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
+<script type="text/javascript" src="http://www.pirilampo.org/styles/lib/js/jquery.stickytableheaders.min.js"></script>
+<script type="text/javascript" src="http://www.pirilampo.org/styles/readtheorg/js/readtheorg.js"></script>
+<script type="text/javascript">
+/*
+@licstart  The following is the entire license notice for the
+JavaScript code in this tag.
+
+Copyright (C) 2012-2017 Free Software Foundation, Inc.
+
+The JavaScript code in this tag is free software: you can
+redistribute it and/or modify it under the terms of the GNU
+General Public License (GNU GPL) as published by the Free Software
+Foundation, either version 3 of the License, or (at your option)
+any later version.  The code is distributed WITHOUT ANY WARRANTY;
+without even the implied warranty of MERCHANTABILITY or FITNESS
+FOR A PARTICULAR PURPOSE.  See the GNU GPL for more details.
+
+As additional permission under GNU GPL version 3 section 7, you
+may distribute non-source (e.g., minimized or compacted) forms of
+that code without the copy of the GNU GPL normally required by
+section 4, provided you include this license notice and a URL
+through which recipients can access the Corresponding Source.
+
+
+@licend  The above is the entire license notice
+for the JavaScript code in this tag.
+*/
+<!--/*--><![CDATA[/*><!--*/
+ function CodeHighlightOn(elem, id)
+ {
+   var target = document.getElementById(id);
+   if(null != target) {
+     elem.cacheClassElem = elem.className;
+     elem.cacheClassTarget = target.className;
+     target.className = "code-highlighted";
+     elem.className   = "code-highlighted";
+   }
+ }
+ function CodeHighlightOff(elem, id)
+ {
+   var target = document.getElementById(id);
+   if(elem.cacheClassElem)
+     elem.className = elem.cacheClassElem;
+   if(elem.cacheClassTarget)
+     target.className = elem.cacheClassTarget;
+ }
+/*]]>*///-->
+</script>
+</head>
+<body>
+<div id="content">
+<h1 class="title">The Theory and Technique of Electronic Music Exercises in Ad Libitum</h1>
+<div id="table-of-contents">
+<h2>Table of Contents</h2>
+<div id="text-table-of-contents">
+<ul>
+<li><a href="#org2c58c2c">1. Sinusoids, amplitude and frequency</a>
+<ul>
+<li><a href="#orgb39f8d7">1.1. Measures of Amplitude</a></li>
+<li><a href="#orgec8f17f">1.2. Units of Amplitude</a></li>
+<li><a href="#orgfca2211">1.3. Controlling Amplitude</a></li>
+<li><a href="#orge6d1f4a">1.4. Frequency</a></li>
+<li><a href="#org6433321">1.5. Synthesizing a sinusoid</a></li>
+<li><a href="#orgd92eaa7">1.6. Superposing Signals</a></li>
+<li><a href="#org4a2bfbc">1.7. Periodic Signals</a></li>
+<li><a href="#org6981746">1.8. About the Software Examples</a></li>
+<li><a href="#orga2a738e">1.9. Examples</a></li>
+<li><a href="#org71ce93e">1.10. Exercises</a></li>
+</ul>
+</li>
+<li><a href="#org4aca7ae">2. Wavetables and samplers</a>
+<ul>
+<li><a href="#orgf181efc">2.1. The Wavetable Oscillator</a></li>
+<li><a href="#org5bfac7d">2.2. Sampling</a></li>
+<li><a href="#org7bed29e">2.3. Enveloping samplers</a></li>
+<li><a href="#org62bbc70">2.4. Timbre stretching</a></li>
+<li><a href="#orgb127768">2.5. Interpolation</a></li>
+<li><a href="#org2653937">2.6. Examples</a></li>
+<li><a href="#org1d99557">2.7. Exercises</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
+<p>
+It's my exercise book for studying "The Theory and Technique of Electronic
+Music" by Miller Puckette. Work is done in Ad Libitum instead of PureData, and
+some pieces of code migrate back to Ad Libitum standard library.
+</p>
+
+<div id="outline-container-org2c58c2c" class="outline-2">
+<h2 id="org2c58c2c"><span class="section-number-2">1</span> Sinusoids, amplitude and frequency</h2>
+<div class="outline-text-2" id="text-1">
+<p>
+Ad Libitum deals with continous representation of time, it's expressed as a
+float number of seconds passed from the stream start. For any signal either
+continous or discrete feels more natural, and there is no clear measure of
+their shares. Good news that conversion is relatively easy in both directions.
+</p>
+
+<p>
+<code>~&lt;</code> is a syntax sugar which wraps code into function of two parameters:
+<code>time</code> and <code>channel</code>, which are thrown in scope. Such kind of function is how
+Ad Libitum represents audio signals. Think about time as a continuous
+counterpart of sample number <code>n</code> in TTEM. <code>channel</code> will be discussed later.
+Think about <code>~&lt;</code> as the thing which animates your formula to produce signal.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-scheme"><span style="color: #DCDCCC;">(</span><span style="color: #F0DFAF; font-weight: bold;">define</span> <span style="color: #BFEBBF;">(</span><span style="color: #93E0E3;">sinusoid</span> a &#969; &#966;<span style="color: #BFEBBF;">)</span> <span style="color: #BFEBBF;">(</span>~&lt; <span style="color: #D0BF8F;">(</span>* a <span style="color: #93E0E3;">(</span>cos <span style="color: #9FC59F;">(</span>+ <span style="color: #94BFF3;">(</span>* &#969; time<span style="color: #94BFF3;">)</span> &#966;<span style="color: #9FC59F;">)</span><span style="color: #93E0E3;">)</span><span style="color: #D0BF8F;">)</span><span style="color: #BFEBBF;">)</span><span style="color: #DCDCCC;">)</span>
+</pre>
+</div>
+
+<p>
+<code>play!</code> connects your signal to audio output and you can hear it! Amplitude
+range in Ad Libitum is [-1, 1], setting a=0.2 we are producing signal in 1/5
+of it.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-scheme"><span style="color: #DCDCCC;">(</span>play! <span style="color: #BFEBBF;">(</span>sinusoid <span style="color: #BFEBBF;">0.2</span> <span style="color: #BFEBBF;">2000.0</span> <span style="color: #BFEBBF;">0.0</span><span style="color: #BFEBBF;">)</span><span style="color: #DCDCCC;">)</span>
+</pre>
+</div>
+
+<p>
+And the most important function in Ad Libitum — <code>h!</code> hush!
+</p>
+
+<div class="org-src-container">
+<pre class="src src-scheme"><span style="color: #DCDCCC;">(</span>h!<span style="color: #DCDCCC;">)</span>
+</pre>
+</div>
+
+<p>
+Let's make sinusoid to receive regular frequency instead of angular one.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-scheme"><span style="color: #DCDCCC;">(</span><span style="color: #F0DFAF; font-weight: bold;">define</span> <span style="color: #BFEBBF;">(</span><span style="color: #93E0E3;">&#402;</span>&#8594;&#969; &#402;<span style="color: #BFEBBF;">)</span>
+  <span style="color: #BFEBBF;">(</span>* <span style="color: #BFEBBF;">2&#960;</span> &#402;<span style="color: #BFEBBF;">)</span><span style="color: #DCDCCC;">)</span>
+
+<span style="color: #DCDCCC;">(</span><span style="color: #F0DFAF; font-weight: bold;">define</span> <span style="color: #BFEBBF;">(</span><span style="color: #93E0E3;">&#969;</span>&#8594;&#402; &#969;<span style="color: #BFEBBF;">)</span>
+  <span style="color: #BFEBBF;">(</span>/ &#969; <span style="color: #BFEBBF;">2&#960;</span><span style="color: #BFEBBF;">)</span><span style="color: #DCDCCC;">)</span>
+
+<span style="color: #DCDCCC;">(</span><span style="color: #F0DFAF; font-weight: bold;">define</span> <span style="color: #BFEBBF;">(</span><span style="color: #93E0E3;">sinusoid</span> a &#402; &#966;<span style="color: #BFEBBF;">)</span>
+  <span style="color: #BFEBBF;">(</span>~&lt; <span style="color: #D0BF8F;">(</span>* a <span style="color: #93E0E3;">(</span>cos <span style="color: #9FC59F;">(</span>+ <span style="color: #94BFF3;">(</span>* <span style="color: #E0CF9F;">(</span>&#402;&#8594;&#969; &#402;<span style="color: #E0CF9F;">)</span> time<span style="color: #94BFF3;">)</span> &#966;<span style="color: #9FC59F;">)</span><span style="color: #93E0E3;">)</span><span style="color: #D0BF8F;">)</span><span style="color: #BFEBBF;">)</span><span style="color: #DCDCCC;">)</span>
+
+<span style="color: #DCDCCC;">(</span>play! <span style="color: #BFEBBF;">(</span>sinusoid <span style="color: #BFEBBF;">0.2</span> <span style="color: #BFEBBF;">440.0</span> <span style="color: #BFEBBF;">0.0</span><span style="color: #BFEBBF;">)</span><span style="color: #DCDCCC;">)</span>
+<span style="color: #DCDCCC;">(</span>h!<span style="color: #DCDCCC;">)</span>
+</pre>
+</div>
+</div>
+
+<div id="outline-container-orgb39f8d7" class="outline-3">
+<h3 id="orgb39f8d7"><span class="section-number-3">1.1</span> Measures of Amplitude</h3>
+<div class="outline-text-3" id="text-1-1">
+<p>
+This is not a blood pact, but many of Ad Libitum code relies on fact that
+audiosignal is called sample by sample, without skips. Making that assumption
+we are able to write RMS amplitude measurement even in continuous
+representation of time.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-scheme"><span style="color: #DCDCCC;">(</span><span style="color: #F0DFAF; font-weight: bold;">define</span> <span style="color: #BFEBBF;">(</span><span style="color: #93E0E3;">rms-amplitude</span> window-width s<span style="color: #BFEBBF;">)</span>
+  <span style="color: #BFEBBF;">(</span><span style="color: #F0DFAF; font-weight: bold;">let</span> <span style="color: #D0BF8F;">(</span><span style="color: #93E0E3;">[</span>windows <span style="color: #9FC59F;">(</span>make-vector *channels*<span style="color: #9FC59F;">)</span><span style="color: #93E0E3;">]</span>
+        <span style="color: #93E0E3;">[</span>N <span style="color: #9FC59F;">(</span>-&gt; window-width <span style="color: #94BFF3;">(</span>* *sample-rate*<span style="color: #94BFF3;">)</span> <span style="color: #94BFF3;">(</span>ceiling<span style="color: #94BFF3;">)</span> <span style="color: #94BFF3;">(</span>exact<span style="color: #94BFF3;">)</span><span style="color: #9FC59F;">)</span><span style="color: #93E0E3;">]</span>
+        <span style="color: #93E0E3;">[</span>cursor -1<span style="color: #93E0E3;">]</span><span style="color: #D0BF8F;">)</span>
+    <span style="color: #D0BF8F;">(</span>do-ec <span style="color: #93E0E3;">(</span>: i *channels*<span style="color: #93E0E3;">)</span>
+           <span style="color: #93E0E3;">(</span>vector-set! windows i <span style="color: #9FC59F;">(</span>make-vector N <span style="color: #BFEBBF;">0.0</span><span style="color: #9FC59F;">)</span><span style="color: #93E0E3;">)</span><span style="color: #D0BF8F;">)</span>
+    <span style="color: #D0BF8F;">(</span>~&lt;
+     <span style="color: #93E0E3;">(</span><span style="color: #F0DFAF; font-weight: bold;">when</span> <span style="color: #9FC59F;">(</span>zero? channel<span style="color: #9FC59F;">)</span>
+       <span style="color: #9FC59F;">(</span><span style="color: #F0DFAF; font-weight: bold;">set!</span> cursor <span style="color: #94BFF3;">(</span>mod <span style="color: #E0CF9F;">(</span>+ cursor <span style="color: #BFEBBF;">1</span><span style="color: #E0CF9F;">)</span> N<span style="color: #94BFF3;">)</span><span style="color: #9FC59F;">)</span><span style="color: #93E0E3;">)</span>
+     <span style="color: #93E0E3;">(</span><span style="color: #F0DFAF; font-weight: bold;">let</span> <span style="color: #9FC59F;">(</span><span style="color: #94BFF3;">[</span>window <span style="color: #E0CF9F;">(</span>vector-ref windows channel<span style="color: #E0CF9F;">)</span><span style="color: #94BFF3;">]</span>
+           <span style="color: #94BFF3;">[</span>x <span style="color: #BFEBBF;">0.0</span><span style="color: #94BFF3;">]</span><span style="color: #9FC59F;">)</span>
+       <span style="color: #9FC59F;">(</span>vector-set! window cursor <span style="color: #94BFF3;">(</span>&lt;~ s<span style="color: #94BFF3;">)</span><span style="color: #9FC59F;">)</span>
+       <span style="color: #9FC59F;">(</span>vector-for-each <span style="color: #94BFF3;">(</span><span style="color: #F0DFAF; font-weight: bold;">&#955;</span> <span style="color: #E0CF9F;">(</span>y<span style="color: #E0CF9F;">)</span> <span style="color: #E0CF9F;">(</span><span style="color: #F0DFAF; font-weight: bold;">set!</span> x <span style="color: #8FB28F;">(</span>+ x <span style="color: #6CA0A3;">(</span>* y y<span style="color: #6CA0A3;">)</span><span style="color: #8FB28F;">)</span><span style="color: #E0CF9F;">)</span><span style="color: #94BFF3;">)</span> window<span style="color: #9FC59F;">)</span>
+       <span style="color: #9FC59F;">(</span>/ x N<span style="color: #9FC59F;">)</span><span style="color: #93E0E3;">)</span><span style="color: #D0BF8F;">)</span><span style="color: #BFEBBF;">)</span><span style="color: #DCDCCC;">)</span>
+</pre>
+</div>
+
+<p>
+Let's make sinusoid amplitude a signal, and set it to rms amplitude measured
+from sinusoid with peak amplitude 1.0
+Note <code>&lt;~</code> syntax sugar to apply audiosignal function to time and channel.
+<code>(&lt;~ a)</code> is equivalent to <code>(a time channel)</code>
+Also note how we make constant signal with <code>(~&lt; 1.0)</code>
+</p>
+
+<div class="org-src-container">
+<pre class="src src-scheme"><span style="color: #DCDCCC;">(</span><span style="color: #F0DFAF; font-weight: bold;">define</span> <span style="color: #BFEBBF;">(</span><span style="color: #93E0E3;">sinusoid</span> a &#402; &#966;<span style="color: #BFEBBF;">)</span>
+  <span style="color: #BFEBBF;">(</span>~&lt; <span style="color: #D0BF8F;">(</span>* <span style="color: #93E0E3;">(</span>&lt;~ a<span style="color: #93E0E3;">)</span> <span style="color: #93E0E3;">(</span>cos <span style="color: #9FC59F;">(</span>+ <span style="color: #94BFF3;">(</span>* <span style="color: #E0CF9F;">(</span>&#402;&#8594;&#969; &#402;<span style="color: #E0CF9F;">)</span> time<span style="color: #94BFF3;">)</span> &#966;<span style="color: #9FC59F;">)</span><span style="color: #93E0E3;">)</span><span style="color: #D0BF8F;">)</span><span style="color: #BFEBBF;">)</span><span style="color: #DCDCCC;">)</span>
+</pre>
+</div>
+
+<p>
+Note that computing rms in realtime is very expensive.
+Try to increase window width until you get audio buffer underflow glitches.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-scheme"><span style="color: #DCDCCC;">(</span>play! <span style="color: #BFEBBF;">(</span>sinusoid <span style="color: #D0BF8F;">(</span>rms-amplitude <span style="color: #BFEBBF;">2/440</span> <span style="color: #93E0E3;">(</span>sinusoid <span style="color: #9FC59F;">(</span>~&lt; <span style="color: #BFEBBF;">1.0</span><span style="color: #9FC59F;">)</span> <span style="color: #BFEBBF;">440.0</span> <span style="color: #BFEBBF;">0.0</span><span style="color: #93E0E3;">)</span><span style="color: #D0BF8F;">)</span> <span style="color: #BFEBBF;">440.0</span> <span style="color: #BFEBBF;">0.0</span><span style="color: #BFEBBF;">)</span><span style="color: #DCDCCC;">)</span>
+<span style="color: #DCDCCC;">(</span>h!<span style="color: #DCDCCC;">)</span>
+</pre>
+</div>
+
+<p>
+Compare with 1.0 peak itself, it's louder!
+</p>
+
+<div class="org-src-container">
+<pre class="src src-scheme"><span style="color: #DCDCCC;">(</span>play! <span style="color: #BFEBBF;">(</span>sinusoid <span style="color: #D0BF8F;">(</span>~&lt; <span style="color: #BFEBBF;">1.0</span><span style="color: #D0BF8F;">)</span> <span style="color: #BFEBBF;">440.0</span> <span style="color: #BFEBBF;">0.0</span><span style="color: #BFEBBF;">)</span><span style="color: #DCDCCC;">)</span>
+<span style="color: #DCDCCC;">(</span>h!<span style="color: #DCDCCC;">)</span>
+</pre>
+</div>
+
+<p>
+Let's throttle <code>rms-amplitude</code> to make it less hungry
+</p>
+
+<div class="org-src-container">
+<pre class="src src-scheme"><span style="color: #DCDCCC;">(</span><span style="color: #F0DFAF; font-weight: bold;">define</span> <span style="color: #BFEBBF;">(</span><span style="color: #93E0E3;">rms-amplitude</span> window-width s<span style="color: #BFEBBF;">)</span>
+  <span style="color: #BFEBBF;">(</span><span style="color: #F0DFAF; font-weight: bold;">let</span> <span style="color: #D0BF8F;">(</span><span style="color: #93E0E3;">[</span>windows <span style="color: #9FC59F;">(</span>make-vector *channels*<span style="color: #9FC59F;">)</span><span style="color: #93E0E3;">]</span>
+        <span style="color: #93E0E3;">[</span>N <span style="color: #9FC59F;">(</span>-&gt; window-width <span style="color: #94BFF3;">(</span>* *sample-rate*<span style="color: #94BFF3;">)</span> <span style="color: #94BFF3;">(</span>ceiling<span style="color: #94BFF3;">)</span> <span style="color: #94BFF3;">(</span>exact<span style="color: #94BFF3;">)</span><span style="color: #9FC59F;">)</span><span style="color: #93E0E3;">]</span>
+        <span style="color: #93E0E3;">[</span>cursor -1<span style="color: #93E0E3;">]</span>
+        <span style="color: #93E0E3;">[</span>amplitudes <span style="color: #9FC59F;">(</span>make-vector *channels* <span style="color: #BFEBBF;">0.0</span><span style="color: #9FC59F;">)</span><span style="color: #93E0E3;">]</span><span style="color: #D0BF8F;">)</span>
+    <span style="color: #D0BF8F;">(</span>do-ec <span style="color: #93E0E3;">(</span>: i *channels*<span style="color: #93E0E3;">)</span>
+           <span style="color: #93E0E3;">(</span>vector-set! windows i <span style="color: #9FC59F;">(</span>make-vector N <span style="color: #BFEBBF;">0.0</span><span style="color: #9FC59F;">)</span><span style="color: #93E0E3;">)</span><span style="color: #D0BF8F;">)</span>
+    <span style="color: #D0BF8F;">(</span>~&lt;
+     <span style="color: #93E0E3;">(</span><span style="color: #F0DFAF; font-weight: bold;">when</span> <span style="color: #9FC59F;">(</span>zero? channel<span style="color: #9FC59F;">)</span>
+       <span style="color: #9FC59F;">(</span><span style="color: #F0DFAF; font-weight: bold;">set!</span> cursor <span style="color: #94BFF3;">(</span>mod <span style="color: #E0CF9F;">(</span>+ cursor <span style="color: #BFEBBF;">1</span><span style="color: #E0CF9F;">)</span> N<span style="color: #94BFF3;">)</span><span style="color: #9FC59F;">)</span><span style="color: #93E0E3;">)</span>
+     <span style="color: #93E0E3;">(</span><span style="color: #F0DFAF; font-weight: bold;">let</span> <span style="color: #9FC59F;">(</span><span style="color: #94BFF3;">[</span>window <span style="color: #E0CF9F;">(</span>vector-ref windows channel<span style="color: #E0CF9F;">)</span><span style="color: #94BFF3;">]</span><span style="color: #9FC59F;">)</span>
+       <span style="color: #9FC59F;">(</span>vector-set! window cursor <span style="color: #94BFF3;">(</span>&lt;~ s<span style="color: #94BFF3;">)</span><span style="color: #9FC59F;">)</span>
+       <span style="color: #9FC59F;">(</span><span style="color: #F0DFAF; font-weight: bold;">when</span> <span style="color: #94BFF3;">(</span>zero? cursor<span style="color: #94BFF3;">)</span>
+         <span style="color: #94BFF3;">(</span>vector-set!
+          amplitudes
+          channel
+          <span style="color: #E0CF9F;">(</span><span style="color: #F0DFAF; font-weight: bold;">let</span> <span style="color: #8FB28F;">(</span><span style="color: #6CA0A3;">[</span>x <span style="color: #BFEBBF;">0.0</span><span style="color: #6CA0A3;">]</span><span style="color: #8FB28F;">)</span>
+            <span style="color: #8FB28F;">(</span>vector-for-each <span style="color: #6CA0A3;">(</span><span style="color: #F0DFAF; font-weight: bold;">&#955;</span> <span style="color: #DCDCCC;">(</span>y<span style="color: #DCDCCC;">)</span> <span style="color: #DCDCCC;">(</span><span style="color: #F0DFAF; font-weight: bold;">set!</span> x <span style="color: #BFEBBF;">(</span>+ x <span style="color: #D0BF8F;">(</span>* y y<span style="color: #D0BF8F;">)</span><span style="color: #BFEBBF;">)</span><span style="color: #DCDCCC;">)</span><span style="color: #6CA0A3;">)</span> window<span style="color: #8FB28F;">)</span>
+            <span style="color: #8FB28F;">(</span>/ x N<span style="color: #8FB28F;">)</span><span style="color: #E0CF9F;">)</span><span style="color: #94BFF3;">)</span><span style="color: #9FC59F;">)</span><span style="color: #93E0E3;">)</span>
+     <span style="color: #93E0E3;">(</span>vector-ref amplitudes channel<span style="color: #93E0E3;">)</span><span style="color: #D0BF8F;">)</span><span style="color: #BFEBBF;">)</span><span style="color: #DCDCCC;">)</span>
+
+<span style="color: #DCDCCC;">(</span>play! <span style="color: #BFEBBF;">(</span>sinusoid <span style="color: #D0BF8F;">(</span>rms-amplitude <span style="color: #BFEBBF;">1</span> <span style="color: #93E0E3;">(</span>+~ <span style="color: #9FC59F;">(</span>sinusoid <span style="color: #94BFF3;">(</span>~&lt; <span style="color: #BFEBBF;">1.0</span><span style="color: #94BFF3;">)</span> <span style="color: #BFEBBF;">440.0</span> <span style="color: #BFEBBF;">0.0</span><span style="color: #9FC59F;">)</span><span style="color: #93E0E3;">)</span><span style="color: #D0BF8F;">)</span> <span style="color: #BFEBBF;">440.0</span> <span style="color: #BFEBBF;">0.0</span><span style="color: #BFEBBF;">)</span><span style="color: #DCDCCC;">)</span>
+<span style="color: #DCDCCC;">(</span>h!<span style="color: #DCDCCC;">)</span>
+</pre>
+</div>
+
+<p>
+Chez Scheme Gℂ is so cool that though we produce a lot of garbage every
+second it doesn't interrupt sound! But we still have a noticeable lag on
+window initialization. Take it into account if you are going to spawn
+capacitive <code>rms-amplitude</code> signals frequently.
+</p>
+
+<p>
+In future for sinusoid we will use built-in Ad Libitum oscillator available
+as <code>osc:sine</code> (takes phasor signal as input, we'll cover it later) and
+<code>osc:sine///</code> (takes frequency and optional initial phase).
+</p>
+
+<div class="org-src-container">
+<pre class="src src-scheme"><span style="color: #DCDCCC;">(</span>play! <span style="color: #BFEBBF;">(</span>osc:sine/// <span style="color: #BFEBBF;">440.0</span> <span style="color: #BFEBBF;">0.0</span><span style="color: #BFEBBF;">)</span><span style="color: #DCDCCC;">)</span>
+<span style="color: #DCDCCC;">(</span>h!<span style="color: #DCDCCC;">)</span>
+</pre>
+</div>
+</div>
+</div>
+
+<div id="outline-container-orgec8f17f" class="outline-3">
+<h3 id="orgec8f17f"><span class="section-number-3">1.2</span> Units of Amplitude</h3>
+<div class="outline-text-3" id="text-1-2">
+<p>
+Convert amplitude to decibels, with a0 = 1e-5 as suggested in TTEM
+</p>
+
+<div class="org-src-container">
+<pre class="src src-scheme"><span style="color: #DCDCCC;">(</span><span style="color: #F0DFAF; font-weight: bold;">define</span> <span style="color: #BFEBBF;">(</span><span style="color: #93E0E3;">amp-&gt;dB</span> x<span style="color: #BFEBBF;">)</span>
+  <span style="color: #BFEBBF;">(</span>* <span style="color: #BFEBBF;">20.0</span> <span style="color: #D0BF8F;">(</span>log <span style="color: #93E0E3;">(</span>* x <span style="color: #BFEBBF;">1e5</span><span style="color: #93E0E3;">)</span> <span style="color: #BFEBBF;">10.0</span><span style="color: #D0BF8F;">)</span><span style="color: #BFEBBF;">)</span><span style="color: #DCDCCC;">)</span>
+
+<span style="color: #DCDCCC;">(</span>amp-&gt;dB <span style="color: #BFEBBF;">1.0</span><span style="color: #DCDCCC;">)</span>
+<span style="color: #DCDCCC;">(</span>amp-&gt;dB <span style="color: #BFEBBF;">0.5</span><span style="color: #DCDCCC;">)</span>
+</pre>
+</div>
+
+<p>
+But setting a0 to 1.0 is also very convenient — maximum amplitude is then 0dB
+and any one below is just negative. All relations stays the same.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-scheme"><span style="color: #DCDCCC;">(</span><span style="color: #F0DFAF; font-weight: bold;">define</span> <span style="color: #BFEBBF;">(</span><span style="color: #93E0E3;">amp-&gt;dB</span> x<span style="color: #BFEBBF;">)</span>
+  <span style="color: #BFEBBF;">(</span>* <span style="color: #BFEBBF;">20.0</span> <span style="color: #D0BF8F;">(</span>log x <span style="color: #BFEBBF;">10.0</span><span style="color: #D0BF8F;">)</span><span style="color: #BFEBBF;">)</span><span style="color: #DCDCCC;">)</span>
+
+<span style="color: #DCDCCC;">(</span>amp-&gt;dB <span style="color: #BFEBBF;">0.5</span><span style="color: #DCDCCC;">)</span>
+<span style="color: #DCDCCC;">(</span>amp-&gt;dB <span style="color: #BFEBBF;">1e-5</span><span style="color: #DCDCCC;">)</span>
+</pre>
+</div>
+
+<p>
+And convert decibels back to amplitude:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-scheme"><span style="color: #DCDCCC;">(</span><span style="color: #F0DFAF; font-weight: bold;">define</span> <span style="color: #BFEBBF;">(</span><span style="color: #93E0E3;">dB-&gt;amp</span> x<span style="color: #BFEBBF;">)</span>
+  <span style="color: #BFEBBF;">(</span>expt <span style="color: #BFEBBF;">10.0</span> <span style="color: #D0BF8F;">(</span>/ x <span style="color: #BFEBBF;">20.0</span><span style="color: #D0BF8F;">)</span><span style="color: #BFEBBF;">)</span><span style="color: #DCDCCC;">)</span>
+
+<span style="color: #DCDCCC;">(</span>dB-&gt;amp -100.0<span style="color: #DCDCCC;">)</span>
+<span style="color: #DCDCCC;">(</span>dB-&gt;amp -50.0<span style="color: #DCDCCC;">)</span>
+<span style="color: #DCDCCC;">(</span>dB-&gt;amp -10.0<span style="color: #DCDCCC;">)</span>
+<span style="color: #DCDCCC;">(</span>dB-&gt;amp <span style="color: #BFEBBF;">0.0</span><span style="color: #DCDCCC;">)</span>
+</pre>
+</div>
+
+<p>
+Amplitude is related in an inexact way to the perceived loudness of a sound.
+In general, two signals with the same peak or RMS amplitude won’t necessarily
+have the same loudness at all. But amplifying a signal by 3 dB, say, will
+fairly reliably make it sound about one “step” louder.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-scheme"><span style="color: #DCDCCC;">(</span><span style="color: #F0DFAF; font-weight: bold;">define</span> <span style="color: #93E0E3;">*volume-step-dB*</span> <span style="color: #BFEBBF;">3.0</span><span style="color: #DCDCCC;">)</span>
+</pre>
+</div>
+
+<p>
+Let's test it!
+</p>
+
+<div class="org-src-container">
+<pre class="src src-scheme"><span style="color: #DCDCCC;">(</span><span style="color: #F0DFAF; font-weight: bold;">define</span> <span style="color: #BFEBBF;">(</span><span style="color: #93E0E3;">sinusoid</span> a &#402; &#966;<span style="color: #BFEBBF;">)</span>
+  <span style="color: #BFEBBF;">(</span>~&lt; <span style="color: #D0BF8F;">(</span>* a <span style="color: #93E0E3;">(</span>cos <span style="color: #9FC59F;">(</span>+ <span style="color: #94BFF3;">(</span>* <span style="color: #E0CF9F;">(</span>&#402;&#8594;&#969; &#402;<span style="color: #E0CF9F;">)</span> time<span style="color: #94BFF3;">)</span> &#966;<span style="color: #9FC59F;">)</span><span style="color: #93E0E3;">)</span><span style="color: #D0BF8F;">)</span><span style="color: #BFEBBF;">)</span><span style="color: #DCDCCC;">)</span>
+<span style="color: #DCDCCC;">(</span>play! <span style="color: #BFEBBF;">(</span>sinusoid <span style="color: #D0BF8F;">(</span>dB-&gt;amp -10.0<span style="color: #D0BF8F;">)</span> <span style="color: #BFEBBF;">440.0</span> <span style="color: #BFEBBF;">0.0</span><span style="color: #BFEBBF;">)</span><span style="color: #DCDCCC;">)</span>
+<span style="color: #DCDCCC;">(</span>play! <span style="color: #BFEBBF;">(</span>sinusoid <span style="color: #D0BF8F;">(</span>dB-&gt;amp <span style="color: #93E0E3;">(</span>- <span style="color: #BFEBBF;">10.0</span> *volume-step-dB*<span style="color: #93E0E3;">)</span><span style="color: #D0BF8F;">)</span> <span style="color: #BFEBBF;">440.0</span> <span style="color: #BFEBBF;">0.0</span><span style="color: #BFEBBF;">)</span><span style="color: #DCDCCC;">)</span>
+<span style="color: #DCDCCC;">(</span>h!<span style="color: #DCDCCC;">)</span>
+</pre>
+</div>
+
+<p>
+Try to change step. For that wave personally I hear 2dB difference.
+</p>
+</div>
+</div>
+
+<div id="outline-container-orgfca2211" class="outline-3">
+<h3 id="orgfca2211"><span class="section-number-3">1.3</span> Controlling Amplitude</h3>
+<div class="outline-text-3" id="text-1-3">
+<p>
+We already controlled amplitude by multiplying every sample by <code>a</code>
+Let's do it by multiplying sinusoid by constant signal.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-scheme"><span style="color: #DCDCCC;">(</span>play! <span style="color: #BFEBBF;">(</span>*~ <span style="color: #D0BF8F;">(</span>~&lt; <span style="color: #BFEBBF;">0.5</span><span style="color: #D0BF8F;">)</span> <span style="color: #D0BF8F;">(</span>osc:sine/// <span style="color: #BFEBBF;">440.0</span><span style="color: #D0BF8F;">)</span><span style="color: #BFEBBF;">)</span><span style="color: #DCDCCC;">)</span>
+<span style="color: #DCDCCC;">(</span>play! <span style="color: #BFEBBF;">(</span>*~ <span style="color: #D0BF8F;">(</span>~&lt; <span style="color: #BFEBBF;">0.2</span><span style="color: #D0BF8F;">)</span> <span style="color: #D0BF8F;">(</span>osc:sine/// <span style="color: #BFEBBF;">440.0</span><span style="color: #D0BF8F;">)</span><span style="color: #BFEBBF;">)</span><span style="color: #DCDCCC;">)</span>
+<span style="color: #DCDCCC;">(</span>h!<span style="color: #DCDCCC;">)</span>
+</pre>
+</div>
+</div>
+</div>
+
+<div id="outline-container-orge6d1f4a" class="outline-3">
+<h3 id="orge6d1f4a"><span class="section-number-3">1.4</span> Frequency</h3>
+<div class="outline-text-3" id="text-1-4">
+<div class="org-src-container">
+<pre class="src src-scheme"><span style="color: #DCDCCC;">(</span><span style="color: #F0DFAF; font-weight: bold;">define</span> <span style="color: #BFEBBF;">(</span><span style="color: #93E0E3;">midi-pitch-&gt;frequency</span> m<span style="color: #BFEBBF;">)</span>
+  <span style="color: #BFEBBF;">(</span>* <span style="color: #BFEBBF;">440.0</span> <span style="color: #D0BF8F;">(</span>expt <span style="color: #BFEBBF;">2.0</span> <span style="color: #93E0E3;">(</span>/ <span style="color: #9FC59F;">(</span>- m <span style="color: #BFEBBF;">69.0</span><span style="color: #9FC59F;">)</span> <span style="color: #BFEBBF;">12.0</span><span style="color: #93E0E3;">)</span><span style="color: #D0BF8F;">)</span><span style="color: #BFEBBF;">)</span><span style="color: #DCDCCC;">)</span>
+
+<span style="color: #DCDCCC;">(</span><span style="color: #F0DFAF; font-weight: bold;">define</span> <span style="color: #BFEBBF;">(</span><span style="color: #93E0E3;">frequency-&gt;midi-pitch</span> f<span style="color: #BFEBBF;">)</span>
+  <span style="color: #BFEBBF;">(</span>+ <span style="color: #BFEBBF;">69</span> <span style="color: #D0BF8F;">(</span>exact <span style="color: #93E0E3;">(</span>round <span style="color: #9FC59F;">(</span>* <span style="color: #BFEBBF;">12.0</span> <span style="color: #94BFF3;">(</span>log <span style="color: #E0CF9F;">(</span>/ f <span style="color: #BFEBBF;">440.0</span><span style="color: #E0CF9F;">)</span> <span style="color: #BFEBBF;">2.0</span><span style="color: #94BFF3;">)</span><span style="color: #9FC59F;">)</span><span style="color: #93E0E3;">)</span><span style="color: #D0BF8F;">)</span><span style="color: #BFEBBF;">)</span><span style="color: #DCDCCC;">)</span>
+
+<span style="color: #DCDCCC;">(</span>play! <span style="color: #BFEBBF;">(</span>osc:sine/// <span style="color: #D0BF8F;">(</span>midi-pitch-&gt;frequency <span style="color: #BFEBBF;">69</span><span style="color: #D0BF8F;">)</span><span style="color: #BFEBBF;">)</span><span style="color: #DCDCCC;">)</span>
+<span style="color: #DCDCCC;">(</span>play! <span style="color: #BFEBBF;">(</span>osc:sine/// <span style="color: #D0BF8F;">(</span>midi-pitch-&gt;frequency <span style="color: #BFEBBF;">72</span><span style="color: #D0BF8F;">)</span><span style="color: #BFEBBF;">)</span><span style="color: #DCDCCC;">)</span>
+<span style="color: #DCDCCC;">(</span>h!<span style="color: #DCDCCC;">)</span>
+</pre>
+</div>
+
+<p>
+Ad Libitum allows you to use MIDI controller. Support is still incomplete and
+relies on many assumptions. Your MIDI input device should be connected and
+identified as the first one.
+<code>now</code> is Ad Libitum clock function. It's required for MIDI module to put
+proper timestamps on events.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-scheme"><span style="color: #DCDCCC;">(</span>midi:start now<span style="color: #DCDCCC;">)</span>
+</pre>
+</div>
+
+<p>
+Let's defined so called control signal for our frequency. We'll speak about
+control signals later, but putting it simply, control signal is an audio
+signal which is updated in non-audio rate by calling its setter.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-scheme"><span style="color: #DCDCCC;">(</span><span style="color: #F0DFAF; font-weight: bold;">define-values</span> <span style="color: #BFEBBF;">(</span>frequency set-frequency!<span style="color: #BFEBBF;">)</span> <span style="color: #BFEBBF;">(</span>control-signal id <span style="color: #BFEBBF;">440.0</span> instant-transition<span style="color: #BFEBBF;">)</span><span style="color: #DCDCCC;">)</span>
+</pre>
+</div>
+
+<p>
+Let's set callback which will be called for every control change MIDI event.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-scheme"><span style="color: #DCDCCC;">(</span>midi:set-cc! <span style="color: #BFEBBF;">(</span><span style="color: #F0DFAF; font-weight: bold;">&#955;</span> <span style="color: #D0BF8F;">(</span>t knob value channel<span style="color: #D0BF8F;">)</span>
+                <span style="color: #D0BF8F;">(</span>set-frequency! <span style="color: #93E0E3;">(</span>midi-pitch-&gt;frequency value<span style="color: #93E0E3;">)</span><span style="color: #D0BF8F;">)</span><span style="color: #BFEBBF;">)</span><span style="color: #DCDCCC;">)</span>
+
+<span style="color: #DCDCCC;">(</span>play! <span style="color: #BFEBBF;">(</span>osc:sine/// frequency<span style="color: #BFEBBF;">)</span><span style="color: #DCDCCC;">)</span>
+<span style="color: #DCDCCC;">(</span>h!<span style="color: #DCDCCC;">)</span>
+</pre>
+</div>
+
+<p>
+Notice that abrupt change of frequency cause "pops" discussed in TTEM 1.5
+</p>
+</div>
+</div>
+
+<div id="outline-container-org6433321" class="outline-3">
+<h3 id="org6433321"><span class="section-number-3">1.5</span> Synthesizing a sinusoid</h3>
+<div class="outline-text-3" id="text-1-5">
+<p>
+To make transition smooth we could use built-in <b>linear-transition</b>
+</p>
+
+<div class="org-src-container">
+<pre class="src src-scheme"><span style="color: #DCDCCC;">(</span><span style="color: #F0DFAF; font-weight: bold;">define-values</span> <span style="color: #BFEBBF;">(</span>frequency set-frequency!<span style="color: #BFEBBF;">)</span> <span style="color: #BFEBBF;">(</span>control-signal id <span style="color: #BFEBBF;">440.0</span> *linear-transition*<span style="color: #BFEBBF;">)</span><span style="color: #DCDCCC;">)</span>
+</pre>
+</div>
+
+<p>
+Besides of using MIDI input we could make frequency change programmatically.
+<code>schedule</code> allows you to call any function later at given point of time.
+Any function could schedule itself. It is called temporal recursion.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-scheme"><span style="color: #DCDCCC;">(</span><span style="color: #F0DFAF; font-weight: bold;">define</span> <span style="color: #BFEBBF;">(</span><span style="color: #93E0E3;">swap-frequency</span> i<span style="color: #BFEBBF;">)</span>
+  <span style="color: #BFEBBF;">(</span><span style="color: #F0DFAF; font-weight: bold;">if</span> <span style="color: #D0BF8F;">(</span>zero? i<span style="color: #D0BF8F;">)</span>
+      <span style="color: #D0BF8F;">(</span>set-frequency! <span style="color: #BFEBBF;">440.0</span><span style="color: #D0BF8F;">)</span>
+      <span style="color: #D0BF8F;">(</span>set-frequency! <span style="color: #BFEBBF;">220.0</span><span style="color: #D0BF8F;">)</span><span style="color: #BFEBBF;">)</span>
+  <span style="color: #BFEBBF;">(</span>schedule <span style="color: #D0BF8F;">(</span>+ <span style="color: #93E0E3;">(</span>now<span style="color: #93E0E3;">)</span> <span style="color: #BFEBBF;">1/4</span><span style="color: #D0BF8F;">)</span> 'swap-frequency <span style="color: #D0BF8F;">(</span>- <span style="color: #BFEBBF;">1</span> i<span style="color: #D0BF8F;">)</span><span style="color: #BFEBBF;">)</span><span style="color: #DCDCCC;">)</span>
+
+<span style="color: #DCDCCC;">(</span>swap-frequency <span style="color: #BFEBBF;">0</span><span style="color: #DCDCCC;">)</span>
+
+<span style="color: #DCDCCC;">(</span>play! <span style="color: #BFEBBF;">(</span>osc:sine/// frequency<span style="color: #BFEBBF;">)</span><span style="color: #DCDCCC;">)</span>
+<span style="color: #DCDCCC;">(</span>h!<span style="color: #DCDCCC;">)</span>
+</pre>
+</div>
+</div>
+</div>
+
+<div id="outline-container-orgd92eaa7" class="outline-3">
+<h3 id="orgd92eaa7"><span class="section-number-3">1.6</span> Superposing Signals</h3>
+</div>
+<div id="outline-container-org4a2bfbc" class="outline-3">
+<h3 id="org4a2bfbc"><span class="section-number-3">1.7</span> Periodic Signals</h3>
+</div>
+<div id="outline-container-org6981746" class="outline-3">
+<h3 id="org6981746"><span class="section-number-3">1.8</span> About the Software Examples</h3>
+</div>
+<div id="outline-container-orga2a738e" class="outline-3">
+<h3 id="orga2a738e"><span class="section-number-3">1.9</span> Examples</h3>
+</div>
+<div id="outline-container-org71ce93e" class="outline-3">
+<h3 id="org71ce93e"><span class="section-number-3">1.10</span> Exercises</h3>
+</div>
+</div>
+
+<div id="outline-container-org4aca7ae" class="outline-2">
+<h2 id="org4aca7ae"><span class="section-number-2">2</span> Wavetables and samplers</h2>
+<div class="outline-text-2" id="text-2">
+</div>
+<div id="outline-container-orgf181efc" class="outline-3">
+<h3 id="orgf181efc"><span class="section-number-3">2.1</span> The Wavetable Oscillator</h3>
+</div>
+<div id="outline-container-org5bfac7d" class="outline-3">
+<h3 id="org5bfac7d"><span class="section-number-3">2.2</span> Sampling</h3>
+</div>
+<div id="outline-container-org7bed29e" class="outline-3">
+<h3 id="org7bed29e"><span class="section-number-3">2.3</span> Enveloping samplers</h3>
+</div>
+<div id="outline-container-org62bbc70" class="outline-3">
+<h3 id="org62bbc70"><span class="section-number-3">2.4</span> Timbre stretching</h3>
+</div>
+<div id="outline-container-orgb127768" class="outline-3">
+<h3 id="orgb127768"><span class="section-number-3">2.5</span> Interpolation</h3>
+</div>
+<div id="outline-container-org2653937" class="outline-3">
+<h3 id="org2653937"><span class="section-number-3">2.6</span> Examples</h3>
+</div>
+<div id="outline-container-org1d99557" class="outline-3">
+<h3 id="org1d99557"><span class="section-number-3">2.7</span> Exercises</h3>
+</div>
+</div>
+</div>
+<div id="postamble" class="status">
+<p class="author">Author: Ruslan Prakapchuk</p>
+<p class="date">Created: 2017-10-14 Sat 12:50</p>
+<p class="validation"><a href="http://validator.w3.org/check?uri=referer">Validate</a></p>
+</div>
+</body>
+</html>

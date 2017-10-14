@@ -1,3 +1,6 @@
+#+TITLE: Ad Libitum
+#+SETUPFILE: org-html-themes/setup/theme-readtheorg.setup
+
 * AD LIBITUM
 
   The Scheme Live Coding Environment. Built on Chez Scheme and libsoundio.
@@ -9,7 +12,7 @@
   MacOS therefore following instructions are MacOS-specific. Any feedback and
   improvement for other platforms is more than welcome! Current state of Ad
   Libitum dependencies is that it should be easy to port it to Linux and
-  moderately (but possible) to Windows.
+  moderately hard (but possible) to Windows.
 
 ** Chez Scheme
 
@@ -107,7 +110,7 @@ make
 Chez Scheme Version 9.4.1
 Copyright 1984-2017 Cisco Systems, Inc.
 
-> (sound:set-dsp! tuner)
+> (play! tuner)
 >
 #+END_SRC
 
@@ -133,35 +136,37 @@ licensing.
    provide it globally.
 
    For performance reasons =chez-sound= itself doesn't provide any protection
-   against broken =write-callback=. But in livecoding performance mistakes are
-   the part of exploration and arguably we want to sacrifice some performance to
-   be able to not restart entire sound subsystem for fixing our
-   =write-callback=.
+   against broken =write-callback=. But in livecoding mistakes are the part of
+   exploration and arguably we want to sacrifice some performance to be able to
+   not restart entire sound subsystem for fixing our =write-callback=. That's
+   why calling =*dsp*= is wrapped into =guard=.
+
+   To keep our scheduler clock in sync with audio we store audio time and return
+   it from =now= function which is passed to scheduler later.
 
 #+NAME: sound
 #+BEGIN_SRC scheme
-  (define (silence time channel) 0.0)
-
-  (define *dsp* silence)
+  ;; <sound>
   (define *time* 0.0)
+  (define (now) *time*)
+
+  (define (silence time channel) 0.0)
+  (define *dsp* silence)
+  (define (set-dsp! f) (set! *dsp* f))
+  (define (hush!) (set-dsp! silence))
 
   (define (write-callback time channel)
     (set! *time* time)
     (guard (_ [else 0.0])
       (*dsp* time channel)))
 
-  (define (now) *time*)
-
   (define *sound-out* (soundio:open-default-out-stream write-callback))
   (define *sample-rate* (soundio:sample-rate *sound-out*))
   (define *channels* (soundio:channel-count *sound-out*))
 
-  (define (set-dsp! f)
-    (set! *dsp* f))
-
-  (define (hush!) (set-dsp! silence))
-
   (define (start) (soundio:start-out-stream *sound-out*))
+  (define (stop) (soundio:stop-out-stream *sound-out*))
+  ;; </sound>
 #+END_SRC
 
 ** Scheduler
@@ -175,16 +180,18 @@ licensing.
   scheduler start or number of rendered samples) and to callback procedure at
   some point of time with more or less guaranteed skew limit.
 
-  To have scheduler in sync with audiostream it probably worth to couple it with
-  write callback.
-
   Let's start with scheduler interface. As has been said there are two basic
-  functions it must provide:
+  functions it must provide, =now= and =schedule=. First one allows to get
+  current point in time, and it is usually comes to schedule from external
+  source like audio stream to be in sync with it. Second one allows to schedule
+  execution at some point in future.
 
 #+NAME: scheduler-interface
 #+BEGIN_SRC scheme
+  ;; <scheduler-interface>
   <<now>>
   <<schedule>>
+  ;; </scheduler-interface>
 #+END_SRC
 
   As far as scheduler is stateful and even involves thread creation, it must
@@ -192,20 +199,31 @@ licensing.
 
 #+NAME: scheduler-interface
 #+BEGIN_SRC scheme
+  ;; <scheduler-interface>
   <<start-scheduler>>
   <<stop-scheduler>>
+  ;; </scheduler-interface>
 #+END_SRC
 
   Let's shape scheduler's data. Obviously, =now= appears here, in form of either
   scheduler's own counter or function (which will get system time or related
   write thread sample number). Another thing is =queue=, where =schedule= will
-  store callbacks. And =thread= id or flag or whatever used to control thread
-  exit. And the last one which comes to the mind at the moment is =resolution=
-  as a time duration of the longest sleep of scheduler thread before checking
-  events ready to be fired.
+  store callbacks. Because queuing could happen from different threads at the
+  same time, as well as dequeuing inside scheduler could happen together with
+  queuing from another thread, we need to protect it with =mutex=. We also need
+  =thread= id or flag or whatever used to control thread exit, because Scheme
+  doesn't expose =pthread_kill=. And the last one which comes to the mind at the
+  moment is =resolution= as a number of times per second scheduler checks the
+  =queue= for expired events.
+
+  Together with record definition we provide =simple-scheduler= which creates
+  schedule with reasonable default parameters. The only thing it accepts is
+  =now=, because usually you want you schedule to be in sync with external
+  clock.
 
 #+NAME: scheduler-record
 #+BEGIN_SRC scheme
+  ;; <scheduler-record>
   (define-record-type scheduler
     (fields now (mutable queue) resolution (mutable thread) mutex))
 
@@ -213,17 +231,22 @@ licensing.
     (make-scheduler
      now           ; now
      heap/empty    ; queue
-     0.001         ; resolution
+     250           ; resolution
      #f            ; thread
      (make-mutex)  ; mutex
      ))
+  ;; </scheduler-record>
 #+END_SRC
+
+  Let's implement scheduler interface.
 
   =now= then would just call =now= field:
 
 #+NAME: now
 #+BEGIN_SRC scheme
+  ;; <now>
   (define (now scheduler) ((scheduler-now scheduler)))
+  ;; </now>
 #+END_SRC
 
   Event queue accepts events which must have =f= with its
@@ -231,8 +254,10 @@ licensing.
 
 #+NAME: event-record
 #+BEGIN_SRC scheme
+  ;; <event-record>
   (define-record-type event
     (fields time f args))
+  ;; </event-record>
 #+END_SRC
 
   For =queue= we need some heap implementation, I'm going to jump into [[Pairing
@@ -241,36 +266,43 @@ licensing.
   Mutex is used to prevent data race on insert and remove from queue happening
   in different threads.
 
+  =schedule= should accept either =event= record, or its fields (and create
+  record by itself) to unclutter user code.
+
 #+NAME: schedule
 #+BEGIN_SRC scheme
+  ;; <schedule>
   (define schedule
     (case-lambda
       [(scheduler event)
        (with-mutex (scheduler-mutex scheduler)
                    (scheduler-queue-set! scheduler (heap/insert event-time event (scheduler-queue scheduler))))]
       [(scheduler t f . args)
-       (schedule scheduler (make-event t f args))]))
+       (schedule scheduler (make-event (inexact t) f args))]))
+  ;; </schedule>
 #+END_SRC
 
   Processing events is just executing any expired events' functions and removing
-  them from the queue. Note, that our current implementation is built on the
-  assumption that scheduler's clock is based on =current-time=.
+  them from the queue.
 
-  To enable dynamic temporal recursion we evaluate event's =f= as a symbol to be
-  resolved in a function, not as an immediate function value.
+  To enable dynamic temporal recursion we support event's =f= to be a symbol
+  referring top level function.
 
   Of course, live events are error prone, but we don't want flawed event to blow
   entire thread. Thus =f= execution is secured with =guard=.
 
-#+NAME: process-events
+#+NAME: scheduler-process-events
 #+BEGIN_SRC scheme
-  (define (process-events scheduler t)
+  ;; <scheduler-process-events>
+  (define (process-events scheduler time)
     (with-mutex
      (scheduler-mutex scheduler)
      (let next-event ()
        (let ([event (heap/find-min (scheduler-queue scheduler))])
-         (when (and event (<= (event-time event) t))
-           (scheduler-queue-set! scheduler (heap/delete-min event-time (scheduler-queue scheduler)))
+         (when (and event (<= (event-time event) time))
+           (scheduler-queue-set!
+            scheduler
+            (heap/delete-min event-time (scheduler-queue scheduler)))
            (guard (_ [else #f])
              (let ([f (event-f event)])
                (apply (if (symbol? f)
@@ -278,6 +310,7 @@ licensing.
                           f)
                       (event-args event))))
            (next-event))))))
+  ;; </scheduler-process-events>
 #+END_SRC
 
   Now it's a time for start/stop thread. Stopping thread would be just setting a
@@ -285,37 +318,45 @@ licensing.
 
 #+NAME: stop-scheduler
 #+BEGIN_SRC scheme
+  ;; <stop-scheduler>
   (define (stop-scheduler scheduler)
     (scheduler-thread-set! scheduler #f))
+  ;; </stop-scheduler>
 #+END_SRC
 
-  Starting thread will fork and loop calling expired events.
-
-*** TODO make sleeping scheduler clock type independent
-
-*** CODE
+  Starting thread will fork and loop calling expired events. We set expire
+  period for a half of resolution period in future to compensate a little bit
+  that events could expire during =process-events=. Proper adjustment require
+  further investigation taking in account that audio clock is not uniform (it
+  moves fast inside filling audio buffer process then waits to buffer to be
+  available again).
 
 #+NAME: start-scheduler
 #+BEGIN_SRC scheme
+  ;; <start-scheduler>
   (define (start-scheduler scheduler)
     (fork-thread
      (lambda ()
        (scheduler-thread-set! scheduler (get-thread-id))
        (let* ([resolution (scheduler-resolution scheduler)]
-              [polling-usec (exact (floor (* resolution 1e6)))])
+              [expired-horizon (/ 0.5 resolution)]
+              [microseconds-to-sleep (exact (floor (/ 1e6 resolution)))])
          (let loop ()
            (when (scheduler-thread scheduler)
-             (process-events scheduler (+ (now scheduler) resolution))
-             (usleep 0 polling-usec)
+             (process-events scheduler (+ (now scheduler) expired-horizon))
+             (usleep 0 microseconds-to-sleep)
              (loop)))))))
+  ;; </start-scheduler>
 #+END_SRC
 
 #+NAME: scheduler
 #+BEGIN_SRC scheme
+  ;; <scheduler>
   <<scheduler-record>>
   <<event-record>>
-  <<process-events>>
+  <<scheduler-process-events>>
   <<scheduler-interface>>
+  ;; </scheduler>
 #+END_SRC
 
   We need just a simple default scheduler at hand for Ad Libitum needs:
@@ -337,6 +378,7 @@ licensing.
 
 #+NAME: pairing-heap
 #+BEGIN_SRC scheme
+  ;; <pairing-heap>
   ;; we do some #f-punning and don't throw on empty heaps
 
   (define heap/empty '())
@@ -370,107 +412,124 @@ licensing.
     (if (null? heap)
         heap/empty
         (heap/merge-pairs comparator (cdr heap))))
+  ;; </pairing-heap>
 #+END_SRC
 
 ** Remote REPL
 
-  We need own repl server because music doesn't work in geiser repl for somewhat
-  reason. The most universal solution would be to have REPL over either UDP or
-  TCP with the simplest possible protocol. We want it to be just a carrier,
-  everything else should happen inside editor and engine. Sadly Chez Scheme has
-  no sockets in its std lib. We are gonna try Aaron W. Hsu's [[https://github.com/arcfide/chez-sockets][chez-sockets]]
-  library.
+   We need own repl server because music doesn't work in geiser repl for
+   somewhat reason. The most universal solution would be to have REPL over
+   either UDP or TCP with the simplest possible protocol. We want it to be just
+   a carrier, everything else should happen inside editor and engine. Sadly Chez
+   Scheme has no sockets in its std lib. We are gonna try Aaron W. Hsu's
+   [[https://github.com/arcfide/chez-sockets][chez-sockets]] library.
 
-  Actually, we are still able to use Geiser with our REPL server because it
-  supports remote REPL. See "Connecting to an external Scheme" at [[http://www.nongnu.org/geiser/geiser_3.html#The-REPL][docs]]. The only
-  thing required for it is to load =scheme/chez/geiser/geiser.ss= into the REPL
-  thread.
+   Actually, we are still able to use Geiser with our REPL server because it
+   supports remote REPL. See "Connecting to an external Scheme" at [[http://www.nongnu.org/geiser/geiser_3.html#The-REPL][docs]]. The
+   only thing required for it is to load =scheme/chez/geiser/geiser.ss= into the
+   REPL thread.
 
-  First, let's create a TCP socket. Here we rely on assumption, that default
-  protocol is TCP.
+   First, let's create a TCP socket. Here we rely on assumption, that default
+   protocol is TCP.
 
-*** TODO ensure that protocol is TCP
+*** TODO Ensure that protocol is TCP
 
-  Though Aaron doesn't recommend using blocking sockets, they are so much easier
-  for out case! No need to implement polling when waiting for connection or
-  receiving value.
+*** Blocking vs Async sockets
 
-  Tried blocking sockets. They work fine by themselves, but play bad with
-  =sleep= called from other threads! Falling back to async sockets and polling then.
+    Though Aaron doesn't recommend using blocking sockets, they are so much
+    easier for our case! No need to implement polling when waiting for
+    connection or receiving value.
 
-*** TODO proper socket closing
+    Tried blocking sockets. They work fine by themselves, but play bad with
+    =sleep= called from other threads! Falling back to async sockets and polling
+    then.
 
-*** CODE
+*** Open socket
 
 #+NAME: open-socket
-  #+BEGIN_SRC scheme
-    (define (open-socket)
-      (let ([socket (sock:create-socket
-                     sock:socket-domain/internet
-                     sock:socket-type/stream
-                     sock:socket-protocol/auto)])
-        <<bind-socket>>
-        <<listen-socket>>
-        socket
-        ))
-  #+END_SRC
+#+BEGIN_SRC scheme
+  ;; <open-socket>
+  (define (open-socket)
+    (let ([socket (sock:create-socket
+                   sock:socket-domain/internet
+                   sock:socket-type/stream
+                   sock:socket-protocol/auto)])
+      <<bind-socket>>
+      <<listen-socket>>
+      socket
+      ))
+  ;; </open-socket>
+#+END_SRC
 
-  Then we are going to listen address and port for input. We'll make it
-  configurable later, let's provide some sensible hardcoded defaults for now.
-  /localhost/ is for security reasons, and /37146/ is default Geiser port.
+    Then we are going to listen address and port for input. We'll make it
+    configurable later, let's provide some sensible hardcoded defaults for now.
+    /localhost/ is for security reasons, and /37146/ is default Geiser port.
 
 #+NAME: bind-socket
 #+BEGIN_SRC scheme
+  ;; <bind-socket>
   (sock:bind-socket socket (sock:string->internet-address "127.0.0.1:37146"))
+  ;; </bind-socket>
 #+END_SRC
 
-  And then let's listen for new connections!
+    And then let's listen for new connections!
 
 #+NAME: listen-socket
 #+BEGIN_SRC scheme
+  ;; <listen-socket>
   (sock:listen-socket socket 1024)
+  ;; </listen-socket>
 #+END_SRC
 
-To actually accept new connections we are going to create new thread and just
-run infinite look with =accept-socket= inside. Remember, our socket is
-non-blocking so we are to make polling to not eat all CPU by eager calls. After
-accepting new connection we'll proceed it in new thread.
+*** Accept connections
+
+    To actually accept new connections we are going to create new thread and
+    just run infinite loop with =accept-socket= inside. Remember, our socket is
+    non-blocking so we are to make polling to not eat all CPU by eager calls.
+    After accepting new connection we'll proceed it in new thread.
 
 #+NAME: accept-connections
 #+BEGIN_SRC scheme
+  ;; <accept-connections>
   (define (accept-connections repl-server-socket)
     (fork-thread
      (lambda ()
        (let loop ()
-         (usleep 0 polling-usec)
+         (usleep 0 polling-microseconds)
          (let-values ([(socket address) (sock:accept-socket repl-server-socket)])
            (when socket
              (printf "New REPL @ ~s\r\n" (sock:internet-address->string address))
              (spawn-remote-repl socket address)))
          (loop)))))
+  ;; </accept-connections>
 #+END_SRC
 
-  Every new connection accepted would spawn new thread with a REPL loop inside
-  it. Because we are using async sockets, we are forced to run actual loop and
-  poll socket for values. /50ms/ should be a reasonable polling delay to keep it
-  responsive and not resource greedy at the same time. Also
-  =receive-from-socket= require to limit maximum message length. Here /65k/ is
-  also is a kind of a guess. Chez Scheme operates UTF-8 strings and messages are
-  read as bytevectors from sockets, thus we need a transcoder to convert them
-  back and forth. Let's put all these requirements to values:
+*** Spawn remote REPL
+
+    Every new connection accepted would spawn new thread with a REPL loop inside
+    it. Because we are using async sockets, we are forced to run actual loop and
+    poll socket for values. /50ms/ should be a reasonable polling delay to keep
+    it responsive and not resource greedy at the same time. Also
+    =receive-from-socket= require to limit maximum message length. Here /65k/ is
+    also is a kind of a guess. Chez Scheme operates UTF-8 strings and messages
+    are read as bytevectors from sockets, thus we need a transcoder to convert
+    them back and forth. Let's put all these requirements to values:
 
 #+NAME: spawn-remote-repl-options
 #+BEGIN_SRC scheme
-  (define polling-usec 50000)
+  ;; <spawn-remote-repl-options>
+  (define polling-microseconds 50000)
   (define max-chunk-length 65536)
   (define code-tx (make-transcoder (utf-8-codec) (eol-style lf) (error-handling-mode replace)))
+  ;; </spawn-remote-repl-options>
 #+END_SRC
 
-  Preparations are straightforward: define some helpers, send initial prompt,
-  and start loop.
+    Preparations are straightforward: define some helpers, send initial prompt,
+    and start loop.
 
 #+NAME: spawn-remote-repl
 #+BEGIN_SRC scheme
+  ;; <spawn-remote-repl>
   <<spawn-remote-repl-options>>
   (define (spawn-remote-repl socket address)
     (fork-thread
@@ -481,13 +540,15 @@ accepting new connection we'll proceed it in new thread.
          (send-prompt)
          <<repl-loop>>
          ))))
+  ;; </spawn-remote-repl>
 #+END_SRC
 
-  Converting messages to bytevectors and sending to proper port is quite
-  tedious, let's write a couple of helpers:
+    Converting messages to bytevectors and sending to proper port is quite
+    tedious, let's write a couple of helpers:
 
 #+NAME: repl-send-helpers
 #+BEGIN_SRC scheme
+  ;; <repl-send-helpers>
   [call-with-send-port
    (lambda (f)
      (let ([response (call-with-bytevector-output-port f code-tx)])
@@ -495,17 +556,20 @@ accepting new connection we'll proceed it in new thread.
   [send-prompt
    (lambda ()
      (call-with-send-port (lambda (p) (display "> " p))))]
+  ;; </repl-send-helpers>
 #+END_SRC
 
-  Loop start with polling delay. For simplicity it's constant and unconditional
-  in the beginning of every cycle. If socket is ready and contains non-empty
-  message then we do evaluation and send result back. Reading from socket is
-  implemented via ports, look at =chez-socket= documentation for more info.
+    Loop starts with polling delay. For simplicity it's constant and
+    unconditional in the beginning of every cycle. If socket is ready and
+    contains non-empty message then we do evaluation and send result back.
+    Reading from socket is implemented via ports, look at =chez-socket=
+    documentation for more info.
 
 #+NAME: repl-loop
 #+BEGIN_SRC scheme
+  ;; <repl-loop>
   (let loop ()
-    (usleep 0 polling-usec)
+    (usleep 0 polling-microseconds)
     (let-values ([(request address)
                   (sock:receive-from-socket socket max-chunk-length)])
       (if (and request (positive? (bytevector-length request)))
@@ -514,13 +578,15 @@ accepting new connection we'll proceed it in new thread.
            <<repl-read-eval-print>>
            )
           (loop))))
+  ;; </repl-loop>
 #+END_SRC
 
-  Our remote REPL supports multi-form messages, therefore we need inner loop to
-  read and process them one by one.
+    Our remote REPL supports multi-form messages, therefore we need inner loop to
+    read and process them one by one.
 
 #+NAME: repl-read-eval-print
 #+BEGIN_SRC scheme
+  ;; <repl-read-eval-print>
   (lambda (p)
     (do ([x (read p) (read p)])
         ((eof-object? x))
@@ -530,12 +596,14 @@ accepting new connection we'll proceed it in new thread.
        ))
     (send-prompt)
     (loop))
+  ;; </repl-read-eval-print>
 #+END_SRC
 
-  Eval and send result back, easy, huh?
+    Eval and send result back, easy, huh?
 
 #+NAME: repl-eval-print
 #+BEGIN_SRC scheme
+  ;; <repl-eval-print>
   (lambda (p)
     (let* (
            <<repl-eval>>
@@ -543,45 +611,52 @@ accepting new connection we'll proceed it in new thread.
       <<repl-print>>
       )
     )
+  ;; </repl-eval-print>
 #+END_SRC
 
-  Tricky part is that we want to:
+    Tricky part is that we want to:
 
-    - capture output performed by evaluated form
-    - capture result of form evaluated
-    - don't blow up on exception and capture its message
+      - capture output performed by evaluated form
+      - capture result of form evaluated
+      - don't blow up on exception and capture its message
 
-  That's why we can't just call =eval=
+    That's why we can't just call =eval=
 
 #+NAME: repl-eval
 #+BEGIN_SRC scheme
+  ;; <repl-eval>
   [result #f]
   [output
    (with-output-to-string
      (lambda ()
        (set! result (guard (x [else (display-condition x)]) (eval x)))))]
+  ;; </repl-eval>
 #+END_SRC
 
-  On the other hand, sending is quite straightforward, because we need just to
-  write to port provided by =call-with-send-port=
+    On the other hand, sending is quite straightforward, because we need just to
+    write to port provided by =call-with-send-port=
 
 #+NAME: repl-print
 #+BEGIN_SRC scheme
+  ;; <repl-print>
   (printf "| ~s\r\n" output)
   (printf "< ~s\r\n" result)
   (display output p)
   (display result p)
   (newline p)
+  ;; </repl-print>
 #+END_SRC
 
-*** TODO stop loop and close socket on disconnect
+*** TODO Stop loop and close socket on disconnect
 
 *** Start REPL server
 
 #+NAME: start-repl-server
 #+BEGIN_SRC scheme
+  ;; <start-repl-server>
   (define (start-repl-server)
     (accept-connections (open-socket)))
+  ;; </start-repl-server>
 #+END_SRC
 
 * Core
@@ -592,6 +667,11 @@ accepting new connection we'll proceed it in new thread.
   instruments for live coding. In the book we are going to use those instruments
   to experiment with sound.
 
+  One of the naming principles of Ad Libitum variables and functions is that
+  they should have proper long self-describing name for clarity and could have
+  any funky alias for shortening during performance and for fun cryptic
+  librettos.
+
 ** Math
 
    Before diving into the abyss of digital music let's define several useful
@@ -599,16 +679,15 @@ accepting new connection we'll proceed it in new thread.
 
 #+NAME: basic-math
 #+BEGIN_SRC scheme
+  ;; <basic-math>
   (define pi (inexact (* (asin 1.0) 2)))
-  (define two-pi (fl* 2.0 pi))
+  (define two-pi (* 2.0 pi))
   (alias π pi)
   (alias 2π two-pi)
 
-  (define (mod1 x)
-    (mod x 1.0))
-
   (define (random-amplitude)
     (- (random 2.0) 1.0))
+  ;; </basic-math>
 #+END_SRC
 
 ** Generators
@@ -633,17 +712,21 @@ accepting new connection we'll proceed it in new thread.
 
 #+NAME: tuner-constants
 #+BEGIN_SRC scheme
+  ;; <tuner-constants>
   (define tuner-frequency 440.0)
-  (define tuner-period (/ 1.0 tuner-frequency))
-  (define tuner-half-period (/ tuner-period 2.0))
+  (define tuner-period (/ tuner-frequency))
+  (define tuner-half-period (* 0.5 tuner-period))
+  ;; </tuner-constants>
 #+END_SRC
 
 #+NAME: simplest-oscillator
 #+BEGIN_SRC scheme
+  ;; <simplest-oscillator>
   (define (simplest-oscillator time channel)
     (if (> (mod time tuner-period) tuner-half-period)
         1.0
         -1.0))
+  ;; </simplest-oscillator>
 #+END_SRC
 
    Actually, this waveform is called square, because of shape. Once we'll add
@@ -678,6 +761,7 @@ accepting new connection we'll proceed it in new thread.
 
 #+NAME: signal
 #+BEGIN_SRC scheme
+  ;; <signal>
   (define-syntax (signal stx)
     (syntax-case stx ()
       [(k body ...)
@@ -697,6 +781,7 @@ accepting new connection we'll proceed it in new thread.
                body ...)))]))
 
   (alias define~ define-signal)
+  ;; </signal>
 #+END_SRC
 
    The most basic signal is just a constant one, which is essentially created by
@@ -705,15 +790,19 @@ accepting new connection we'll proceed it in new thread.
 
 #+NAME: constant
 #+BEGIN_SRC scheme
+  ;; <constant>
   (define~ (constant amplitude) amplitude)
+  ;; </constant>
 #+END_SRC
 
    Then we are able to define =silence= as follows:
 
 #+NAME: silence
 #+BEGIN_SRC scheme
+  ;; <silence>
   (define~ silence 0.0)
   (alias ∅ silence)
+  ;; </silence>
 #+END_SRC
 
    Quick question for self-test: what sound would =(~< 1.0)= produce?
@@ -723,12 +812,14 @@ accepting new connection we'll proceed it in new thread.
 
 #+NAME: compose
 #+BEGIN_SRC scheme
+  ;; <compose>
   (define (compose . fns)
     (define (make-chain fn chain)
       (λ args (call-with-values (cut apply fn args) chain)))
     (reduce make-chain values fns))
 
   (alias ∘ compose)
+  ;; </compose>
 #+END_SRC
 
    For unifying oscillators we are going to define signal which will care about
@@ -742,7 +833,7 @@ accepting new connection we'll proceed it in new thread.
    half-interval.
 
    Here we have an opportunity for a small syntactic improvement. The use-case
-   when signal is applied to parameters named exactly time and channel in
+   when signal is applied to parameters named exactly =time= and =channel= in
    current scope is very common. Let's create a special syntax for it.
 
 #+NAME: deref-signal
@@ -755,19 +846,31 @@ accepting new connection we'll proceed it in new thread.
          #'(signal time channel))]))
 #+END_SRC
 
-   Let's use it in our phasor signal:
+   Let's use it in our phasor signal. Phasor is used so frequently that we want
+   to provide a small optimization for the case when frequency is known to be
+   constant.
+
+   Note that =dynamic-phasor= relies on being called sample by sample. Skipping
+   samples is okay-ish (it's like pausing phasor), but calling the same phasor
+   from several other signals could make it move too fast. We need additional
+   check to protect it.
 
 #+NAME: phasor
 #+BEGIN_SRC scheme
-  ;; TODO make it robust to multiple calls per sample?
+  ;; <phasor>
   (define (dynamic-phasor frequency phase0)
-    (let ([previous-phase (make-vector *channels* 0.0)])
+    (let ([previous-times (make-vector *channels* 0.0)]
+          [previous-phases (make-vector *channels* 0.0)])
       (~<
-       (let* ([phase-delta (/ (<~ frequency) *sample-rate*)]
-              [next-phase (-> (vector-ref previous-phase channel)
+       (let* ([previous-time (vector-ref previous-times channel)]
+              [phase-delta (if (< previous-time time)
+                               (/ (<~ frequency) *sample-rate*)
+                               0.0)]
+              [next-phase (-> (vector-ref previous-phases channel)
                               (+ phase-delta)
                               (mod 1.0))])
-         (vector-set! previous-phase channel next-phase)
+         (vector-set! previous-times channel time)
+         (vector-set! previous-phases channel next-phase)
          (-> (<~ phase0)
              (+ next-phase)
              (mod 1.0))))))
@@ -785,12 +888,16 @@ accepting new connection we'll proceed it in new thread.
        (if (number? frequency)
            (static-phasor frequency 0.0)
            (dynamic-phasor frequency ∅))]))
+
+  (alias /// phasor)
+  ;; </phasor>
 #+END_SRC
 
    Then basic waveforms are defined in very clean way:
 
 #+NAME: waveforms
 #+BEGIN_SRC scheme
+  ;; <waveforms>
   (define~ (sine phase)
     (sin (* 2π (<~ phase))))
 
@@ -821,17 +928,22 @@ accepting new connection we'll proceed it in new thread.
     (let ([n (fixnum->flonum (vector-length table))])
       (~< (vector-ref table (flonum->fixnum (fltruncate (fl* (<~ phase) n)))))))
 
-  (define sine* (∘ sine phasor))
-  (define cosine* (∘ cosine phasor))
-  (define square* (∘ square phasor))
-  (define pulse*
+  (define sine/// (∘ sine phasor))
+  (define cosine/// (∘ cosine phasor))
+  (define square/// (∘ square phasor))
+  (define pulse///
     (case-lambda
       [(pulse-width frequency phase0)
        (pulse pulse-width (phasor frequency phase0))]
       [(pulse-width frequency)
-       (pulse* pulse-width frequency ∅)]))
-  (define tri* (∘ tri phasor))
-  (define saw* (∘ saw phasor))
+       (pulse pulse-width (phasor frequency ∅))]))
+  (define tri/// (∘ tri phasor))
+  (define saw/// (∘ saw phasor))
+  (define sampler///
+    (case-lambda
+      [(table frequency) (sampler table (phasor frequency))]
+      [(table frequency phase0) (sampler table (phasor frequency phase0))]))
+  ;; </waveforms>
 #+END_SRC
 
    Before we play something interesting with stuff we already defined we need
@@ -843,16 +955,18 @@ accepting new connection we'll proceed it in new thread.
 
 #+NAME: live-signal
 #+BEGIN_SRC scheme
-  (define~ (live-signal symbol)
-    (<~ (top-level-value symbol)))
+  ;; <live-signal>
+  (define~ (live-signal symbol) (<~ (top-level-value symbol)))
+  ;; </live-signal>
 #+END_SRC
 
    Also useful to have live value counterpart:
 
 #+NAME: live-value
 #+BEGIN_SRC scheme
-  (define~ (live-value symbol)
-    (top-level-value symbol))
+  ;; <live-value>
+  (define~ (live-value symbol) (top-level-value symbol))
+  ;; </live-value>
 #+END_SRC
 
    Next step is implementation of signal arithmetics to ease their mixing and
@@ -860,6 +974,7 @@ accepting new connection we'll proceed it in new thread.
 
 #+NAME: signal-operators
 #+BEGIN_SRC scheme
+  ;; <signal-operators>
   (define~ (signal-sum* x y)
     (+ (<~ x) (<~ y)))
 
@@ -891,13 +1006,14 @@ accepting new connection we'll proceed it in new thread.
 
   ;; normalizing +~
   (define (mix . args)
-    (*~ (∑ args) (constant (inexact (/ (length args))))))
+    (*~ (∑ args) (constant (inexact (/ (sqrt (length args)))))))
 
   (define~ (pan p)
     (let ([p (* 0.5 (+ 1.0 (<~ p)))])
       (if (zero? channel)
           (- 1.0 p)
           p)))
+  ;; </signal-operators>
 #+END_SRC
 
 ** Envelopes
@@ -923,6 +1039,7 @@ accepting new connection we'll proceed it in new thread.
 
 #+NAME: adsr
 #+BEGIN_SRC scheme
+  ;; <adsr>
   (define~ (adsr start end attack decay sustain release)
     (let ([end (<~ end)])
       (if (<= end time)
@@ -949,12 +1066,14 @@ accepting new connection we'll proceed it in new thread.
                             (- 1.0 (* (- 1.0 s) (/ Δt d)))
                             s))))
                 0.0)))))
+  ;; </adsr>
 #+END_SRC
 
    Let's test it with simple note play:
 
 #+NAME: play-note
 #+BEGIN_SRC scheme
+  ;; <play-note>
   (define (simple-instrument start end freq a d s r)
     (let* ([start (live-value start)]
            [end (live-value end)]
@@ -978,6 +1097,7 @@ accepting new connection we'll proceed it in new thread.
 
   ;; (sound:set-dsp! (live-signal 'inst))
   ;; (play-note 440.0 1.1)
+  ;; </play-note>
 #+END_SRC
 
    We return to instrument concept later and come up with better design for it.
@@ -988,6 +1108,7 @@ accepting new connection we'll proceed it in new thread.
 
 #+NAME: impulse
 #+BEGIN_SRC scheme
+  ;; <impulse>
   (define~ (impulse start apex)
     (let ([start (<~ start)])
       (if (<= start time)
@@ -995,25 +1116,338 @@ accepting new connection we'll proceed it in new thread.
                       (- (<~ apex) start))])
             (* h (exp (- 1.0 h))))
           0.0)))
+  ;; </impulse>
 #+END_SRC
 
-
 ** Metronome
+
+  Metronome is a mean to align scheduling with some periodic beat.
+
+** Control signals
+
+#+NAME: control-signal
+#+BEGIN_SRC scheme
+  ;; <control-signal>
+  (define *sound-barrier* 0.03)
+
+  (define (linear-transition Δt)
+    (λ (δt x y)
+      (if (< δt Δt)
+          (+ x (* (- y x) (/ δt Δt)))
+          y)))
+
+  (define instant-transition
+    (λ (δt x y)
+      y))
+
+  (define *linear-transition* (linear-transition *sound-barrier*))
+
+  (define control-signal
+    (case-lambda
+      [(x)
+       (if (number? x)
+           (control-signal id x *linear-transition*)
+           (control-signal x 0.0 *linear-transition*))]
+      [(f x)
+       (control-signal f x *linear-transition*)]
+      [(f x transition)
+       (let ([start (now)]
+             [x x]
+             [y x])
+         (values
+          (~< (transition (- time start) x y))
+          (λ args
+            (set! x (transition (- (now) start) x y))
+            (set! y (apply f args))
+            (set! start (now)))))]))
+  ;; </control-signal>
+#+END_SRC
+
+#+NAME: beat
+#+BEGIN_SRC scheme
+  ;; <beat>
+  (define (time->beat time bpm)
+    (-> time (* bpm) (/ 60) (round)))
+
+  (define (beat->time beat bpm)
+    (-> beat (* 60) (/ bpm)))
+
+  (define (next-beat time bpm)
+    (beat->time (+ 1 (time->beat time bpm)) bpm))
+
+  (define (metro bpm . args)
+    (apply schedule (next-beat (now) bpm) args))
+
+  (define *bpm* 60.0)
+
+  (define (set-bpm! bpm)
+    (set! *bpm* bpm))
+
+  (define (*beat*)
+    (time->beat (now) *bpm*))
+
+  (define (*metro* . args)
+    (apply metro *bpm* args))
+  ;; </beat>
+#+END_SRC
 
 * Std
 
 ** FFT
 ** Filters
+
+#+NAME: delay
+#+BEGIN_SRC scheme
+  ;; <delay>
+  (define~ (delay Δt f)
+    (f (- time (<~ Δt)) channel))
+  ;; </delay>
+#+END_SRC
+
+#+NAME: echo
+#+BEGIN_SRC scheme
+  ;; <echo>
+  (define *max-line-duration* 1)
+
+  (define (echo delay feedback signal)
+    (let ([line-size (* *max-line-duration* *sample-rate*)]
+          [lines (make-vector *channels*)]
+          [cursor -1])
+      (do ([i 0 (+ i 1)])
+          ((= i *channels*) 0)
+        (vector-set! lines i (make-vector line-size 0.0)))
+      (~<
+       (when(zero? channel)
+         (set! cursor (mod (+ cursor 1) line-size)))
+       (let ([line (vector-ref lines channel)]
+             [x (<~ signal)]
+             [delay (flonum->fixnum (round (* (<~ delay) *sample-rate*)))]
+             [feedback (<~ feedback)])
+         (let* ([i (mod (+ line-size (- cursor delay)) line-size)]
+                [y (vector-ref line i)]
+                [z (+ x (* feedback y))])
+           (vector-set! line cursor z)
+           z)))))
+  ;; </echo>
+#+END_SRC
+
+#+NAME: lpf
+#+BEGIN_SRC scheme
+  ;; <lpf>
+  (define (lpf-frequency->α frequency)
+    (let ([k (* frequency *sample-angular-period*)])
+      (/ k (+ k 1))))
+
+  (define (lpf frequency x)
+    (let ([ys (make-vector *channels* 0.0)])
+      (~<
+       (let* ([y-1 (vector-ref ys channel)]
+              [α (lpf-frequency->α (<~ frequency))])
+         (let ([y (+ y-1 (* α (- (<~ x) y-1)))])
+           (vector-set! ys channel y)
+           y)))))
+  ;; </lpf>
+#+END_SRC
+
+#+NAME: hpf
+#+BEGIN_SRC scheme
+  ;; <hpf>
+  (define (hpf-frequency->α frequency)
+    (let ([k (* frequency *sample-angular-period*)])
+      (/ (+ k 1))))
+
+  (define (hpf frequency x)
+    (let ([xs (make-vector *channels* 0.0)]
+          [ys (make-vector *channels* 0.0)])
+      (~<
+       (let ([x-1 (vector-ref xs channel)]
+             [y-1 (vector-ref ys channel)]
+             [x (<~ x)]
+             [α (hpf-frequency->α (<~ frequency))])
+         (let ([y (* α (+ y-1 (- x x-1)))])
+           (vector-set! xs channel x)
+           (vector-set! ys channel y)
+           y)))))
+  ;; </hpf>
+#+END_SRC
+
+#+NAME: make-biquad-filter
+#+BEGIN_SRC scheme
+  ;; <make-biquad-filter>
+  (define (make-biquad-filter make-coefficients)
+    (λ (Q frequency x)
+      (let ([xs-1 (make-vector *channels* 0.0)]
+            [xs-2 (make-vector *channels* 0.0)]
+            [ys-1 (make-vector *channels* 0.0)]
+            [ys-2 (make-vector *channels* 0.0)])
+        (~<
+         (let ([x-1 (vector-ref xs-1 channel)]
+               [x-2 (vector-ref xs-2 channel)]
+               [y-1 (vector-ref ys-1 channel)]
+               [y-2 (vector-ref ys-2 channel)]
+               [x (<~ x)]
+               [Q (<~ Q)]
+               [frequency (<~ frequency)])
+           (let* ([ω (* frequency *sample-angular-period*)]
+                  [sin-ω (sin ω)]
+                  [cos-ω (cos ω)]
+                  [α (/ sin-ω (* 2.0 Q))])
+             (let-values ([(b0 b1 b2 a0 a1 a2) (make-coefficients sin-ω cos-ω α)])
+               (let ([y (-
+                         (+
+                          (* (/ b0 a0) x)
+                          (* (/ b1 a0) x-1)
+                          (* (/ b2 a0) x-2))
+                         (* (/ a1 a0) y-1)
+                         (* (/ a2 a0) y-2))])
+                 (vector-set! xs-1 channel x)
+                 (vector-set! xs-2 channel x-1)
+                 (vector-set! ys-1 channel y)
+                 (vector-set! ys-2 channel y-1)
+                 y))))))))
+  ;; </make-biquad-filter>
+#+END_SRC
+
+#+NAME: biquad-lpf
+#+BEGIN_SRC scheme
+  ;; <biquad-lpf>
+  (define (make-lpf-coefficients sin-ω cos-ω α)
+    (let ([b0 (* 0.5 (- 1.0 cos-ω))])
+      (values
+       b0             ;; b0
+       (- 1.0 cos-ω)  ;; b1
+       b0             ;; b2
+       (+ 1.0 α)      ;; a0
+       (* -2.0 cos-ω) ;; a1
+       (- 1.0 α)      ;; a2
+       )))
+
+  (define biquad-lpf (make-biquad-filter make-lpf-coefficients))
+  ;; </biquad-lpf>
+#+END_SRC
+
+#+NAME: biquad-hpf
+#+BEGIN_SRC scheme
+  ;; <biquad-hpf>
+  (define (make-hpf-coefficients sin-ω cos-ω α)
+    (let ([b0 (* 0.5 (+ 1.0 cos-ω))])
+      (values
+       b0             ;; b0
+       (- -1.0 cos-ω) ;; b1
+       b0             ;; b2
+       (+ 1.0 α)      ;; a0
+       (* -2.0 cos-ω) ;; a1
+       (- 1.0 α)      ;; a2
+       )))
+
+  (define biquad-hpf (make-biquad-filter make-hpf-coefficients))
+  ;; </biquad-hpf>
+#+END_SRC
+
 ** Instruments
 
+#+NAME: polyphony
+#+BEGIN_SRC scheme
+  ;; <polyphony>
+  (define (make-polyphony n make-voice)
+    (let ([voices (make-vector n ∅)]
+          [cursor 0])
+      (let ([signal
+             (apply mix (list-ec (: i n) (~< (<~ (vector-ref voices i)))))]
+            [play-note
+             (λ args
+               (let ([voice (apply make-voice args)])
+                 (vector-set! voices cursor voice)
+                 (set! cursor (mod (+ cursor 1) n))
+                 voice))])
+        (values signal play-note))))
+
+  (define (make-static-polyphony n make-voice)
+    ;; (make-voice) -> (list signal play-note)
+    (let ([voices (list-ec (: i n) (make-voice))]
+          [cursor 0])
+      (let ([signal (apply mix (map first voices))]
+            [play-note
+             (λ args
+               (apply (second (vector-ref voices cursor)) args)
+               (set! cursor (mod (+ cursor 1) n)))])
+        (values signal play-note))))
+  ;; </polyphony>
+#+END_SRC
 
 
 ** Scales
+
+   We are going to represent scales with Scheme's basic data structure, list.
+   And the most basic operation which we want to perform on scale is chosing a
+   note from it without worrying about falling out of range:
+
+#+NAME: choice
+#+BEGIN_SRC scheme
+  ;; <choice>
+  (define (choice list n)
+    (list-ref list (mod n (length list))))
+
+  (define (random-choice list)
+    (list-ref list (random (length list))))
+  ;; </choice>
+#+END_SRC
+
+  Basic intervals from Western music.
+
+#+NAME: intervals
+#+BEGIN_SRC scheme
+  ;; <intervals>
+  (define chromatic-scale-half-step
+    (expt 2 1/12))
+
+  (define second-interval (expt chromatic-scale-half-step 2))
+  (define third-interval (expt chromatic-scale-half-step 4))
+  (define perfect-fourth-interval (expt chromatic-scale-half-step 5))
+  (define perfect-fifth-interval (expt chromatic-scale-half-step 7))
+  (define major-sixth-interval (expt chromatic-scale-half-step 9))
+  (define major-seventh-interval (expt chromatic-scale-half-step 11))
+  (define perfect-octave-interval (expt chromatic-scale-half-step 12))
+  (define minor-second-interval (expt chromatic-scale-half-step 1))
+  (define minor-third-interval (expt chromatic-scale-half-step 3))
+  (define minor-sixth-interval (expt chromatic-scale-half-step 8))
+  (define minor-seventh-interval (expt chromatic-scale-half-step 11))
+  (define triton-interval (expt chromatic-scale-half-step 11))
+  ;; </intervals>
+#+END_SRC
+
+  Some basic scales from Western music.
+
+#+NAME: scales
+#+BEGIN_SRC scheme
+  ;; <scales>
+  (define chromatic-scale '(1 2 3 4 5 6 7 8 9 10 11 12))
+  (define pentatonic-scale '(1 3 5 8 10))
+  (define major-scale '(1 3 5 6 8 10 12))
+  (define minor-scale '(1 3 4 6 8 9 11))
+
+  (define (make-scale base-frequency scale)
+    (map (λ (x) (* base-frequency (expt chromatic-scale-half-step (- x 1)))) scale))
+  ;; </scales>
+#+END_SRC
+
 ** Rhythm
+
+#+NAME: pattern
+#+BEGIN_SRC scheme
+  ;; <pattern>
+  (define (play-pattern pattern sound beat)
+    (let ([n (length pattern)])
+      (when (positive? (choice pattern (exact beat)))
+        (sound))))
+  ;; </pattern>
+#+END_SRC
+
 ** MIDI
 
 #+NAME: midi
 #+BEGIN_SRC scheme
+  ;; <midi>
   (define (*on-note-on* timestamp data1 data2 channel)
     (printf "~s:~s:~s:~s\r\n" timestamp data1 data2 channel))
 
@@ -1066,14 +1500,16 @@ accepting new connection we'll proceed it in new thread.
       (pm:terminate)
       (set! *stream* #f)
       (set! *scheduler* #f)))
+  ;; </midi>
 #+END_SRC
 * Misc
 
-  To import =chez-soundio= and =chez-sockets= we must add respective folders to =library-directories=
-  To do that let's create a couple of helpers:
+  To import =chez-soundio= and =chez-sockets= we must add respective folders to
+  =library-directories= To do that let's create a couple of helpers:
 
 #+NAME: add-library-directories
 #+BEGIN_SRC scheme
+  ;; <add-library-directories>
   (define (add-library-directory dir)
     (library-directories
      (cons dir (library-directories))))
@@ -1087,12 +1523,14 @@ accepting new connection we'll proceed it in new thread.
    "./chez-soundio"
    "./chez-portmidi"
    "./chez-sockets")
+  ;; </add-library-directories>
 #+END_SRC
 
   Also let's define several useful aliases and finally start our services:
 
 #+NAME: ad-libitum-init
 #+BEGIN_SRC scheme
+  ;; <ad-libitum-init>
   (alias now sound:now)
   (alias schedule scheduler:*schedule*)
   (alias callback schedule)
@@ -1106,16 +1544,19 @@ accepting new connection we'll proceed it in new thread.
   (scheduler:init now)
   (scheduler:start)
   (repl:start-repl-server)
+  ;; </ad-libitum-init>
 #+END_SRC
 
   Tuner stuff to test everything is working:
 
 #+NAME: test-tuner
 #+BEGIN_SRC scheme
+  ;; <test-tuner>
   (define (tuner time channel)
     (sin (* 2π time tuner-frequency)))
 
   ;; (sound:set-dsp! tuner)
+  ;; </test-tuner>
 #+END_SRC
 
   Some stuff about time and scales to be moved to appropriate sections when
@@ -1123,52 +1564,21 @@ accepting new connection we'll proceed it in new thread.
 
 #+NAME: sandbox
 #+BEGIN_SRC scheme
-  (define (random-choice list)
-    (list-ref list (random (length list))))
-
-  (define chromatic-scale-half-step
-    (expt 2 1/12))
-
-  (define second-interval (expt chromatic-scale-half-step 2))
-  (define third-interval (expt chromatic-scale-half-step 4))
-  (define perfect-fourth-interval (expt chromatic-scale-half-step 5))
-  (define perfect-fifth-interval (expt chromatic-scale-half-step 7))
-  (define major-sixth-interval (expt chromatic-scale-half-step 9))
-  (define major-seventh-interval (expt chromatic-scale-half-step 11))
-  (define perfect-octave-interval (expt chromatic-scale-half-step 12))
-  (define minor-second-interval (expt chromatic-scale-half-step 1))
-  (define minor-third-interval (expt chromatic-scale-half-step 3))
-  (define minor-sixth-interval (expt chromatic-scale-half-step 8))
-  (define minor-seventh-interval (expt chromatic-scale-half-step 11))
-  (define triton-interval (expt chromatic-scale-half-step 11))
-
-  ;; TODO excercise: represent scales as whole/half steps
-
-  (define chromatic-scale '(1 2 3 4 5 6 7 8 9 10 11 12))
-  (define pentatonic-scale '(1 3 5 8 10))
-  (define major-scale '(1 3 5 6 8 10 12))
-  (define minor-scale '(1 3 4 6 8 9 11))
-
-  (define (make-scale base-frequency scale)
-    (map (λ (x) (* base-frequency (expt chromatic-scale-half-step (- x 1)))) scale))
-
-  ;;
-
-  (define (unroll signal period sample-rate)
-    (let* ([n (exact (truncate (* period sample-rate)))]
+  ;; <sandbox>
+  (define (unroll signal period)
+    (let* ([n (exact (truncate (* period *sample-rate*)))]
            [table (make-vector n)])
       (do ([i 0 (+ i 1)])
           ((= i n))
-        (vector-set! table i (inexact (signal (/ i sample-rate) 0))))
+        (vector-set! table i (inexact (signal (/ i *sample-rate*) 0))))
       (cut sampler table <>)))
-
-  ;; (define table-sine-wave (unroll (simple-osc 0.1) 10 96000))
 
   (define (make-overtone amplitudes wave frequency phase0)
     (∑ (map
         (λ (amplitude factor)
-          (*~ amplitude
-              (wave (osc:phasor (*~ (~< factor) frequency) phase0))))
+          (let ([factor (inexact factor)])
+            (*~ amplitude
+                (wave (osc:phasor (*~ (~< factor) frequency) phase0)))))
         amplitudes
         (iota (length amplitudes)))))
 
@@ -1177,197 +1587,9 @@ accepting new connection we'll proceed it in new thread.
            [end (+ start duration)])
       (values (~< start) (~< end))))
 
-  (define~ (amp2phase s)
+  (define~ (amplitude->phase s)
     (* 0.5 (+ 1.0 (<~ s))))
-
-  (define (make-polyphony n make-voice)
-    (let ([voices (make-vector n ∅)]
-          [cursor 0])
-      (let ([signal
-             (apply mix (list-ec (: i n) (~< (<~ (vector-ref voices i)))))]
-            [play-note
-             (λ args
-               (let ([voice (apply make-voice args)])
-                 (vector-set! voices cursor voice)
-                 (set! cursor (mod (+ cursor 1) n))
-                 voice))])
-        (values signal play-note))))
-
-  (define (make-static-polyphony n make-voice)
-    ;; (make-voice) -> (list signal play-note)
-    (let ([voices (list-ec (: i n) (make-voice))]
-          [cursor 0])
-      (let ([signal (apply mix (map first voices))]
-            [play-note
-             (λ args
-               (apply (second (vector-ref voices cursor)) args)
-               (set! cursor (mod (+ cursor 1) n)))])
-        (values signal play-note))))
-
-  (define (time->beat time bpm)
-    (-> time (* bpm) (/ 60) (round)))
-
-  (define (beat->time beat bpm)
-    (-> beat (* 60) (/ bpm)))
-
-  (define (next-beat time bpm)
-    (beat->time (+ 1 (time->beat time bpm)) bpm))
-
-  (define (metro bpm . args)
-    (apply schedule (next-beat (now) bpm) args))
-
-  (define *bpm* 60.0)
-
-  (define (*metro* . args)
-    (apply metro *bpm* args))
-
-  (define (play-pattern pattern sound beat)
-    (let ([n (length pattern)])
-      (when (positive? (list-ref pattern (mod (exact beat) n)))
-        (sound))))
-
-  (define~ (delay t s)
-    (let ([t (<~ t)])
-      (s  (- time t) channel)))
-
-  (define *max-line-duration* 1)
-
-  (define (echo delay feedback signal)
-    (let ([line-size (* *max-line-duration* *sample-rate*)]
-          [lines (make-vector *channels*)]
-          [cursor -1])
-      (do ([i 0 (+ i 1)])
-          ((= i *channels*) 0)
-        (vector-set! lines i (make-vector line-size 0.0)))
-      (~<
-       (when(zero? channel)
-         (set! cursor (mod (+ cursor 1) line-size)))
-       (let ([line (vector-ref lines channel)]
-             [x (<~ signal)]
-             [delay (flonum->fixnum (round (* (<~ delay) *sample-rate*)))]
-             [feedback (<~ feedback)])
-         (let* ([i (mod (+ line-size (- cursor delay)) line-size)]
-                [y (vector-ref line i)]
-                [z (+ x (* feedback y))])
-           (vector-set! line cursor z)
-           z)))))
-
-  (define (lpf-frequency->α frequency)
-    (let ([k (* frequency *sample-angular-period*)])
-      (/ k (+ k 1))))
-
-  (define (hpf-frequency->α frequency)
-    (let ([k (* frequency *sample-angular-period*)])
-      (/ (+ k 1))))
-
-  (define (lpf frequency x)
-    (let ([ys (make-vector *channels* 0.0)])
-      (~<
-       (let* ([y-1 (vector-ref ys channel)]
-              [α (lpf-frequency->α (<~ frequency))])
-         (let ([y (+ y-1 (* α (- (<~ x) y-1)))])
-           (vector-set! ys channel y)
-           y)))))
-
-  (define (hpf frequency x)
-    (let ([xs (make-vector *channels* 0.0)]
-          [ys (make-vector *channels* 0.0)])
-      (~<
-       (let ([x-1 (vector-ref xs channel)]
-             [y-1 (vector-ref ys channel)]
-             [x (<~ x)]
-             [α (hpf-frequency->α (<~ frequency))])
-         (let ([y (* α (+ y-1 (- x x-1)))])
-           (vector-set! xs channel x)
-           (vector-set! ys channel y)
-           y)))))
-
-  (define (make-lpf-coefficients sin-ω cos-ω α)
-    (let ([b0 (* 0.5 (- 1.0 cos-ω))])
-      (values
-       b0             ;; b0
-       (- 1.0 cos-ω)  ;; b1
-       b0             ;; b2
-       (+ 1.0 α)      ;; a0
-       (* -2.0 cos-ω) ;; a1
-       (- 1.0 α)      ;; a2
-       )))
-
-  (define (make-hpf-coefficients sin-ω cos-ω α)
-    (let ([b0 (* 0.5 (+ 1.0 cos-ω))])
-      (values
-       b0             ;; b0
-       (- -1.0 cos-ω) ;; b1
-       b0             ;; b2
-       (+ 1.0 α)      ;; a0
-       (* -2.0 cos-ω) ;; a1
-       (- 1.0 α)      ;; a2
-       )))
-
-  (define (make-biquad-filter make-coefficients)
-    (λ (Q frequency x)
-      (let ([xs-1 (make-vector *channels* 0.0)]
-            [xs-2 (make-vector *channels* 0.0)]
-            [ys-1 (make-vector *channels* 0.0)]
-            [ys-2 (make-vector *channels* 0.0)])
-        (~<
-         (let ([x-1 (vector-ref xs-1 channel)]
-               [x-2 (vector-ref xs-2 channel)]
-               [y-1 (vector-ref ys-1 channel)]
-               [y-2 (vector-ref ys-2 channel)]
-               [x (<~ x)]
-               [Q (<~ Q)]
-               [frequency (<~ frequency)])
-           (let* ([ω (* frequency *sample-angular-period*)]
-                  [sin-ω (sin ω)]
-                  [cos-ω (cos ω)]
-                  [α (/ sin-ω (* 2.0 Q))])
-             (let-values ([(b0 b1 b2 a0 a1 a2) (make-coefficients sin-ω cos-ω α)])
-               (let ([y (-
-                         (+
-                          (* (/ b0 a0) x)
-                          (* (/ b1 a0) x-1)
-                          (* (/ b2 a0) x-2))
-                         (* (/ a1 a0) y-1)
-                         (* (/ a2 a0) y-2))])
-                 (vector-set! xs-1 channel x)
-                 (vector-set! xs-2 channel x-1)
-                 (vector-set! ys-1 channel y)
-                 (vector-set! ys-2 channel y-1)
-                 y))))))))
-
-  (define *sound-barrier* 0.03)
-
-  (define (linear-transition Δt)
-    (λ (δt x y)
-      (if (< δt Δt)
-          (+ x (* (- y x) (/ δt Δt)))
-          y)))
-
-  (define instant-transition
-    (λ (δt x y)
-      y))
-
-  (define *linear-transition* (linear-transition *sound-barrier*))
-
-  (define control-signal
-    (case-lambda
-      [(x)
-       (if (number? x)
-           (control-signal id x *linear-transition*)
-           (control-signal x 0.0 *linear-transition*))]
-      [(f x)
-       (control-signal f x *linear-transition*)]
-      [(f x transition)
-       (let ([start (now)]
-             [x x]
-             [y x])
-         (values
-          (~< (transition (- time start) x y))
-          (λ args
-            (set! x (transition (- (now) start) x y))
-            (set! y (apply f args))
-            (set! start (now)))))]))
+  ;; </sandbox>
 #+END_SRC
 
 * Files :noexport:
@@ -1385,8 +1607,13 @@ accepting new connection we'll proceed it in new thread.
           (srfi s26 cut)
           (srfi s42 eager-comprehensions)
           (ad-libitum signal)
+          (ad-libitum control)
           (prefix (ad-libitum oscillator) osc:)
           (prefix (ad-libitum envelope) env:)
+          (prefix (ad-libitum filter) filter:)
+          (prefix (ad-libitum scale) scale:)
+          (prefix (ad-libitum instrument) inst:)
+          (ad-libitum metro)
           (prefix (ad-libitum noise) noise:)
           (prefix (ad-libitum sound) sound:)
           (prefix (ad-libitum scheduler) scheduler:)
@@ -1405,6 +1632,7 @@ accepting new connection we'll proceed it in new thread.
   (library (ad-libitum common (1))
     (export voodoo λ id >>> >> -> ->>
             compose ∘ pi two-pi π 2π
+            choice random-choice
             random-amplitude
             *channels* *sample-rate* *sample-angular-period*)
     (import (chezscheme)
@@ -1430,6 +1658,7 @@ accepting new connection we'll proceed it in new thread.
 
     <<compose>>
     <<basic-math>>
+    <<choice>>
 
     (define *sample-angular-period* (/ 2π *sample-rate*))
 
@@ -1485,9 +1714,9 @@ accepting new connection we'll proceed it in new thread.
 #+BEGIN_SRC scheme :tangle ad-libitum/oscillator.ss :noweb yes :mkdirp yes :paddle no
   #!chezscheme
   (library (ad-libitum oscillator (1))
-    (export phasor
+    (export phasor ///
             sine cosine square pulse tri saw sampler
-            sine* cosine* square* pulse* tri* saw*
+            sine/// cosine/// square/// pulse/// tri/// saw/// sampler///
             )
     (import (chezscheme)
             (ad-libitum common)
@@ -1522,10 +1751,100 @@ accepting new connection we'll proceed it in new thread.
     )
 #+END_SRC
 
+#+NAME: scale.ss
+#+BEGIN_SRC scheme :tangle ad-libitum/scale.ss :noweb yes :mkdirp yes :paddle no
+  (library (ad-libitum scale (1))
+    (export chromatic-scale-half-step
+            second-interval
+            third-interval
+            perfect-fourth-interval
+            perfect-fifth-interval
+            major-sixth-interval
+            major-seventh-interval
+            perfect-octave-interval
+            minor-second-interval
+            minor-third-interval
+            minor-second-interval
+            triton-interval
+            chromatic-scale
+            pentatonic-scale
+            major-scale
+            minor-scale
+            make-scale
+            )
+    (import (chezscheme)
+            (ad-libitum common))
+    <<intervals>>
+    <<scales>>
+    )
+#+END_SRC
+
+#+NAME: control.ss
+#+BEGIN_SRC scheme :tangle ad-libitum/control.ss :noweb yes :mkdirp yes :paddle no
+  (library (ad-libitum control (1))
+    (export control-signal instant-transition linear-transition *linear-transition*)
+    (import (chezscheme)
+            (ad-libitum common)
+            (ad-libitum signal)
+            (only (ad-libitum sound) now)
+            )
+    <<control-signal>>
+    )
+#+END_SRC
+
+#+NAME: instrument.ss
+#+BEGIN_SRC scheme :tangle ad-libitum/instrument.ss :noweb yes :mkdirp yes :paddle no
+  (library (ad-libitum instrument (1))
+    (export make-polyphony)
+    (import (chezscheme)
+            (only (srfi s1 lists) first second)
+            (srfi s42 eager-comprehensions)
+            (ad-libitum common)
+            (ad-libitum signal))
+    <<polyphony>>
+    )
+#+END_SRC
+
+#+NAME: filter.ss
+#+BEGIN_SRC scheme :tangle ad-libitum/filter.ss :noweb yes :mkdirp yes :paddle no
+  (library (ad-libitum filter (1))
+    (export delay
+            echo
+            lpf
+            hpf
+            biquad-lpf
+            biquad-hpf)
+    (import (except (chezscheme) delay)
+            (ad-libitum common)
+            (ad-libitum signal))
+    <<delay>>
+    <<echo>>
+    <<lpf>>
+    <<hpf>>
+    <<make-biquad-filter>>
+    <<biquad-lpf>>
+    <<biquad-hpf>>
+    )
+#+END_SRC
+
+#+NAME: metro.ss
+#+BEGIN_SRC scheme :tangle ad-libitum/metro.ss :noweb yes :mkdirp yes :paddle no
+  (library (ad-libitum metro (1))
+    (export metro *metro* *beat* play-pattern time->beat beat->time set-bpm!)
+    (import (chezscheme)
+            (ad-libitum common)
+            (only (ad-libitum sound) now)
+            (rename (only (ad-libitum scheduler) *schedule*)
+                    (*schedule* schedule)))
+    <<beat>>
+    <<pattern>>
+    )
+#+END_SRC
+
 #+NAME: sound.ss
 #+BEGIN_SRC scheme :tangle ad-libitum/sound.ss :noweb yes :mkdirp yes :paddle no
   (library (ad-libitum sound (1))
-    (export start set-dsp! hush! *sample-rate* *channels* now)
+    (export start stop set-dsp! hush! *sample-rate* *channels* now)
     (import (chezscheme) (prefix (soundio) soundio:))
     <<sound>>
     )
@@ -1563,8 +1882,8 @@ accepting new connection we'll proceed it in new thread.
 #+BEGIN_SRC scheme :tangle violet.ss :noweb yes :mkdirp yes :paddle no
   (load "ad-libitum.ss")
 
-  <<simplest-oscillator>>
   <<sandbox>>
+  <<simplest-oscillator>>
   <<play-note>>
 #+END_SRC
 
@@ -1650,7 +1969,7 @@ accepting new connection we'll proceed it in new thread.
 #+BEGIN_SRC  scheme :tangle ad-libitum/test-oscillator.ss :noweb yes :mkdirp yes :paddle no
   (import (ad-libitum oscillator))
 
-  (include "ad-libitum/test-runner.ss")
+  (load "ad-libitum/test-runner.ss")
 
   (test-group
    "phasor"

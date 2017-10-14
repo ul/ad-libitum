@@ -1,6 +1,6 @@
 (import (ad-libitum oscillator))
 
-(include "ad-libitum/test-runner.ss")
+(load "ad-libitum/test-runner.ss")
 
 (test-group
  "phasor"
