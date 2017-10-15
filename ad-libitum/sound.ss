@@ -22,4 +22,5 @@
   (define (start) (soundio:start-out-stream *sound-out*))
   (define (stop) (soundio:stop-out-stream *sound-out*))
   ;; </sound>
+
   )

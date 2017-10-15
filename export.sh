@@ -9,6 +9,6 @@ emacs -Q --batch \
      (setq org-confirm-babel-evaluate nil)
      (mapc (lambda (file)
             (find-file (expand-file-name file \"$DIR\"))
-            (org-babel-tangle)
-            (kill-buffer)) '(\"README.org\")))" \
-#2>&1 | grep Tangled
+            (org-html-export-to-html)
+            (kill-buffer)) '(\"README.org\" \"TTEM.org\")))" \
+#2>&1

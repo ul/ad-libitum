@@ -12,18 +12,22 @@
       ;; <bind-socket>
       (sock:bind-socket socket (sock:string->internet-address "127.0.0.1:37146"))
       ;; </bind-socket>
+
       ;; <listen-socket>
       (sock:listen-socket socket 1024)
       ;; </listen-socket>
+
       socket
       ))
   ;; </open-socket>
+
   ;; <spawn-remote-repl>
   ;; <spawn-remote-repl-options>
   (define polling-microseconds 50000)
   (define max-chunk-length 65536)
   (define code-tx (make-transcoder (utf-8-codec) (eol-style lf) (error-handling-mode replace)))
   ;; </spawn-remote-repl-options>
+
   (define (spawn-remote-repl socket address)
     (fork-thread
      (lambda ()
@@ -37,6 +41,7 @@
                (lambda ()
                  (call-with-send-port (lambda (p) (display "> " p))))]
               ;; </repl-send-helpers>
+
               )
          (send-prompt)
          ;; <repl-loop>
@@ -63,6 +68,7 @@
                                    (lambda ()
                                      (set! result (guard (x [else (display-condition x)]) (eval x)))))]
                                 ;; </repl-eval>
+
                                 )
                            ;; <repl-print>
                            (printf "| ~s\r\n" output)
@@ -71,18 +77,23 @@
                            (display result p)
                            (newline p)
                            ;; </repl-print>
+
                            )
                          )
                        ;; </repl-eval-print>
+
                        ))
                     (send-prompt)
                     (loop))
                   ;; </repl-read-eval-print>
+
                   )
                  (loop))))
          ;; </repl-loop>
+
          ))))
   ;; </spawn-remote-repl>
+
   ;; <accept-connections>
   (define (accept-connections repl-server-socket)
     (fork-thread
@@ -95,8 +106,10 @@
              (spawn-remote-repl socket address)))
          (loop)))))
   ;; </accept-connections>
+
   ;; <start-repl-server>
   (define (start-repl-server)
     (accept-connections (open-socket)))
   ;; </start-repl-server>
+
   )

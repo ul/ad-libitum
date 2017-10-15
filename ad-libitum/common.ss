@@ -34,6 +34,7 @@
   
   (alias ∘ compose)
   ;; </compose>
+
   ;; <basic-math>
   (define pi (inexact (* (asin 1.0) 2)))
   (define two-pi (* 2.0 pi))
@@ -43,6 +44,7 @@
   (define (random-amplitude)
     (- (random 2.0) 1.0))
   ;; </basic-math>
+
   ;; <choice>
   (define (choice list n)
     (list-ref list (mod n (length list))))
@@ -50,6 +52,7 @@
   (define (random-choice list)
     (list-ref list (random (length list))))
   ;; </choice>
+
 
   (define *sample-angular-period* (/ 2π *sample-rate*))
 

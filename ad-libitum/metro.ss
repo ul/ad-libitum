@@ -29,10 +29,12 @@
   (define (*metro* . args)
     (apply metro *bpm* args))
   ;; </beat>
+
   ;; <pattern>
   (define (play-pattern pattern sound beat)
     (let ([n (length pattern)])
       (when (positive? (choice pattern (exact beat)))
         (sound))))
   ;; </pattern>
+
   )

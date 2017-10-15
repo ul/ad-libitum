@@ -36,6 +36,7 @@
   (define minor-seventh-interval (expt chromatic-scale-half-step 11))
   (define triton-interval (expt chromatic-scale-half-step 11))
   ;; </intervals>
+
   ;; <scales>
   (define chromatic-scale '(1 2 3 4 5 6 7 8 9 10 11 12))
   (define pentatonic-scale '(1 3 5 8 10))
@@ -45,4 +46,5 @@
   (define (make-scale base-frequency scale)
     (map (λ (x) (* base-frequency (expt chromatic-scale-half-step (- x 1)))) scale))
   ;; </scales>
+
   )

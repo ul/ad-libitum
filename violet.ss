@@ -26,12 +26,14 @@
 (define~ (amplitude->phase s)
   (* 0.5 (+ 1.0 (<~ s))))
 ;; </sandbox>
+
 ;; <simplest-oscillator>
 (define (simplest-oscillator time channel)
   (if (> (mod time tuner-period) tuner-half-period)
       1.0
       -1.0))
 ;; </simplest-oscillator>
+
 ;; <play-note>
 (define (simple-instrument start end freq a d s r)
   (let* ([start (live-value start)]
@@ -57,3 +59,4 @@
 ;; (sound:set-dsp! (live-signal 'inst))
 ;; (play-note 440.0 1.1)
 ;; </play-note>
+

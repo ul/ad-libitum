@@ -40,6 +40,7 @@
         heap/empty
         (heap/merge-pairs comparator (cdr heap))))
   ;; </pairing-heap>
+
   ;; <scheduler>
   ;; <scheduler-record>
   (define-record-type scheduler
@@ -54,10 +55,12 @@
      (make-mutex)  ; mutex
      ))
   ;; </scheduler-record>
+
   ;; <event-record>
   (define-record-type event
     (fields time f args))
   ;; </event-record>
+
   ;; <scheduler-process-events>
   (define (process-events scheduler time)
     (with-mutex
@@ -76,10 +79,12 @@
                       (event-args event))))
            (next-event))))))
   ;; </scheduler-process-events>
+
   ;; <scheduler-interface>
   ;; <now>
   (define (now scheduler) ((scheduler-now scheduler)))
   ;; </now>
+
   ;; <schedule>
   (define schedule
     (case-lambda
@@ -89,6 +94,7 @@
       [(scheduler t f . args)
        (schedule scheduler (make-event (inexact t) f args))]))
   ;; </schedule>
+
   ;; </scheduler-interface>
   ;; <scheduler-interface>
   ;; <start-scheduler>
@@ -105,16 +111,21 @@
              (usleep 0 microseconds-to-sleep)
              (loop)))))))
   ;; </start-scheduler>
+
   ;; <stop-scheduler>
   (define (stop-scheduler scheduler)
     (scheduler-thread-set! scheduler #f))
   ;; </stop-scheduler>
+
   ;; </scheduler-interface>
+
   ;; </scheduler>
+
   (define *scheduler* #f)
   (define (init now) (set! *scheduler* (simple-scheduler now)))
   (define (start) (start-scheduler *scheduler*))
   (define (stop) (stop-scheduler *scheduler*))
   (define (*schedule* t f . args) (schedule *scheduler* (make-event t f args)))
   (define (*now*) (now *scheduler*))
+
   )

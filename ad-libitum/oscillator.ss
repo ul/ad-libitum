@@ -42,6 +42,7 @@
   
   (alias /// phasor)
   ;; </phasor>
+
   ;; <waveforms>
   (define~ (sine phase)
     (sin (* 2π (<~ phase))))
@@ -89,4 +90,5 @@
       [(table frequency) (sampler table (phasor frequency))]
       [(table frequency phase0) (sampler table (phasor frequency phase0))]))
   ;; </waveforms>
+
   )

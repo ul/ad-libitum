@@ -31,6 +31,7 @@
                             s))))
                 0.0)))))
   ;; </adsr>
+
   ;; <impulse>
   (define~ (impulse start apex)
     (let ([start (<~ start)])
@@ -40,4 +41,5 @@
             (* h (exp (- 1.0 h))))
           0.0)))
   ;; </impulse>
+
   )

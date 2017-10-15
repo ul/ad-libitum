@@ -14,6 +14,7 @@
  "./chez-sockets")
 ;; </add-library-directories>
 
+
 (import (ad-libitum common))
 
 (voodoo)
@@ -52,14 +53,17 @@
 (scheduler:start)
 (repl:start-repl-server)
 ;; </ad-libitum-init>
+
 ;; <tuner-constants>
 (define tuner-frequency 440.0)
 (define tuner-period (/ tuner-frequency))
 (define tuner-half-period (* 0.5 tuner-period))
 ;; </tuner-constants>
+
 ;; <test-tuner>
 (define (tuner time channel)
   (sin (* 2π time tuner-frequency)))
 
 ;; (sound:set-dsp! tuner)
 ;; </test-tuner>
+

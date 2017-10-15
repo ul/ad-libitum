@@ -12,6 +12,7 @@
   (define~ (delay Δt f)
     (f (- time (<~ Δt)) channel))
   ;; </delay>
+
   ;; <echo>
   (define *max-line-duration* 1)
   
@@ -35,6 +36,7 @@
            (vector-set! line cursor z)
            z)))))
   ;; </echo>
+
   ;; <lpf>
   (define (lpf-frequency->α frequency)
     (let ([k (* frequency *sample-angular-period*)])
@@ -49,6 +51,7 @@
            (vector-set! ys channel y)
            y)))))
   ;; </lpf>
+
   ;; <hpf>
   (define (hpf-frequency->α frequency)
     (let ([k (* frequency *sample-angular-period*)])
@@ -67,6 +70,7 @@
            (vector-set! ys channel y)
            y)))))
   ;; </hpf>
+
   ;; <make-biquad-filter>
   (define (make-biquad-filter make-coefficients)
     (λ (Q frequency x)
@@ -100,6 +104,7 @@
                  (vector-set! ys-2 channel y-1)
                  y))))))))
   ;; </make-biquad-filter>
+
   ;; <biquad-lpf>
   (define (make-lpf-coefficients sin-ω cos-ω α)
     (let ([b0 (* 0.5 (- 1.0 cos-ω))])
@@ -114,6 +119,7 @@
   
   (define biquad-lpf (make-biquad-filter make-lpf-coefficients))
   ;; </biquad-lpf>
+
   ;; <biquad-hpf>
   (define (make-hpf-coefficients sin-ω cos-ω α)
     (let ([b0 (* 0.5 (+ 1.0 cos-ω))])
@@ -128,4 +134,5 @@
   
   (define biquad-hpf (make-biquad-filter make-hpf-coefficients))
   ;; </biquad-hpf>
+
   )

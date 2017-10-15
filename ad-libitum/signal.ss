@@ -27,25 +27,31 @@
   
   (alias define~ define-signal)
   ;; </signal>
+
   ;; <constant>
   (define~ (constant amplitude) amplitude)
   ;; </constant>
+
   ;; <silence>
   (define~ silence 0.0)
   (alias ∅ silence)
   ;; </silence>
+
   (define-syntax (<~ stx)
     (syntax-case stx ()
       [(k signal)
        (with-syntax ([time (datum->syntax #'k 'time)]
                      [channel (datum->syntax #'k 'channel)])
          #'(signal time channel))]))
+
   ;; <live-signal>
   (define~ (live-signal symbol) (<~ (top-level-value symbol)))
   ;; </live-signal>
+
   ;; <live-value>
   (define~ (live-value symbol) (top-level-value symbol))
   ;; </live-value>
+
   ;; <signal-operators>
   (define~ (signal-sum* x y)
     (+ (<~ x) (<~ y)))
@@ -86,4 +92,5 @@
           (- 1.0 p)
           p)))
   ;; </signal-operators>
+
   )
