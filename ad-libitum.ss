@@ -24,7 +24,7 @@
         (srfi s26 cut)
         (srfi s42 eager-comprehensions)
         (ad-libitum signal)
-        (ad-libitum control)
+        (prefix (ad-libitum control) ctrl:)
         (prefix (ad-libitum oscillator) osc:)
         (prefix (ad-libitum envelope) env:)
         (prefix (ad-libitum filter) filter:)

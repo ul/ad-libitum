@@ -4,7 +4,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
 <title>Ad Libitum</title>
-<!-- 2017-10-15 Sun 21:25 -->
+<!-- 2017-10-16 Mon 09:02 -->
 <meta  http-equiv="Content-Type" content="text/html;charset=utf-8" />
 <meta  name="generator" content="Org-mode" />
 <meta  name="author" content="Ruslan Prakapchuk" />
@@ -200,6 +200,7 @@ for the JavaScript code in this tag.
 <ul>
 <li><a href="#sec-5-3-1">5.3.1. ADSR</a></li>
 <li><a href="#sec-5-3-2">5.3.2. Impulse</a></li>
+<li><a href="#sec-5-3-3">5.3.3. Transition</a></li>
 </ul>
 </li>
 <li><a href="#sec-5-4">5.4. Metronome</a></li>
@@ -1290,6 +1291,16 @@ Quick question for self-test: what sound would <code>(~&lt; 1.0)</code> produce?
 </p>
 
 <p>
+Though it's still very useful signal, let give it a separate name:
+</p>
+
+<div class="org-src-container">
+
+<pre class="src src-scheme" id="unit">(define~ unit 1.0)
+</pre>
+</div>
+
+<p>
 For composing signal creators we could define a helper, which is the regular
 function composition!
 </p>
@@ -1655,6 +1666,49 @@ Another simple though useful envelope is impulse.
 </div>
 </div>
 </div>
+
+<div id="outline-container-sec-5-3-3" class="outline-4">
+<h4 id="sec-5-3-3"><span class="section-number-4">5.3.3</span> Transition</h4>
+<div class="outline-text-4" id="text-5-3-3">
+<div class="org-src-container">
+
+<pre class="src src-scheme" id="transition">;; &lt;transition&gt;
+(define (transition curve Δt signal)
+  (let ([starts (make-vector *channels* (now))]
+	[previous-values (make-vector *channels* 0.0)]
+	[next-values (make-vector *channels* 0.0)])
+    (~&lt;
+     (let ([Δt (&lt;~ Δt)]
+	   [current-value (&lt;~ signal)]
+	   [next-value (vector-ref next-values channel)])
+       (unless (= current-value next-value)
+	 (vector-set! previous-values channel next-value)
+	 (vector-set! next-values channel current-value)
+	 (vector-set! starts channel time))
+       (let ([δt (- time (vector-ref starts channel))])
+	 (if (&lt; δt Δt)
+	     (let ([previous-value (vector-ref previous-values channel)])
+	       (+ previous-value
+		  (curve (/ δt Δt) (- current-value previous-value))))
+	     current-value))))))
+
+(define (instant-curve a Δx)
+  Δx)
+
+(define (linear-curve a Δx)
+  (* a Δx))
+
+(define (quadratic-curve a Δx)
+  (* (expt a 4.0) Δx))
+
+(define instant-transition (cut transition instant-curve unit &lt;&gt;))
+(define linear-transition (cut transition linear-curve &lt;&gt; &lt;&gt;))
+(define quadratic-transition (cut transition quadratic-curve &lt;&gt; &lt;&gt;))
+;; &lt;/transition&gt;
+</pre>
+</div>
+</div>
+</div>
 </div>
 
 <div id="outline-container-sec-5-4" class="outline-3">
@@ -1672,38 +1726,14 @@ Metronome is a mean to align scheduling with some periodic beat.
 <div class="org-src-container">
 
 <pre class="src src-scheme" id="control-signal">;; &lt;control-signal&gt;
-(define *sound-barrier* 0.03)
-
-(define (linear-transition Δt)
-  (λ (δt x y)
-    (if (&lt; δt Δt)
-	(+ x (* (- y x) (/ δt Δt)))
-	y)))
-
-(define instant-transition
-  (λ (δt x y)
-    y))
-
-(define *linear-transition* (linear-transition *sound-barrier*))
-
-(define control-signal
+(define make-control
   (case-lambda
     [(x)
      (if (number? x)
-	 (control-signal id x *linear-transition*)
-	 (control-signal x 0.0 *linear-transition*))]
+	 (make-control id x)
+	 (make-control x 0.0))]
     [(f x)
-     (control-signal f x *linear-transition*)]
-    [(f x transition)
-     (let ([start (now)]
-	   [x x]
-	   [y x])
-       (values
-	(~&lt; (transition (- time start) x y))
-	(λ args
-	  (set! x (transition (- (now) start) x y))
-	  (set! y (apply f args))
-	  (set! start (now)))))]))
+     (values (~&lt; x) (λ args (set! x (apply f args))))]))
 ;; &lt;/control-signal&gt;
 </pre>
 </div>
@@ -2196,7 +2226,7 @@ we'll come to them:
 </div>
 <div id="postamble" class="status">
 <p class="author">Author: Ruslan Prakapchuk</p>
-<p class="date">Created: 2017-10-15 Sun 21:25</p>
+<p class="date">Created: 2017-10-16 Mon 09:02</p>
 <p class="creator"><a href="http://www.gnu.org/software/emacs/">Emacs</a> 25.3.1 (<a href="http://orgmode.org">Org</a> mode 8.2.10)</p>
 <p class="validation"><a href="http://validator.w3.org/check?uri=referer">Validate</a></p>
 </div>

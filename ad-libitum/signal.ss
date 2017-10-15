@@ -1,6 +1,8 @@
 #!chezscheme
 (library (ad-libitum signal (1))
-  (export signal ~< <~ define-signal define~ constant silence ∅ live-signal live-value
+  (export signal ~< <~ define-signal define~
+          constant silence ∅ unit
+          live-signal live-value
           signal-sum signal-prod signal-diff signal-div
           +~ *~ -~ /~ ∑ ∏ mix pan)
   (import (chezscheme)
@@ -36,6 +38,8 @@
   (define~ silence 0.0)
   (alias ∅ silence)
   ;; </silence>
+
+  (define~ unit 1.0)
 
   (define-syntax (<~ stx)
     (syntax-case stx ()

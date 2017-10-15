@@ -6,9 +6,12 @@ all:
 	cc -O3 -dynamiclib -Wl,-undefined -Wl,dynamic_lookup -I${SCHEMEH} -o socket-ffi-values.so chez-sockets/socket-ffi-values.c
 
 tangle:
-	@./tangle.ss README.org
+	@ls *.org | parallel "./tangle.ss {}"
 
 export:
 	@./export.sh
 
 precommit: tangle export
+
+watch:
+	@ls *.org | entr $(MAKE) tangle

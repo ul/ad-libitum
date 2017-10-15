@@ -240,7 +240,7 @@
    signal which is updated in non-audio rate by calling its setter.
 
 #+BEGIN_SRC scheme
-  (define-values (frequency set-frequency!) (control-signal id 440.0 instant-transition))
+  (define-values (frequency set-frequency!) (ctrl:make-control 440.0))
 #+END_SRC
 
    Let's set callback which will be called for every control change MIDI event.
@@ -257,10 +257,13 @@
 
 ** Synthesizing a sinusoid
 
-   To make transition smooth we could use built-in *linear-transition*
+   To make transition smooth we could use built-in =env:linear-transition=
 
 #+BEGIN_SRC scheme
-  (define-values (frequency set-frequency!) (control-signal id 440.0 *linear-transition*))
+  (define-values (frequency set-frequency!) (ctrl:make-control 440.0))
+
+  (play! (osc:sine/// (env:linear-transition (~< 0.05) frequency)))
+  (h!)
 #+END_SRC
 
    Besides of using MIDI input we could make frequency change programmatically.
@@ -277,6 +280,8 @@
   (swap-frequency 0)
 
   (play! (osc:sine/// frequency))
+  (play! (osc:sine/// (env:linear-transition (~< 0.05) frequency)))
+  (play! (osc:sine/// (env:quadratic-transition (~< 0.05) frequency)))
   (h!)
 #+END_SRC
 

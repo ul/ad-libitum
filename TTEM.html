@@ -4,7 +4,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
 <title>The Theory and Technique of Electronic Music Exercises in Ad Libitum</title>
-<!-- 2017-10-15 Sun 21:25 -->
+<!-- 2017-10-16 Mon 09:02 -->
 <meta  http-equiv="Content-Type" content="text/html;charset=utf-8" />
 <meta  name="generator" content="Org-mode" />
 <meta  name="author" content="Ruslan Prakapchuk" />
@@ -508,7 +508,7 @@ signal which is updated in non-audio rate by calling its setter.
 
 <div class="org-src-container">
 
-<pre class="src src-scheme">(define-values (frequency set-frequency!) (control-signal id 440.0 instant-transition))
+<pre class="src src-scheme">(define-values (frequency set-frequency!) (ctrl:make-control 440.0))
 </pre>
 </div>
 
@@ -536,12 +536,15 @@ Notice that abrupt change of frequency cause "pops" discussed in TTEM 1.5
 <h3 id="sec-1-5"><span class="section-number-3">1.5</span> Synthesizing a sinusoid</h3>
 <div class="outline-text-3" id="text-1-5">
 <p>
-To make transition smooth we could use built-in <b>linear-transition</b>
+To make transition smooth we could use built-in <code>env:linear-transition</code>
 </p>
 
 <div class="org-src-container">
 
-<pre class="src src-scheme">(define-values (frequency set-frequency!) (control-signal id 440.0 *linear-transition*))
+<pre class="src src-scheme">(define-values (frequency set-frequency!) (ctrl:make-control 440.0))
+
+(play! (osc:sine/// (env:linear-transition (~&lt; 0.05) frequency)))
+(h!)
 </pre>
 </div>
 
@@ -562,6 +565,8 @@ Any function could schedule itself. It is called temporal recursion.
 (swap-frequency 0)
 
 (play! (osc:sine/// frequency))
+(play! (osc:sine/// (env:linear-transition (~&lt; 0.05) frequency)))
+(play! (osc:sine/// (env:quadratic-transition (~&lt; 0.05) frequency)))
 (h!)
 </pre>
 </div>
@@ -716,7 +721,7 @@ Correlated signals.
 </div>
 <div id="postamble" class="status">
 <p class="author">Author: Ruslan Prakapchuk</p>
-<p class="date">Created: 2017-10-15 Sun 21:25</p>
+<p class="date">Created: 2017-10-16 Mon 09:02</p>
 <p class="creator"><a href="http://www.gnu.org/software/emacs/">Emacs</a> 25.3.1 (<a href="http://orgmode.org">Org</a> mode 8.2.10)</p>
 <p class="validation"><a href="http://validator.w3.org/check?uri=referer">Validate</a></p>
 </div>

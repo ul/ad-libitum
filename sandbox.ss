@@ -64,15 +64,3 @@
 (h!)
 
 ;;;;
-(define-values (frequency set-frequency!) (control-signal id 440.0 *linear-transition*))
-
-(define (swap-frequency i)
-  (if (zero? i)
-      (set-frequency! 440.0)
-      (set-frequency! 220.0))
-  (schedule (+ (now) 1/4) 'swap-frequency (- 1 i)))
-
-(swap-frequency 0)
-
-(play! (osc:sine/// frequency))
-(h!)

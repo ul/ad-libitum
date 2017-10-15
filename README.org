@@ -807,6 +807,13 @@ licensing.
 
    Quick question for self-test: what sound would =(~< 1.0)= produce?
 
+   Though it's still very useful signal, let give it a separate name:
+
+#+NAME: unit
+#+BEGIN_SRC scheme
+(define~ unit 1.0)
+#+END_SRC
+
    For composing signal creators we could define a helper, which is the regular
    function composition!
 
@@ -1119,6 +1126,45 @@ licensing.
   ;; </impulse>
 #+END_SRC
 
+*** Transition
+
+#+NAME: transition
+#+BEGIN_SRC scheme
+  ;; <transition>
+  (define (transition curve Δt signal)
+    (let ([starts (make-vector *channels* (now))]
+          [previous-values (make-vector *channels* 0.0)]
+          [next-values (make-vector *channels* 0.0)])
+      (~<
+       (let ([Δt (<~ Δt)]
+             [current-value (<~ signal)]
+             [next-value (vector-ref next-values channel)])
+         (unless (= current-value next-value)
+           (vector-set! previous-values channel next-value)
+           (vector-set! next-values channel current-value)
+           (vector-set! starts channel time))
+         (let ([δt (- time (vector-ref starts channel))])
+           (if (< δt Δt)
+               (let ([previous-value (vector-ref previous-values channel)])
+                 (+ previous-value
+                    (curve (/ δt Δt) (- current-value previous-value))))
+               current-value))))))
+
+  (define (instant-curve a Δx)
+    Δx)
+
+  (define (linear-curve a Δx)
+    (* a Δx))
+
+  (define (quadratic-curve a Δx)
+    (* (expt a 4.0) Δx))
+
+  (define instant-transition (cut transition instant-curve unit <>))
+  (define linear-transition (cut transition linear-curve <> <>))
+  (define quadratic-transition (cut transition quadratic-curve <> <>))
+  ;; </transition>
+#+END_SRC
+
 ** Metronome
 
   Metronome is a mean to align scheduling with some periodic beat.
@@ -1128,38 +1174,14 @@ licensing.
 #+NAME: control-signal
 #+BEGIN_SRC scheme
   ;; <control-signal>
-  (define *sound-barrier* 0.03)
-
-  (define (linear-transition Δt)
-    (λ (δt x y)
-      (if (< δt Δt)
-          (+ x (* (- y x) (/ δt Δt)))
-          y)))
-
-  (define instant-transition
-    (λ (δt x y)
-      y))
-
-  (define *linear-transition* (linear-transition *sound-barrier*))
-
-  (define control-signal
+  (define make-control
     (case-lambda
       [(x)
        (if (number? x)
-           (control-signal id x *linear-transition*)
-           (control-signal x 0.0 *linear-transition*))]
+           (make-control id x)
+           (make-control x 0.0))]
       [(f x)
-       (control-signal f x *linear-transition*)]
-      [(f x transition)
-       (let ([start (now)]
-             [x x]
-             [y x])
-         (values
-          (~< (transition (- time start) x y))
-          (λ args
-            (set! x (transition (- (now) start) x y))
-            (set! y (apply f args))
-            (set! start (now)))))]))
+       (values (~< x) (λ args (set! x (apply f args))))]))
   ;; </control-signal>
 #+END_SRC
 
@@ -1607,7 +1629,7 @@ licensing.
           (srfi s26 cut)
           (srfi s42 eager-comprehensions)
           (ad-libitum signal)
-          (ad-libitum control)
+          (prefix (ad-libitum control) ctrl:)
           (prefix (ad-libitum oscillator) osc:)
           (prefix (ad-libitum envelope) env:)
           (prefix (ad-libitum filter) filter:)
@@ -1694,7 +1716,9 @@ licensing.
 #+BEGIN_SRC scheme :tangle ad-libitum/signal.ss :noweb yes :mkdirp yes :paddle no
   #!chezscheme
   (library (ad-libitum signal (1))
-    (export signal ~< <~ define-signal define~ constant silence ∅ live-signal live-value
+    (export signal ~< <~ define-signal define~
+            constant silence ∅ unit
+            live-signal live-value
             signal-sum signal-prod signal-diff signal-div
             +~ *~ -~ /~ ∑ ∏ mix pan)
     (import (chezscheme)
@@ -1703,6 +1727,7 @@ licensing.
     <<signal>>
     <<constant>>
     <<silence>>
+    <<unit>>
     <<deref-signal>>
     <<live-signal>>
     <<live-value>>
@@ -1742,12 +1767,18 @@ licensing.
 #+NAME: envelope.ss
 #+BEGIN_SRC scheme :tangle ad-libitum/envelope.ss :noweb yes :mkdirp yes :paddle no
   (library (ad-libitum envelope (1))
-    (export adsr impulse)
+    (export adsr impulse
+            transition instant-transition linear-transition quadratic-transition
+            )
     (import (chezscheme)
+            (srfi s26 cut)
             (ad-libitum common)
-            (ad-libitum signal))
+            (ad-libitum signal)
+            (only (ad-libitum sound) now)
+            )
     <<adsr>>
     <<impulse>>
+    <<transition>>
     )
 #+END_SRC
 
@@ -1782,11 +1813,10 @@ licensing.
 #+NAME: control.ss
 #+BEGIN_SRC scheme :tangle ad-libitum/control.ss :noweb yes :mkdirp yes :paddle no
   (library (ad-libitum control (1))
-    (export control-signal instant-transition linear-transition *linear-transition*)
+    (export make-control)
     (import (chezscheme)
             (ad-libitum common)
             (ad-libitum signal)
-            (only (ad-libitum sound) now)
             )
     <<control-signal>>
     )

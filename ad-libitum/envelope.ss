@@ -1,8 +1,13 @@
 (library (ad-libitum envelope (1))
-  (export adsr impulse)
+  (export adsr impulse
+          transition instant-transition linear-transition quadratic-transition
+          )
   (import (chezscheme)
+          (srfi s26 cut)
           (ad-libitum common)
-          (ad-libitum signal))
+          (ad-libitum signal)
+          (only (ad-libitum sound) now)
+          )
   ;; <adsr>
   (define~ (adsr start end attack decay sustain release)
     (let ([end (<~ end)])
@@ -41,5 +46,39 @@
             (* h (exp (- 1.0 h))))
           0.0)))
   ;; </impulse>
+
+  ;; <transition>
+  (define (transition curve Δt signal)
+    (let ([starts (make-vector *channels* (now))]
+          [previous-values (make-vector *channels* 0.0)]
+          [next-values (make-vector *channels* 0.0)])
+      (~<
+       (let ([Δt (<~ Δt)]
+             [current-value (<~ signal)]
+             [next-value (vector-ref next-values channel)])
+         (unless (= current-value next-value)
+           (vector-set! previous-values channel next-value)
+           (vector-set! next-values channel current-value)
+           (vector-set! starts channel time))
+         (let ([δt (- time (vector-ref starts channel))])
+           (if (< δt Δt)
+               (let ([previous-value (vector-ref previous-values channel)])
+                 (+ previous-value
+                    (curve (/ δt Δt) (- current-value previous-value))))
+               current-value))))))
+  
+  (define (instant-curve a Δx)
+    Δx)
+  
+  (define (linear-curve a Δx)
+    (* a Δx))
+  
+  (define (quadratic-curve a Δx)
+    (* (expt a 4.0) Δx))
+  
+  (define instant-transition (cut transition instant-curve unit <>))
+  (define linear-transition (cut transition linear-curve <> <>))
+  (define quadratic-transition (cut transition quadratic-curve <> <>))
+  ;; </transition>
 
   )
