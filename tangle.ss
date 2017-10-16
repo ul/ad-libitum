@@ -9,7 +9,7 @@
 
 (define utf-tx (make-transcoder (utf-8-codec)))
 
-(define block-name-irx (irregex '(: "#+NAME:" (* space) ($ (* any)) (* space))))
+(define block-name-irx (irregex '(: "#+NAME:" (* space) ($ (+ any)) (* space))))
 
 (define begin-tangle-block-irx
   (irregex
@@ -25,7 +25,7 @@
 
 (define end-block-irx (irregex '(: "#+END_SRC")))
 
-(define macro-irx (irregex '(: (=> prefix (* any)) "<<" (=> name (* any)) ">>" (=> suffix (* any)))))
+(define macro-irx (irregex '(: (=> prefix (* any)) "<<" (=> name (+ any)) ">>" (=> suffix (* any)))))
 
 (define (match-macro s)
   (let ([m (irregex-match macro-irx s)])
