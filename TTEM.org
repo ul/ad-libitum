@@ -140,6 +140,7 @@
    =osc:sine///= (takes frequency and optional initial phase).
 
 #+BEGIN_SRC scheme
+  (play! (osc:sine (osc:phasor 440.0 0.0)))
   (play! (osc:sine/// 440.0 0.0))
   (h!)
 #+END_SRC
@@ -364,6 +365,66 @@
   (measure-peak 0.0 0) ;; => 1.0
   (measure-rms 0.0 0) ;; => 0.7071067811829478
   (measure-rms-signal-1-2 0.0 0) ;; => 0.3535533905914739
+#+END_SRC
+
+   To be honest, trick with =solo= points to drawbacks in =rms-amplitude= and
+   =peak-amplitude= design. It would be better for them to just proxy input
+   signal and provide some accessor to measurement result.
+
+#+BEGIN_SRC scheme
+  (define (peak-amplitude signal)
+    (let ([peaks (make-vector *channels* 0.0)])
+      (values
+       (~<
+        (let* ([sample (<~ signal)]
+               [peak (max sample (vector-ref peaks channel))])
+          (vector-set! peaks channel peak)
+          sample))
+       (λ () peaks))))
+
+  (define (window width signal)
+    (let ([windows (make-vector *channels*)]
+          [N (-> width (* *sample-rate*) (ceiling) (exact))]
+          [cursor -1])
+      (do-ec (: i *channels*)
+             (vector-set! windows i (make-vector N 0.0)))
+      (values
+       (~<
+        (when (zero? channel)
+          (set! cursor (mod (+ cursor 1) N)))
+        (let ([sample (<~ signal)]
+              [window (vector-ref windows channel)])
+          (vector-set! window cursor sample)
+          sample))
+       (λ () windows))))
+
+  (define (rms-amplitude window-width signal)
+    (let-values ([(signal windows) (window window-width signal)])
+      (values
+       signal
+       (λ ()
+         (vector-map
+          (λ (window)
+            (let ([x 0.0])
+              (vector-for-each (λ (y) (set! x (+ x (* y y)))) window)
+              (sqrt (/ x (vector-length window)))) )
+          (windows))))))
+#+END_SRC
+
+#+BEGIN_SRC scheme
+  (define signal-1 (*~ (~< 0.5) (osc:sine/// (midi-pitch->frequency 69))))
+  (define signal-2 (*~ (~< 0.5) (osc:sine/// (midi-pitch->frequency 72))))
+
+  (define superposed-signal (+~ signal-1 signal-2))
+
+  (define-values (superposed-signal measure-peak) (peak-amplitude superposed-signal))
+  (define-values (superposed-signal measure-rms) (rms-amplitude 0.1 superposed-signal))
+
+  (play! superposed-signal)
+  (h!)
+
+  (measure-peak)
+  (measure-rms)
 #+END_SRC
 
 ** Periodic Signals

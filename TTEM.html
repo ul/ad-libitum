@@ -4,7 +4,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
 <title>The Theory and Technique of Electronic Music Exercises in Ad Libitum</title>
-<!-- 2017-10-16 Mon 09:02 -->
+<!-- 2017-10-16 Mon 11:46 -->
 <meta  http-equiv="Content-Type" content="text/html;charset=utf-8" />
 <meta  name="generator" content="Org-mode" />
 <meta  name="author" content="Ruslan Prakapchuk" />
@@ -363,7 +363,8 @@ as <code>osc:sine</code> (takes phasor signal as input, we'll cover it later) an
 
 <div class="org-src-container">
 
-<pre class="src src-scheme">(play! (osc:sine/// 440.0 0.0))
+<pre class="src src-scheme">(play! (osc:sine (osc:phasor 440.0 0.0)))
+(play! (osc:sine/// 440.0 0.0))
 (h!)
 </pre>
 </div>
@@ -676,6 +677,72 @@ Correlated signals.
 (measure-rms-signal-1-2 0.0 0) ;; =&gt; 0.3535533905914739
 </pre>
 </div>
+
+<p>
+To be honest, trick with <code>solo</code> points to drawbacks in <code>rms-amplitude</code> and
+<code>peak-amplitude</code> design. It would be better for them to just proxy input
+signal and provide some accessor to measurement result.
+</p>
+
+<div class="org-src-container">
+
+<pre class="src src-scheme">(define (peak-amplitude signal)
+  (let ([peaks (make-vector *channels* 0.0)])
+    (values
+     (~&lt;
+      (let* ([sample (&lt;~ signal)]
+	     [peak (max sample (vector-ref peaks channel))])
+	(vector-set! peaks channel peak)
+	sample))
+     (λ () peaks))))
+
+(define (window width signal)
+  (let ([windows (make-vector *channels*)]
+	[N (-&gt; width (* *sample-rate*) (ceiling) (exact))]
+	[cursor -1])
+    (do-ec (: i *channels*)
+	   (vector-set! windows i (make-vector N 0.0)))
+    (values
+     (~&lt;
+      (when (zero? channel)
+	(set! cursor (mod (+ cursor 1) N)))
+      (let ([sample (&lt;~ signal)]
+	    [window (vector-ref windows channel)])
+	(vector-set! window cursor sample)
+	sample))
+     (λ () windows))))
+
+(define (rms-amplitude window-width signal)
+  (let-values ([(signal windows) (window window-width signal)])
+    (values
+     signal
+     (λ ()
+       (vector-map
+	(λ (window)
+	  (let ([x 0.0])
+	    (vector-for-each (λ (y) (set! x (+ x (* y y)))) window)
+	    (sqrt (/ x (vector-length window)))) )
+	(windows))))))
+</pre>
+</div>
+
+<div class="org-src-container">
+
+<pre class="src src-scheme">(define signal-1 (*~ (~&lt; 0.5) (osc:sine/// (midi-pitch-&gt;frequency 69))))
+(define signal-2 (*~ (~&lt; 0.5) (osc:sine/// (midi-pitch-&gt;frequency 72))))
+
+(define superposed-signal (+~ signal-1 signal-2))
+
+(define-values (superposed-signal measure-peak) (peak-amplitude superposed-signal))
+(define-values (superposed-signal measure-rms) (rms-amplitude 0.1 superposed-signal))
+
+(play! superposed-signal)
+(h!)
+
+(measure-peak)
+(measure-rms)
+</pre>
+</div>
 </div>
 </div>
 
@@ -721,7 +788,7 @@ Correlated signals.
 </div>
 <div id="postamble" class="status">
 <p class="author">Author: Ruslan Prakapchuk</p>
-<p class="date">Created: 2017-10-16 Mon 09:02</p>
+<p class="date">Created: 2017-10-16 Mon 11:46</p>
 <p class="creator"><a href="http://www.gnu.org/software/emacs/">Emacs</a> 25.3.1 (<a href="http://orgmode.org">Org</a> mode 8.2.10)</p>
 <p class="validation"><a href="http://validator.w3.org/check?uri=referer">Validate</a></p>
 </div>
