@@ -1,9 +1,9 @@
 #+TITLE: Ad Libitum
 #+SETUPFILE: org-html-themes/setup/theme-readtheorg.setup
 
-* AD LIBITUM
-
   The Scheme Live Coding Environment. Built on Chez Scheme and libsoundio.
+
+  You might want to read this file here [[http://ul.mantike.pro/ad-libitum/README.html]]
 
 * Getting Started
 

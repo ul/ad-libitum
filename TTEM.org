@@ -5,6 +5,8 @@
   Music" by Miller Puckette. Work is done in Ad Libitum instead of PureData, and
   some pieces of code migrate back to Ad Libitum standard library.
 
+  You might want to read this file here [[http://ul.mantike.pro/ad-libitum/TTEM.html]]
+
 * Sinusoids, amplitude and frequency
 
   Ad Libitum deals with continous representation of time, it's expressed as a
