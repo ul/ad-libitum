@@ -476,8 +476,6 @@
 
 *** Amplitude control in decibels
 
-**** (a)
-
 #+BEGIN_SRC scheme
   (define amplitude 0.0)
   (define amplitude~ (live-value 'amplitude))
@@ -495,10 +493,10 @@
   (h!)
 #+END_SRC
 
-**** (b)
+*** Smoothed envelope control with an envelope generator
 
-     Note, that in *𝔄𝔏* instead of messages we just set values or invoke function
-     which do that.
+    Note, that in *𝔄𝔏* instead of messages we just set values or invoke function
+    which do that.
 
 #+BEGIN_SRC scheme
   (define (make-line)
@@ -549,7 +547,18 @@
   (h!)
 #+END_SRC
 
-**** (c)
+*** Major triad
+
+    =mix= is normalizing =+~=
+
+#+BEGIN_SRC scheme
+  (play!
+   (mix (osc:sine/// 440.0)
+        (osc:sine/// 550.0)
+        (osc:sine/// 660.0)))
+
+  (h!)
+#+END_SRC
 
 #+BEGIN_SRC scheme
 
