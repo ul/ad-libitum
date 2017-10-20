@@ -814,6 +814,36 @@ licensing.
 (define~ unit 1.0)
 #+END_SRC
 
+   Another useful syntax sugar is for referrign and setting vector element
+   corresponding to the current channel. It is very common pattern to store
+   signal state in vector on per-channel basis.
+
+#+NAME: channel
+#+BEGIN_SRC scheme
+  ;; <channel>
+  (define-syntax (make-channel-vector stx)
+    (syntax-case stx ()
+      [(k)
+       (with-syntax ([*channels* (datum->syntax #'k '*channels*)])
+         #'(make-vector *channels*))]
+      [(k value)
+       (with-syntax ([*channels* (datum->syntax #'k '*channels*)])
+         #'(make-vector *channels* value))]))
+
+  (define-syntax (channel-ref stx)
+    (syntax-case stx ()
+      [(k name)
+       (with-syntax ([channel (datum->syntax #'k 'channel)])
+         #'(vector-ref name channel))]))
+
+  (define-syntax (channel-set! stx)
+    (syntax-case stx ()
+      [(k name value)
+       (with-syntax ([channel (datum->syntax #'k 'channel)])
+         #'(vector-set! name channel value))]))
+  ;; </channel>
+#+END_SRC
+
    For composing signal creators we could define a helper, which is the regular
    function composition!
 
@@ -866,18 +896,18 @@ licensing.
 #+BEGIN_SRC scheme
   ;; <phasor>
   (define (dynamic-phasor frequency phase0)
-    (let ([previous-times (make-vector *channels* 0.0)]
-          [previous-phases (make-vector *channels* 0.0)])
+    (let ([previous-times (make-channel-vector 0.0)]
+          [previous-phases (make-channel-vector 0.0)])
       (~<
-       (let* ([previous-time (vector-ref previous-times channel)]
+       (let* ([previous-time (channel-ref previous-times)]
               [phase-delta (if (< previous-time time)
                                (/ (<~ frequency) *sample-rate*)
                                0.0)]
-              [next-phase (-> (vector-ref previous-phases channel)
+              [next-phase (-> (channel-ref previous-phases)
                               (+ phase-delta)
                               (mod 1.0))])
-         (vector-set! previous-times channel time)
-         (vector-set! previous-phases channel next-phase)
+         (channel-set! previous-times time)
+         (channel-set! previous-phases next-phase)
          (-> (<~ phase0)
              (+ next-phase)
              (mod 1.0))))))
@@ -1132,20 +1162,20 @@ licensing.
 #+BEGIN_SRC scheme
   ;; <transition>
   (define (transition curve Δt signal)
-    (let ([starts (make-vector *channels* (now))]
-          [previous-values (make-vector *channels* 0.0)]
-          [next-values (make-vector *channels* 0.0)])
+    (let ([starts (make-channel-vector (now))]
+          [previous-values (make-channel-vector 0.0)]
+          [next-values (make-channel-vector 0.0)])
       (~<
        (let ([Δt (<~ Δt)]
              [current-value (<~ signal)]
-             [next-value (vector-ref next-values channel)])
+             [next-value (channel-ref next-values)])
          (unless (= current-value next-value)
-           (vector-set! previous-values channel next-value)
-           (vector-set! next-values channel current-value)
-           (vector-set! starts channel time))
-         (let ([δt (- time (vector-ref starts channel))])
+           (channel-set! previous-values next-value)
+           (channel-set! next-values current-value)
+           (channel-set! starts time))
+         (let ([δt (- time (channel-ref starts))])
            (if (< δt Δt)
-               (let ([previous-value (vector-ref previous-values channel)])
+               (let ([previous-value (channel-ref previous-values)])
                  (+ previous-value
                     (curve (/ δt Δt) (- current-value previous-value))))
                current-value))))))
@@ -1233,15 +1263,15 @@ licensing.
 
   (define (echo delay feedback signal)
     (let ([line-size (* *max-line-duration* *sample-rate*)]
-          [lines (make-vector *channels*)]
+          [lines (make-channel-vector)]
           [cursor -1])
-      (do ([i 0 (+ i 1)])
-          ((= i *channels*) 0)
-        (vector-set! lines i (make-vector line-size 0.0)))
+      (do ([channel 0 (+ channel 1)])
+          ((= channel *channels*) 0)
+        (channel-set! lines (make-vector line-size 0.0)))
       (~<
        (when(zero? channel)
          (set! cursor (mod (+ cursor 1) line-size)))
-       (let ([line (vector-ref lines channel)]
+       (let ([line (channel-ref lines)]
              [x (<~ signal)]
              [delay (flonum->fixnum (round (* (<~ delay) *sample-rate*)))]
              [feedback (<~ feedback)])
@@ -1261,12 +1291,12 @@ licensing.
       (/ k (+ k 1))))
 
   (define (lpf frequency x)
-    (let ([ys (make-vector *channels* 0.0)])
+    (let ([ys (make-channel-vector 0.0)])
       (~<
-       (let* ([y-1 (vector-ref ys channel)]
+       (let* ([y-1 (channel-ref ys)]
               [α (lpf-frequency->α (<~ frequency))])
          (let ([y (+ y-1 (* α (- (<~ x) y-1)))])
-           (vector-set! ys channel y)
+           (channel-set! ys y)
            y)))))
   ;; </lpf>
 #+END_SRC
@@ -1279,16 +1309,16 @@ licensing.
       (/ (+ k 1))))
 
   (define (hpf frequency x)
-    (let ([xs (make-vector *channels* 0.0)]
-          [ys (make-vector *channels* 0.0)])
+    (let ([xs (make-channel-vector 0.0)]
+          [ys (make-channel-vector 0.0)])
       (~<
-       (let ([x-1 (vector-ref xs channel)]
-             [y-1 (vector-ref ys channel)]
+       (let ([x-1 (channel-ref xs)]
+             [y-1 (channel-ref ys)]
              [x (<~ x)]
              [α (hpf-frequency->α (<~ frequency))])
          (let ([y (* α (+ y-1 (- x x-1)))])
-           (vector-set! xs channel x)
-           (vector-set! ys channel y)
+           (channel-set! xs x)
+           (channel-set! ys y)
            y)))))
   ;; </hpf>
 #+END_SRC
@@ -1298,15 +1328,15 @@ licensing.
   ;; <make-biquad-filter>
   (define (make-biquad-filter make-coefficients)
     (λ (Q frequency x)
-      (let ([xs-1 (make-vector *channels* 0.0)]
-            [xs-2 (make-vector *channels* 0.0)]
-            [ys-1 (make-vector *channels* 0.0)]
-            [ys-2 (make-vector *channels* 0.0)])
+      (let ([xs-1 (make-channel-vector 0.0)]
+            [xs-2 (make-channel-vector 0.0)]
+            [ys-1 (make-channel-vector 0.0)]
+            [ys-2 (make-channel-vector 0.0)])
         (~<
-         (let ([x-1 (vector-ref xs-1 channel)]
-               [x-2 (vector-ref xs-2 channel)]
-               [y-1 (vector-ref ys-1 channel)]
-               [y-2 (vector-ref ys-2 channel)]
+         (let ([x-1 (channel-ref xs-1)]
+               [x-2 (channel-ref xs-2)]
+               [y-1 (channel-ref ys-1)]
+               [y-2 (channel-ref ys-2)]
                [x (<~ x)]
                [Q (<~ Q)]
                [frequency (<~ frequency)])
@@ -1322,10 +1352,10 @@ licensing.
                           (* (/ b2 a0) x-2))
                          (* (/ a1 a0) y-1)
                          (* (/ a2 a0) y-2))])
-                 (vector-set! xs-1 channel x)
-                 (vector-set! xs-2 channel x-1)
-                 (vector-set! ys-1 channel y)
-                 (vector-set! ys-2 channel y-1)
+                 (channel-set! xs-1 x)
+                 (channel-set! xs-2 x-1)
+                 (channel-set! ys-1 y)
+                 (channel-set! ys-2 y-1)
                  y))))))))
   ;; </make-biquad-filter>
 #+END_SRC
@@ -1558,7 +1588,8 @@ licensing.
   (alias callback schedule)
 
   ;; in case of emergency ☺
-  (alias h! sound:hush!)
+  (alias hush! sound:hush!)
+  (alias h! hush!)
 
   (alias play! sound:set-dsp!)
 
@@ -1717,6 +1748,7 @@ licensing.
   #!chezscheme
   (library (ad-libitum signal (1))
     (export signal ~< <~ define-signal define~
+            make-channel-vector channel-ref channel-set!
             constant silence ∅ unit
             live-signal live-value
             signal-sum signal-prod signal-diff signal-div
@@ -1725,6 +1757,7 @@ licensing.
             (srfi s26 cut)
             (ad-libitum common))
     <<signal>>
+    <<channel>>
     <<constant>>
     <<silence>>
     <<unit>>

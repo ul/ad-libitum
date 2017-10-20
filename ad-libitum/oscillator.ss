@@ -10,18 +10,18 @@
 
   ;; <phasor>
   (define (dynamic-phasor frequency phase0)
-    (let ([previous-times (make-vector *channels* 0.0)]
-          [previous-phases (make-vector *channels* 0.0)])
+    (let ([previous-times (make-channel-vector 0.0)]
+          [previous-phases (make-channel-vector 0.0)])
       (~<
-       (let* ([previous-time (vector-ref previous-times channel)]
+       (let* ([previous-time (channel-ref previous-times)]
               [phase-delta (if (< previous-time time)
                                (/ (<~ frequency) *sample-rate*)
                                0.0)]
-              [next-phase (-> (vector-ref previous-phases channel)
+              [next-phase (-> (channel-ref previous-phases)
                               (+ phase-delta)
                               (mod 1.0))])
-         (vector-set! previous-times channel time)
-         (vector-set! previous-phases channel next-phase)
+         (channel-set! previous-times time)
+         (channel-set! previous-phases next-phase)
          (-> (<~ phase0)
              (+ next-phase)
              (mod 1.0))))))

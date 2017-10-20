@@ -49,20 +49,20 @@
 
   ;; <transition>
   (define (transition curve Δt signal)
-    (let ([starts (make-vector *channels* (now))]
-          [previous-values (make-vector *channels* 0.0)]
-          [next-values (make-vector *channels* 0.0)])
+    (let ([starts (make-channel-vector (now))]
+          [previous-values (make-channel-vector 0.0)]
+          [next-values (make-channel-vector 0.0)])
       (~<
        (let ([Δt (<~ Δt)]
              [current-value (<~ signal)]
-             [next-value (vector-ref next-values channel)])
+             [next-value (channel-ref next-values)])
          (unless (= current-value next-value)
-           (vector-set! previous-values channel next-value)
-           (vector-set! next-values channel current-value)
-           (vector-set! starts channel time))
-         (let ([δt (- time (vector-ref starts channel))])
+           (channel-set! previous-values next-value)
+           (channel-set! next-values current-value)
+           (channel-set! starts time))
+         (let ([δt (- time (channel-ref starts))])
            (if (< δt Δt)
-               (let ([previous-value (vector-ref previous-values channel)])
+               (let ([previous-value (channel-ref previous-values)])
                  (+ previous-value
                     (curve (/ δt Δt) (- current-value previous-value))))
                current-value))))))

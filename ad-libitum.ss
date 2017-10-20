@@ -44,7 +44,8 @@
 (alias callback schedule)
 
 ;; in case of emergency ☺
-(alias h! sound:hush!)
+(alias hush! sound:hush!)
+(alias h! hush!)
 
 (alias play! sound:set-dsp!)
 

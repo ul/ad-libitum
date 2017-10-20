@@ -1,6 +1,7 @@
 #!chezscheme
 (library (ad-libitum signal (1))
   (export signal ~< <~ define-signal define~
+          make-channel-vector channel-ref channel-set!
           constant silence ∅ unit
           live-signal live-value
           signal-sum signal-prod signal-diff signal-div
@@ -29,6 +30,29 @@
   
   (alias define~ define-signal)
   ;; </signal>
+
+  ;; <channel>
+  (define-syntax (make-channel-vector stx)
+    (syntax-case stx ()
+      [(k)
+       (with-syntax ([*channels* (datum->syntax #'k '*channels*)])
+         #'(make-vector *channels*))]
+      [(k value)
+       (with-syntax ([*channels* (datum->syntax #'k '*channels*)])
+         #'(make-vector *channels* value))]))
+  
+  (define-syntax (channel-ref stx)
+    (syntax-case stx ()
+      [(k name)
+       (with-syntax ([channel (datum->syntax #'k 'channel)])
+         #'(vector-ref name channel))]))
+  
+  (define-syntax (channel-set! stx)
+    (syntax-case stx ()
+      [(k name value)
+       (with-syntax ([channel (datum->syntax #'k 'channel)])
+         #'(vector-set! name channel value))]))
+  ;; </channel>
 
   ;; <constant>
   (define~ (constant amplitude) amplitude)

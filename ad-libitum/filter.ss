@@ -18,15 +18,15 @@
   
   (define (echo delay feedback signal)
     (let ([line-size (* *max-line-duration* *sample-rate*)]
-          [lines (make-vector *channels*)]
+          [lines (make-channel-vector)]
           [cursor -1])
-      (do ([i 0 (+ i 1)])
-          ((= i *channels*) 0)
-        (vector-set! lines i (make-vector line-size 0.0)))
+      (do ([channel 0 (+ channel 1)])
+          ((= channel *channels*) 0)
+        (channel-set! lines (make-vector line-size 0.0)))
       (~<
        (when(zero? channel)
          (set! cursor (mod (+ cursor 1) line-size)))
-       (let ([line (vector-ref lines channel)]
+       (let ([line (channel-ref lines)]
              [x (<~ signal)]
              [delay (flonum->fixnum (round (* (<~ delay) *sample-rate*)))]
              [feedback (<~ feedback)])
@@ -43,12 +43,12 @@
       (/ k (+ k 1))))
   
   (define (lpf frequency x)
-    (let ([ys (make-vector *channels* 0.0)])
+    (let ([ys (make-channel-vector 0.0)])
       (~<
-       (let* ([y-1 (vector-ref ys channel)]
+       (let* ([y-1 (channel-ref ys)]
               [α (lpf-frequency->α (<~ frequency))])
          (let ([y (+ y-1 (* α (- (<~ x) y-1)))])
-           (vector-set! ys channel y)
+           (channel-set! ys y)
            y)))))
   ;; </lpf>
 
@@ -58,31 +58,31 @@
       (/ (+ k 1))))
   
   (define (hpf frequency x)
-    (let ([xs (make-vector *channels* 0.0)]
-          [ys (make-vector *channels* 0.0)])
+    (let ([xs (make-channel-vector 0.0)]
+          [ys (make-channel-vector 0.0)])
       (~<
-       (let ([x-1 (vector-ref xs channel)]
-             [y-1 (vector-ref ys channel)]
+       (let ([x-1 (channel-ref xs)]
+             [y-1 (channel-ref ys)]
              [x (<~ x)]
              [α (hpf-frequency->α (<~ frequency))])
          (let ([y (* α (+ y-1 (- x x-1)))])
-           (vector-set! xs channel x)
-           (vector-set! ys channel y)
+           (channel-set! xs x)
+           (channel-set! ys y)
            y)))))
   ;; </hpf>
 
   ;; <make-biquad-filter>
   (define (make-biquad-filter make-coefficients)
     (λ (Q frequency x)
-      (let ([xs-1 (make-vector *channels* 0.0)]
-            [xs-2 (make-vector *channels* 0.0)]
-            [ys-1 (make-vector *channels* 0.0)]
-            [ys-2 (make-vector *channels* 0.0)])
+      (let ([xs-1 (make-channel-vector 0.0)]
+            [xs-2 (make-channel-vector 0.0)]
+            [ys-1 (make-channel-vector 0.0)]
+            [ys-2 (make-channel-vector 0.0)])
         (~<
-         (let ([x-1 (vector-ref xs-1 channel)]
-               [x-2 (vector-ref xs-2 channel)]
-               [y-1 (vector-ref ys-1 channel)]
-               [y-2 (vector-ref ys-2 channel)]
+         (let ([x-1 (channel-ref xs-1)]
+               [x-2 (channel-ref xs-2)]
+               [y-1 (channel-ref ys-1)]
+               [y-2 (channel-ref ys-2)]
                [x (<~ x)]
                [Q (<~ Q)]
                [frequency (<~ frequency)])
@@ -98,10 +98,10 @@
                           (* (/ b2 a0) x-2))
                          (* (/ a1 a0) y-1)
                          (* (/ a2 a0) y-2))])
-                 (vector-set! xs-1 channel x)
-                 (vector-set! xs-2 channel x-1)
-                 (vector-set! ys-1 channel y)
-                 (vector-set! ys-2 channel y-1)
+                 (channel-set! xs-1 x)
+                 (channel-set! xs-2 x-1)
+                 (channel-set! ys-1 y)
+                 (channel-set! ys-2 y-1)
                  y))))))))
   ;; </make-biquad-filter>
 
