@@ -2,8 +2,7 @@
 
 DIR=`pwd`
 
-# TODO fix htmlize version dep
-emacs -Q --batch -L ~/.emacs.d/elpa/htmlize-20171017.141/ \
+emacs -Q --batch -L ~/.emacs.d/elpa/htmlize-*/ \
     --eval \
     "(progn
      (require 'htmlize)
