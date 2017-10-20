@@ -4,7 +4,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
 <title>The Theory and Technique of Electronic Music Exercises in Ad Libitum</title>
-<!-- 2017-10-20 Fri 19:46 -->
+<!-- 2017-10-21 Sat 08:43 -->
 <meta  http-equiv="Content-Type" content="text/html;charset=utf-8" />
 <meta  name="generator" content="Org-mode" />
 <meta  name="author" content="Ruslan Prakapchuk" />
@@ -164,6 +164,8 @@ for the JavaScript code in this tag.
 <li><a href="#sec-1-9-2">1.9.2. Amplitude control in decibels</a></li>
 <li><a href="#sec-1-9-3">1.9.3. Smoothed envelope control with an envelope generator</a></li>
 <li><a href="#sec-1-9-4">1.9.4. Major triad</a></li>
+<li><a href="#sec-1-9-5">1.9.5. Conversion between frequency and pitch</a></li>
+<li><a href="#sec-1-9-6">1.9.6. More additive synthesis</a></li>
 </ul>
 </li>
 <li><a href="#sec-1-10">1.10. Exercises</a></li>
@@ -922,10 +924,53 @@ which do that.
 (h!)
 </pre>
 </div>
+</div>
+</div>
 
+<div id="outline-container-sec-1-9-5" class="outline-4">
+<h4 id="sec-1-9-5"><span class="section-number-4">1.9.5</span> Conversion between frequency and pitch</h4>
+<div class="outline-text-4" id="text-1-9-5">
+<p>
+This is covered well before. Only worth to note once more that in <b>𝔄𝔏</b>
+instead of message passing we just give names, set values and call functions.
+</p>
+</div>
+</div>
+
+<div id="outline-container-sec-1-9-6" class="outline-4">
+<h4 id="sec-1-9-6"><span class="section-number-4">1.9.6</span> More additive synthesis</h4>
+<div class="outline-text-4" id="text-1-9-6">
 <div class="org-src-container">
 
-<pre class="src src-scheme"></pre>
+<pre class="src src-scheme">(define-values
+  (frequency set-pitch!)
+  (ctrl:make-control midi-pitch-&gt;frequency 0.0))
+
+(<span style="font-weight: bold;">define</span> <span style="font-weight: bold;">s1</span> (osc:sine/// frequency))
+(<span style="font-weight: bold;">define</span> <span style="font-weight: bold;">s2</span> (*~ (~&lt; 0.1) (osc:sine/// (*~ (~&lt; 2.0) frequency))))
+(<span style="font-weight: bold;">define</span> <span style="font-weight: bold;">s3</span> (*~ (~&lt; 0.2) (osc:sine/// (*~ (~&lt; 3.0) frequency))))
+(<span style="font-weight: bold;">define</span> <span style="font-weight: bold;">s4</span> (*~ (~&lt; 0.5) (osc:sine/// (*~ (~&lt; 4.0) frequency))))
+
+(<span style="font-weight: bold;">define</span> (<span style="font-weight: bold;">switch</span>)
+  (<span style="font-weight: bold;">let</span> ([value 0.0])
+    (values
+     (~&lt; value)
+     (<span style="font-weight: bold;">&#955;</span> () (set! value (- 1.0 value))))))
+
+(define-values (overtones-switch toggle-overtones!) (switch))
+
+(play! (+~ s1
+           (*~ overtones-switch
+               (+~ s2 s3 s4))))
+
+(set-pitch! 69)
+(toggle-overtones!)
+
+(set-pitch! 50)
+(toggle-overtones!)
+
+(h!)
+</pre>
 </div>
 </div>
 </div>
@@ -933,6 +978,93 @@ which do that.
 
 <div id="outline-container-sec-1-10" class="outline-3">
 <h3 id="sec-1-10"><span class="section-number-3">1.10</span> Exercises</h3>
+<div class="outline-text-3" id="text-1-10">
+<div class="org-src-container">
+
+<pre class="src src-scheme"><span style="font-weight: bold; font-style: italic;">;;; </span><span style="font-weight: bold; font-style: italic;">1</span>
+
+(<span style="font-weight: bold;">define</span> <span style="font-weight: bold;">&#966;</span> 0.0)
+(<span style="font-weight: bold;">define</span> <span style="font-weight: bold;">&#969;</span> (/ &#960; 10.0))
+
+<span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">? phase at sample n = 10</span>
+
+(+ (* &#969; 10) &#966;)
+
+<span style="font-weight: bold; font-style: italic;">;;; </span><span style="font-weight: bold; font-style: italic;">2</span>
+
+(<span style="font-weight: bold;">define</span> <span style="font-weight: bold;">sinusoid-1-period</span> 20)
+(<span style="font-weight: bold;">define</span> <span style="font-weight: bold;">sinusoid-2-period</span> 30)
+
+<span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">? period of sum</span>
+
+(lcm sinusoid-1-period sinusoid-2-period)
+
+<span style="font-weight: bold; font-style: italic;">;;; </span><span style="font-weight: bold; font-style: italic;">3</span>
+
+(amp-&gt;dB 1.5)
+(amp-&gt;dB 2)
+(amp-&gt;dB 3)
+(amp-&gt;dB 5)
+
+<span style="font-weight: bold; font-style: italic;">;;; </span><span style="font-weight: bold; font-style: italic;">4</span>
+
+(<span style="font-weight: bold;">define</span> <span style="font-weight: bold;">signal-1-rms-amplitude</span> 3)
+(<span style="font-weight: bold;">define</span> <span style="font-weight: bold;">signal-2-rms-amplitude</span> 4)
+
+<span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">? rms amplitude of signals sum</span>
+
+(sqrt (+ (* signal-1-rms-amplitude signal-1-rms-amplitude)
+         (* signal-2-rms-amplitude signal-2-rms-amplitude)))
+
+<span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">let's double-check with real signal</span>
+(<span style="font-weight: bold;">define</span> <span style="font-weight: bold;">s1</span> (*~ (~&lt; (* signal-1-rms-amplitude (sqrt 2)))
+               (osc:sine/// 440.0)))
+
+(<span style="font-weight: bold;">define</span> <span style="font-weight: bold;">s2</span> (*~ (~&lt; (* signal-2-rms-amplitude (sqrt 2)))
+               (osc:sine/// 543.0)))
+
+(define-values (s1* measure-s1-rms) (rms-amplitude 0.1 s1))
+(define-values (s2* measure-s2-rms) (rms-amplitude 0.1 s2))
+
+(<span style="font-weight: bold;">define</span> <span style="font-weight: bold;">ss</span> (+~ s1* s2*))
+
+(define-values (ss* measure-ss-rms) (rms-amplitude 0.1 ss))
+
+(play! (*~ ss* silence))
+(h!)
+
+(measure-s1-rms) <span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">=&gt; #(2.9999999999627187 2.9999999999627187)</span>
+(measure-s2-rms) <span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">=&gt; #(3.998132153590563 3.998896233813645)</span>
+(measure-ss-rms) <span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">=&gt; #(5.0258347452181065 5.0260213046152185)</span>
+
+<span style="font-weight: bold; font-style: italic;">;;; </span><span style="font-weight: bold; font-style: italic;">5</span>
+
+(<span style="font-weight: bold;">define</span> <span style="font-weight: bold;">amp-factor</span> (/ (dB-&gt;amp 9.0) (dB-&gt;amp 0.0)))
+
+<span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">amp-factor of n equal uncorrelated signals sum is (sqrt n)</span>
+
+(* amp-factor amp-factor)
+
+<span style="font-weight: bold; font-style: italic;">;;; </span><span style="font-weight: bold; font-style: italic;">6</span>
+
+(/ (* 2&#960; 440.0) 44100.0)
+
+<span style="font-weight: bold; font-style: italic;">;;; </span><span style="font-weight: bold; font-style: italic;">7</span>
+
+(- (midi-pitch-&gt;frequency 61)
+   (midi-pitch-&gt;frequency 60))
+
+<span style="font-weight: bold; font-style: italic;">;;; </span><span style="font-weight: bold; font-style: italic;">8</span>
+
+<span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">wtf is cents</span>
+
+<span style="font-weight: bold; font-style: italic;">;;; </span><span style="font-weight: bold; font-style: italic;">9</span>
+
+<span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">min (/ (sqrt N))</span>
+<span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">max 1</span>
+</pre>
+</div>
+</div>
 </div>
 </div>
 
@@ -964,7 +1096,7 @@ which do that.
 </div>
 <div id="postamble" class="status">
 <p class="author">Author: Ruslan Prakapchuk</p>
-<p class="date">Created: 2017-10-20 Fri 19:46</p>
+<p class="date">Created: 2017-10-21 Sat 08:43</p>
 <p class="creator"><a href="http://www.gnu.org/software/emacs/">Emacs</a> 25.3.1 (<a href="http://orgmode.org">Org</a> mode 8.2.10)</p>
 <p class="validation"><a href="http://validator.w3.org/check?uri=referer">Validate</a></p>
 </div>

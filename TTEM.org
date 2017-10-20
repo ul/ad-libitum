@@ -560,11 +560,130 @@
   (h!)
 #+END_SRC
 
-#+BEGIN_SRC scheme
+*** Conversion between frequency and pitch
 
+    This is covered well before. Only worth to note once more that in *𝔄𝔏*
+    instead of message passing we just give names, set values and call functions.
+
+*** More additive synthesis
+
+
+#+BEGIN_SRC scheme
+  (define-values
+    (frequency set-pitch!)
+    (ctrl:make-control midi-pitch->frequency 0.0))
+
+  (define s1 (osc:sine/// frequency))
+  (define s2 (*~ (~< 0.1) (osc:sine/// (*~ (~< 2.0) frequency))))
+  (define s3 (*~ (~< 0.2) (osc:sine/// (*~ (~< 3.0) frequency))))
+  (define s4 (*~ (~< 0.5) (osc:sine/// (*~ (~< 4.0) frequency))))
+
+  (define (switch)
+    (let ([value 0.0])
+      (values
+       (~< value)
+       (λ () (set! value (- 1.0 value))))))
+
+  (define-values (overtones-switch toggle-overtones!) (switch))
+
+  (play! (+~ s1
+             (*~ overtones-switch
+                 (+~ s2 s3 s4))))
+
+  (set-pitch! 69)
+  (toggle-overtones!)
+
+  (set-pitch! 50)
+  (toggle-overtones!)
+
+  (h!)
 #+END_SRC
 
 ** Exercises
+
+#+BEGIN_SRC scheme
+  ;;; 1
+
+  (define φ 0.0)
+  (define ω (/ π 10.0))
+
+  ;; ? phase at sample n = 10
+
+  (+ (* ω 10) φ)
+
+  ;;; 2
+
+  (define sinusoid-1-period 20)
+  (define sinusoid-2-period 30)
+
+  ;; ? period of sum
+
+  (lcm sinusoid-1-period sinusoid-2-period)
+
+  ;;; 3
+
+  (amp->dB 1.5)
+  (amp->dB 2)
+  (amp->dB 3)
+  (amp->dB 5)
+
+  ;;; 4
+
+  (define signal-1-rms-amplitude 3)
+  (define signal-2-rms-amplitude 4)
+
+  ;; ? rms amplitude of signals sum
+
+  (sqrt (+ (* signal-1-rms-amplitude signal-1-rms-amplitude)
+           (* signal-2-rms-amplitude signal-2-rms-amplitude)))
+
+  ;; let's double-check with real signal
+  (define s1 (*~ (~< (* signal-1-rms-amplitude (sqrt 2)))
+                 (osc:sine/// 440.0)))
+
+  (define s2 (*~ (~< (* signal-2-rms-amplitude (sqrt 2)))
+                 (osc:sine/// 543.0)))
+
+  (define-values (s1* measure-s1-rms) (rms-amplitude 0.1 s1))
+  (define-values (s2* measure-s2-rms) (rms-amplitude 0.1 s2))
+
+  (define ss (+~ s1* s2*))
+
+  (define-values (ss* measure-ss-rms) (rms-amplitude 0.1 ss))
+
+  (play! (*~ ss* silence))
+  (h!)
+
+  (measure-s1-rms) ;; => #(2.9999999999627187 2.9999999999627187)
+  (measure-s2-rms) ;; => #(3.998132153590563 3.998896233813645)
+  (measure-ss-rms) ;; => #(5.0258347452181065 5.0260213046152185)
+
+  ;;; 5
+
+  (define amp-factor (/ (dB->amp 9.0) (dB->amp 0.0)))
+
+  ;; amp-factor of n equal uncorrelated signals sum is (sqrt n)
+
+  (* amp-factor amp-factor)
+
+  ;;; 6
+
+  (/ (* 2π 440.0) 44100.0)
+
+  ;;; 7
+
+  (- (midi-pitch->frequency 61)
+     (midi-pitch->frequency 60))
+
+  ;;; 8
+
+  ;; wtf is cents
+
+  ;;; 9
+
+  ;; min (/ (sqrt N))
+  ;; max 1
+#+END_SRC
 
 * Wavetables and samplers
 
