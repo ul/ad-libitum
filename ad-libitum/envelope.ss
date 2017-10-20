@@ -61,7 +61,7 @@
            (channel-set! next-values current-value)
            (channel-set! starts time))
          (let ([δt (- time (channel-ref starts))])
-           (if (< δt Δt)
+           (if (and (positive? Δt) (< δt Δt))
                (let ([previous-value (channel-ref previous-values)])
                  (+ previous-value
                     (curve (/ δt Δt) (- current-value previous-value))))

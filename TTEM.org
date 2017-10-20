@@ -431,10 +431,130 @@
 
 ** Periodic Signals
 
+#+BEGIN_SRC scheme
+  (define s1 (*~ (~< 0.5) (osc:sine/// 220.0 0.0)))
+  (define s2 (*~ (~< 0.3) (osc:sine/// 440.0 0.1)))
+  (define s3 (*~ (~< 0.2) (osc:sine/// 660.0 0.2)))
 
+  (play! (+~ s1 s2 s3))
+
+  (h!)
+#+END_SRC
 
 ** About the Software Examples
+
+   Oh, well... You are already running Ad Libitum at this point.
+
 ** Examples
+
+*** Constant amplitude scaler
+
+    Note how Pd boxes corresponds to Ad Libitum expressions in parenthesis, and
+    instead of graph-like connections tree structure is used. Don't judge fast
+    it as limiting, you always can reuse expression by naming it with help of
+    =define= or =let=, and we will show later how powerful is textual
+    representation.
+
+#+BEGIN_SRC scheme
+  (play!
+   (*~
+    (~< 0.05)
+    (osc:sine/// 440.0)))
+
+  (h!)
+
+  ;;; or
+
+  (define sinusoid (osc:sine/// 440.0))
+  (define amplitude (~< 0.05))
+  (define scaled-sinusoid (*~ amplitude sinusoid))
+
+  (play! scaled-sinusoid)
+
+  (h!)
+#+END_SRC
+
+*** Amplitude control in decibels
+
+**** (a)
+
+#+BEGIN_SRC scheme
+  (define amplitude 0.0)
+  (define amplitude~ (live-value 'amplitude))
+
+  (define (set-amplitude! dB)
+    (set! amplitude (dB->amp dB)))
+
+  (play! (*~ amplitude~ (osc:sine/// 440.0)))
+
+  (set-amplitude! 0) ;; beware of loud sound
+  (set-amplitude! -10)
+  (set-amplitude! -20)
+  (set-amplitude! -50)
+
+  (h!)
+#+END_SRC
+
+**** (b)
+
+     Note, that in *𝔄𝔏* instead of messages we just set values or invoke function
+     which do that.
+
+#+BEGIN_SRC scheme
+  (define (make-line)
+    (let-values ([(value set-value!) (ctrl:make-control 0.0)]
+                 [(Δt set-Δt!) (ctrl:make-control 0.0)])
+      (values
+       (env:linear-transition Δt value)
+       set-value!
+       set-Δt!)))
+
+  (define-values (line~ set-amplitude! set-Δt!) (make-line))
+
+  (define (slow-on)
+    (set-Δt! 2.0)
+    (set-amplitude! 0.1))
+
+  (define (fast-on)
+    (set-Δt! 0.05)
+    (set-amplitude! 0.1))
+
+  (define (instant-on)
+    (set-Δt! 0.0)
+    (set-amplitude! 0.1))
+
+  (define (slow-off)
+    (set-Δt! 2.0)
+    (set-amplitude! 0.0))
+
+  (define (fast-off)
+    (set-Δt! 0.05)
+    (set-amplitude! 0.0))
+
+  (define (instant-off)
+    (set-Δt! 0.0)
+    (set-amplitude! 0.0))
+
+  (play! (*~ (osc:sine/// 440.0) line~))
+
+  (slow-on)
+  (slow-off)
+
+  (fast-on)
+  (fast-off)
+
+  (instant-on)
+  (instant-off)
+
+  (h!)
+#+END_SRC
+
+**** (c)
+
+#+BEGIN_SRC scheme
+
+#+END_SRC
+
 ** Exercises
 
 * Wavetables and samplers

@@ -1174,7 +1174,7 @@ licensing.
            (channel-set! next-values current-value)
            (channel-set! starts time))
          (let ([δt (- time (channel-ref starts))])
-           (if (< δt Δt)
+           (if (and (positive? Δt) (< δt Δt))
                (let ([previous-value (channel-ref previous-values)])
                  (+ previous-value
                     (curve (/ δt Δt) (- current-value previous-value))))
@@ -1612,6 +1612,23 @@ licensing.
   ;; </test-tuner>
 #+END_SRC
 
+  Some useful conversions, see TTEM.org for more details.
+
+#+NAME: unit-conversion
+#+BEGIN_SRC scheme
+  (define (amp->dB x)
+    (* 20.0 (log x 10.0)))
+
+  (define (dB->amp x)
+    (expt 10.0 (/ x 20.0)))
+
+  (define (midi-pitch->frequency m)
+    (* 440.0 (expt 2.0 (/ (- m 69.0) 12.0))))
+
+  (define (frequency->midi-pitch f)
+    (+ 69 (exact (round (* 12.0 (log (/ f 440.0) 2.0))))))
+#+END_SRC
+
   Some stuff about time and scales to be moved to appropriate sections when
   we'll come to them:
 
@@ -1687,6 +1704,7 @@ licensing.
             compose ∘ pi two-pi π 2π
             choice random-choice
             random-amplitude
+            amp->dB dB->amp midi-pitch->frequency frequency->midi-pitch
             *channels* *sample-rate* *sample-angular-period*)
     (import (chezscheme)
             (only (srfi s1 lists) reduce)
@@ -1711,6 +1729,7 @@ licensing.
 
     <<compose>>
     <<basic-math>>
+    <<unit-conversion>>
     <<choice>>
 
     (define *sample-angular-period* (/ 2π *sample-rate*))

@@ -4,7 +4,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
 <title>Ad Libitum</title>
-<!-- 2017-10-20 Fri 18:19 -->
+<!-- 2017-10-20 Fri 19:36 -->
 <meta  http-equiv="Content-Type" content="text/html;charset=utf-8" />
 <meta  name="generator" content="Org-mode" />
 <meta  name="author" content="Ruslan Prakapchuk" />
@@ -1716,7 +1716,7 @@ Another simple though useful envelope is impulse.
          (channel-set! next-values current-value)
          (channel-set! starts time))
        (<span style="font-weight: bold;">let</span> ([&#948;t (- time (channel-ref starts))])
-         (<span style="font-weight: bold;">if</span> (&lt; &#948;t &#916;t)
+         (<span style="font-weight: bold;">if</span> (<span style="font-weight: bold;">and</span> (positive? &#916;t) (&lt; &#948;t &#916;t))
              (<span style="font-weight: bold;">let</span> ([previous-value (channel-ref previous-values)])
                (+ previous-value
                   (curve (/ &#948;t &#916;t) (- current-value previous-value))))
@@ -2218,6 +2218,26 @@ Tuner stuff to test everything is working:
 </div>
 
 <p>
+Some useful conversions, see TTEM.org for more details.
+</p>
+
+<div class="org-src-container">
+
+<pre class="src src-scheme" id="unit-conversion">(<span style="font-weight: bold;">define</span> (<span style="font-weight: bold;">amp-&gt;dB</span> x)
+  (* 20.0 (log x 10.0)))
+
+(<span style="font-weight: bold;">define</span> (<span style="font-weight: bold;">dB-&gt;amp</span> x)
+  (expt 10.0 (/ x 20.0)))
+
+(<span style="font-weight: bold;">define</span> (<span style="font-weight: bold;">midi-pitch-&gt;frequency</span> m)
+  (* 440.0 (expt 2.0 (/ (- m 69.0) 12.0))))
+
+(<span style="font-weight: bold;">define</span> (<span style="font-weight: bold;">frequency-&gt;midi-pitch</span> f)
+  (+ 69 (exact (round (* 12.0 (log (/ f 440.0) 2.0))))))
+</pre>
+</div>
+
+<p>
 Some stuff about time and scales to be moved to appropriate sections when
 we'll come to them:
 </p>
@@ -2257,7 +2277,7 @@ we'll come to them:
 </div>
 <div id="postamble" class="status">
 <p class="author">Author: Ruslan Prakapchuk</p>
-<p class="date">Created: 2017-10-20 Fri 18:19</p>
+<p class="date">Created: 2017-10-20 Fri 19:36</p>
 <p class="creator"><a href="http://www.gnu.org/software/emacs/">Emacs</a> 25.3.1 (<a href="http://orgmode.org">Org</a> mode 8.2.10)</p>
 <p class="validation"><a href="http://validator.w3.org/check?uri=referer">Validate</a></p>
 </div>

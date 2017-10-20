@@ -4,6 +4,7 @@
           compose ∘ pi two-pi π 2π
           choice random-choice
           random-amplitude
+          amp->dB dB->amp midi-pitch->frequency frequency->midi-pitch
           *channels* *sample-rate* *sample-angular-period*)
   (import (chezscheme)
           (only (srfi s1 lists) reduce)
@@ -44,6 +45,18 @@
   (define (random-amplitude)
     (- (random 2.0) 1.0))
   ;; </basic-math>
+
+  (define (amp->dB x)
+    (* 20.0 (log x 10.0)))
+  
+  (define (dB->amp x)
+    (expt 10.0 (/ x 20.0)))
+  
+  (define (midi-pitch->frequency m)
+    (* 440.0 (expt 2.0 (/ (- m 69.0) 12.0))))
+  
+  (define (frequency->midi-pitch f)
+    (+ 69 (exact (round (* 12.0 (log (/ f 440.0) 2.0))))))
 
   ;; <choice>
   (define (choice list n)

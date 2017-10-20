@@ -4,7 +4,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
 <title>The Theory and Technique of Electronic Music Exercises in Ad Libitum</title>
-<!-- 2017-10-20 Fri 18:19 -->
+<!-- 2017-10-20 Fri 19:36 -->
 <meta  http-equiv="Content-Type" content="text/html;charset=utf-8" />
 <meta  name="generator" content="Org-mode" />
 <meta  name="author" content="Ruslan Prakapchuk" />
@@ -158,7 +158,12 @@ for the JavaScript code in this tag.
 <li><a href="#sec-1-6">1.6. Superposing Signals</a></li>
 <li><a href="#sec-1-7">1.7. Periodic Signals</a></li>
 <li><a href="#sec-1-8">1.8. About the Software Examples</a></li>
-<li><a href="#sec-1-9">1.9. Examples</a></li>
+<li><a href="#sec-1-9">1.9. Examples</a>
+<ul>
+<li><a href="#sec-1-9-1">1.9.1. Constant amplitude scaler</a></li>
+<li><a href="#sec-1-9-2">1.9.2. Amplitude control in decibels</a></li>
+</ul>
+</li>
 <li><a href="#sec-1-10">1.10. Exercises</a></li>
 </ul>
 </li>
@@ -752,16 +757,161 @@ signal and provide some accessor to measurement result.
 
 <div id="outline-container-sec-1-7" class="outline-3">
 <h3 id="sec-1-7"><span class="section-number-3">1.7</span> Periodic Signals</h3>
+<div class="outline-text-3" id="text-1-7">
+<div class="org-src-container">
+
+<pre class="src src-scheme">(<span style="font-weight: bold;">define</span> <span style="font-weight: bold;">s1</span> (*~ (~&lt; 0.5) (osc:sine/// 220.0 0.0)))
+(<span style="font-weight: bold;">define</span> <span style="font-weight: bold;">s2</span> (*~ (~&lt; 0.3) (osc:sine/// 440.0 0.1)))
+(<span style="font-weight: bold;">define</span> <span style="font-weight: bold;">s3</span> (*~ (~&lt; 0.2) (osc:sine/// 660.0 0.2)))
+
+(play! (+~ s1 s2 s3))
+
+(h!)
+</pre>
 </div>
-
-
+</div>
+</div>
 
 <div id="outline-container-sec-1-8" class="outline-3">
 <h3 id="sec-1-8"><span class="section-number-3">1.8</span> About the Software Examples</h3>
+<div class="outline-text-3" id="text-1-8">
+<p>
+Oh, well&#x2026; You are already running Ad Libitum at this point.
+</p>
 </div>
+</div>
+
 <div id="outline-container-sec-1-9" class="outline-3">
 <h3 id="sec-1-9"><span class="section-number-3">1.9</span> Examples</h3>
+<div class="outline-text-3" id="text-1-9">
+</div><div id="outline-container-sec-1-9-1" class="outline-4">
+<h4 id="sec-1-9-1"><span class="section-number-4">1.9.1</span> Constant amplitude scaler</h4>
+<div class="outline-text-4" id="text-1-9-1">
+<p>
+Note how Pd boxes corresponds to Ad Libitum expressions in parenthesis, and
+instead of graph-like connections tree structure is used. Don't judge fast
+it as limiting, you always can reuse expression by naming it with help of
+<code>define</code> or <code>let</code>, and we will show later how powerful is textual
+representation.
+</p>
+
+<div class="org-src-container">
+
+<pre class="src src-scheme">(play!
+ (*~
+  (~&lt; 0.05)
+  (osc:sine/// 440.0)))
+
+(h!)
+
+<span style="font-weight: bold; font-style: italic;">;;; </span><span style="font-weight: bold; font-style: italic;">or</span>
+
+(<span style="font-weight: bold;">define</span> <span style="font-weight: bold;">sinusoid</span> (osc:sine/// 440.0))
+(<span style="font-weight: bold;">define</span> <span style="font-weight: bold;">amplitude</span> (~&lt; 0.05))
+(<span style="font-weight: bold;">define</span> <span style="font-weight: bold;">scaled-sinusoid</span> (*~ amplitude sinusoid))
+
+(play! scaled-sinusoid)
+
+(h!)
+</pre>
 </div>
+</div>
+</div>
+
+<div id="outline-container-sec-1-9-2" class="outline-4">
+<h4 id="sec-1-9-2"><span class="section-number-4">1.9.2</span> Amplitude control in decibels</h4>
+<div class="outline-text-4" id="text-1-9-2">
+</div><ol class="org-ol"><li><a id="sec-1-9-2-1" name="sec-1-9-2-1"></a>(a)<br  /><div class="outline-text-5" id="text-1-9-2-1">
+<div class="org-src-container">
+
+<pre class="src src-scheme">(<span style="font-weight: bold;">define</span> <span style="font-weight: bold;">amplitude</span> 0.0)
+(<span style="font-weight: bold;">define</span> <span style="font-weight: bold;">amplitude~</span> (live-value 'amplitude))
+
+(<span style="font-weight: bold;">define</span> (<span style="font-weight: bold;">set-amplitude!</span> dB)
+  (set! amplitude (dB-&gt;amp dB)))
+
+(play! (*~ amplitude~ (osc:sine/// 440.0)))
+
+(set-amplitude! 0) <span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">beware of loud sound</span>
+(set-amplitude! -10)
+(set-amplitude! -20)
+(set-amplitude! -50)
+
+(h!)
+</pre>
+</div>
+</div>
+</li>
+
+<li><a id="sec-1-9-2-2" name="sec-1-9-2-2"></a>(b)<br  /><div class="outline-text-5" id="text-1-9-2-2">
+<p>
+Note, that in <b>𝔄𝔏</b> instead of messages we just set values or invoke function
+which do that.
+</p>
+
+<div class="org-src-container">
+
+<pre class="src src-scheme">(<span style="font-weight: bold;">define</span> (<span style="font-weight: bold;">make-line</span>)
+  (<span style="font-weight: bold;">let-values</span> ([(value set-value!) (ctrl:make-control 0.0)]
+               [(&#916;t set-&#916;t!) (ctrl:make-control 0.0)])
+    (values
+     (env:linear-transition &#916;t value)
+     set-value!
+     set-&#916;t!)))
+
+(define-values (line~ set-amplitude! set-&#916;t!) (make-line))
+
+(<span style="font-weight: bold;">define</span> (<span style="font-weight: bold;">slow-on</span>)
+  (set-&#916;t! 2.0)
+  (set-amplitude! 0.1))
+
+(<span style="font-weight: bold;">define</span> (<span style="font-weight: bold;">fast-on</span>)
+  (set-&#916;t! 0.05)
+  (set-amplitude! 0.1))
+
+(<span style="font-weight: bold;">define</span> (<span style="font-weight: bold;">instant-on</span>)
+  (set-&#916;t! 0.0)
+  (set-amplitude! 0.1))
+
+(<span style="font-weight: bold;">define</span> (<span style="font-weight: bold;">slow-off</span>)
+  (set-&#916;t! 2.0)
+  (set-amplitude! 0.0))
+
+(<span style="font-weight: bold;">define</span> (<span style="font-weight: bold;">fast-off</span>)
+  (set-&#916;t! 0.05)
+  (set-amplitude! 0.0))
+
+(<span style="font-weight: bold;">define</span> (<span style="font-weight: bold;">instant-off</span>)
+  (set-&#916;t! 0.0)
+  (set-amplitude! 0.0))
+
+(play! (*~ (osc:sine/// 440.0) line~))
+
+(slow-on)
+(slow-off)
+
+(fast-on)
+(fast-off)
+
+(instant-on)
+(instant-off)
+
+(h!)
+</pre>
+</div>
+</div>
+</li>
+
+<li><a id="sec-1-9-2-3" name="sec-1-9-2-3"></a>(c)<br  /><div class="outline-text-5" id="text-1-9-2-3">
+<div class="org-src-container">
+
+<pre class="src src-scheme"></pre>
+</div>
+</div>
+</li></ol>
+</div>
+</div>
+
 <div id="outline-container-sec-1-10" class="outline-3">
 <h3 id="sec-1-10"><span class="section-number-3">1.10</span> Exercises</h3>
 </div>
@@ -795,7 +945,7 @@ signal and provide some accessor to measurement result.
 </div>
 <div id="postamble" class="status">
 <p class="author">Author: Ruslan Prakapchuk</p>
-<p class="date">Created: 2017-10-20 Fri 18:19</p>
+<p class="date">Created: 2017-10-20 Fri 19:36</p>
 <p class="creator"><a href="http://www.gnu.org/software/emacs/">Emacs</a> 25.3.1 (<a href="http://orgmode.org">Org</a> mode 8.2.10)</p>
 <p class="validation"><a href="http://validator.w3.org/check?uri=referer">Validate</a></p>
 </div>
