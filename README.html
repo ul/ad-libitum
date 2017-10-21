@@ -4,7 +4,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
 <title>Ad Libitum</title>
-<!-- 2017-10-21 Sat 17:06 -->
+<!-- 2017-10-22 Sun 10:03 -->
 <meta  http-equiv="Content-Type" content="text/html;charset=utf-8" />
 <meta  name="generator" content="Org-mode" />
 <meta  name="author" content="Ruslan Prakapchuk" />
@@ -312,7 +312,7 @@ Run <code>scheme</code> from terminal and try to evaluate simple expression:
 
 <pre class="src src-shell">~/ChezScheme&gt; scheme
 
-Chez Scheme Version 9.4.1
+Chez Scheme Version 9.5.1
 Copyright 1984-2017 Cisco Systems, Inc.
 
 &gt; (+ 1 2 3)
@@ -389,7 +389,7 @@ livecoded your first Ad Libitum piece!
 
 <pre class="src src-scheme">~/ad-libitum&gt; scheme ad-libitum.ss
 
-Chez Scheme Version 9.4.1
+Chez Scheme Version 9.5.1
 Copyright 1984-2017 Cisco Systems, Inc.
 
 &gt; (play! tuner)
@@ -1821,27 +1821,32 @@ Metronome is a mean to align scheduling with some periodic beat.
 <div class="org-src-container">
 
 <pre class="src src-scheme" id="echo"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;echo&gt;</span>
-(<span style="font-weight: bold;">define</span> <span style="font-weight: bold;">*max-line-duration*</span> 1)
+(<span style="font-weight: bold;">define</span> <span style="font-weight: bold;">*max-line-duration-slow*</span> 10)
+(<span style="font-weight: bold;">define</span> <span style="font-weight: bold;">*max-line-duration-fast*</span> 1)
 
-(<span style="font-weight: bold;">define</span> (<span style="font-weight: bold;">echo</span> delay feedback signal)
-  (<span style="font-weight: bold;">let</span> ([line-size (* *max-line-duration* *sample-rate*)]
-        [lines (make-channel-vector)]
-        [cursor -1])
-    (<span style="font-weight: bold;">do</span> ([channel 0 (+ channel 1)])
-        ((= channel *channels*) 0)
-      (channel-set! lines (make-vector line-size 0.0)))
-    (~&lt;
-     (when(zero? channel)
-       (set! cursor (mod (+ cursor 1) line-size)))
-     (<span style="font-weight: bold;">let</span> ([line (channel-ref lines)]
-           [x (&lt;~ signal)]
-           [delay (flonum-&gt;fixnum (round (* (&lt;~ delay) *sample-rate*)))]
-           [feedback (&lt;~ feedback)])
-       (<span style="font-weight: bold;">let*</span> ([i (mod (+ line-size (- cursor delay)) line-size)]
-              [y (vector-ref line i)]
-              [z (+ x (* feedback y))])
-         (vector-set! line cursor z)
-         z)))))
+(<span style="font-weight: bold;">define</span> (<span style="font-weight: bold;">make-echo</span> max-line-duration)
+  (<span style="font-weight: bold;">&#955;</span> (echo delay feedback signal)
+    (<span style="font-weight: bold;">let</span> ([line-size (* max-line-duration *sample-rate*)]
+          [lines (make-channel-vector)]
+          [cursor -1])
+      (<span style="font-weight: bold;">do</span> ([channel 0 (+ channel 1)])
+          ((= channel *channels*) 0)
+        (channel-set! lines (make-vector line-size 0.0)))
+      (~&lt;
+       (when(zero? channel)
+         (set! cursor (mod (+ cursor 1) line-size)))
+       (<span style="font-weight: bold;">let</span> ([line (channel-ref lines)]
+             [x (&lt;~ signal)]
+             [delay (flonum-&gt;fixnum (round (* (&lt;~ delay) *sample-rate*)))]
+             [feedback (&lt;~ feedback)])
+         (<span style="font-weight: bold;">let*</span> ([i (mod (+ line-size (- cursor delay)) line-size)]
+                [y (vector-ref line i)]
+                [z (+ x (* feedback y))])
+           (vector-set! line cursor z)
+           z))))))
+
+(<span style="font-weight: bold;">define</span> <span style="font-weight: bold;">echo</span> (make-echo *max-line-duration-fast*))
+(<span style="font-weight: bold;">define</span> <span style="font-weight: bold;">echo*</span> (make-echo *max-line-duration-slow*))
 <span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;/echo&gt;</span>
 </pre>
 </div>
@@ -2280,7 +2285,7 @@ we'll come to them:
 </div>
 <div id="postamble" class="status">
 <p class="author">Author: Ruslan Prakapchuk</p>
-<p class="date">Created: 2017-10-21 Sat 17:06</p>
+<p class="date">Created: 2017-10-22 Sun 10:03</p>
 <p class="creator"><a href="http://www.gnu.org/software/emacs/">Emacs</a> 25.3.1 (<a href="http://orgmode.org">Org</a> mode 8.2.10)</p>
 <p class="validation"><a href="http://validator.w3.org/check?uri=referer">Validate</a></p>
 </div>

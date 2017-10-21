@@ -1,6 +1,6 @@
 (library (ad-libitum filter (1))
   (export delay
-          echo
+          echo echo*
           lpf
           hpf
           biquad-lpf
@@ -14,27 +14,32 @@
   ;; </delay>
 
   ;; <echo>
-  (define *max-line-duration* 1)
+  (define *max-line-duration-slow* 10)
+  (define *max-line-duration-fast* 1)
   
-  (define (echo delay feedback signal)
-    (let ([line-size (* *max-line-duration* *sample-rate*)]
-          [lines (make-channel-vector)]
-          [cursor -1])
-      (do ([channel 0 (+ channel 1)])
-          ((= channel *channels*) 0)
-        (channel-set! lines (make-vector line-size 0.0)))
-      (~<
-       (when(zero? channel)
-         (set! cursor (mod (+ cursor 1) line-size)))
-       (let ([line (channel-ref lines)]
-             [x (<~ signal)]
-             [delay (flonum->fixnum (round (* (<~ delay) *sample-rate*)))]
-             [feedback (<~ feedback)])
-         (let* ([i (mod (+ line-size (- cursor delay)) line-size)]
-                [y (vector-ref line i)]
-                [z (+ x (* feedback y))])
-           (vector-set! line cursor z)
-           z)))))
+  (define (make-echo max-line-duration)
+    (λ (echo delay feedback signal)
+      (let ([line-size (* max-line-duration *sample-rate*)]
+            [lines (make-channel-vector)]
+            [cursor -1])
+        (do ([channel 0 (+ channel 1)])
+            ((= channel *channels*) 0)
+          (channel-set! lines (make-vector line-size 0.0)))
+        (~<
+         (when(zero? channel)
+           (set! cursor (mod (+ cursor 1) line-size)))
+         (let ([line (channel-ref lines)]
+               [x (<~ signal)]
+               [delay (flonum->fixnum (round (* (<~ delay) *sample-rate*)))]
+               [feedback (<~ feedback)])
+           (let* ([i (mod (+ line-size (- cursor delay)) line-size)]
+                  [y (vector-ref line i)]
+                  [z (+ x (* feedback y))])
+             (vector-set! line cursor z)
+             z))))))
+  
+  (define echo (make-echo *max-line-duration-fast*))
+  (define echo* (make-echo *max-line-duration-slow*))
   ;; </echo>
 
   ;; <lpf>
