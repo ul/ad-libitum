@@ -65,6 +65,9 @@
 (define (tuner time channel)
   (sin (* 2π time tuner-frequency)))
 
+(define (quick-test signal)
+  (signal (random 1.0) (random *channels*)))
+
 ;; (sound:set-dsp! tuner)
 ;; </test-tuner>
 

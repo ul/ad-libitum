@@ -687,7 +687,135 @@
 
 * Wavetables and samplers
 
+  In *𝔄𝔏* we trade sample-number precision in table pickup for uniform use of
+  time. Wavetable lookup then receive position in table in range unit of =[0.0,
+  1.0)= and pick nearest sample at that ratio of table length, rounded down.
+
+  Note our implementation is mono, which is not consistent with *𝔄𝔏* other
+  signal creators. We will refine it later.
+
+#+BEGIN_SRC scheme
+  (define (clamp value start end)
+    (cond
+     [(< value start) start]
+     [(> value end) end]
+     [else value]))
+
+  (define (unit->length x n)
+    (flonum->fixnum (fltruncate (fl* x n))))
+
+  (define (wavetable-lookup table position)
+    (let* ([n (fixnum->flonum (vector-length table))]
+           [expand (cut unit->length <> n)]
+           [clamp (cut clamp <> 0 (- n 1))])
+      (~< (->> (<~ position)
+               (expand)
+               (clamp)
+               (vector-ref table)))))
+#+END_SRC
+
 ** The Wavetable Oscillator
+
+   Let's make a table and try to play it in different ways. We are going to
+   precompute sinusoid wave to have sanity check for our =wavetable-lookup=.
+
+#+BEGIN_SRC scheme
+  (define frequency 440.0)
+
+  (define sinusoid (osc:sine/// frequency))
+
+  (define wavetable-quality-factor 16)
+
+  (define N (exact (round (* wavetable-quality-factor (/ *sample-rate* frequency)))))
+  (define sinusoid-table (make-vector N))
+
+  (do-ec (: i N)
+         (vector-set! sinusoid-table i (sinusoid (/ i *sample-rate* wavetable-quality-factor) 0)))
+
+  (define sinusoid-wavetable
+    (wavetable-lookup sinusoid-table (osc:phasor frequency)))
+
+  ;; should sound the same
+  (play! sinusoid)
+  (play! sinusoid-wavetable)
+
+  (define sinusoid-wavetable-fast
+    (wavetable-lookup sinusoid-table (osc:phasor (* 2.0 frequency))))
+
+  ;; should sound the same
+  (play! (osc:sine/// (* 2.0 frequency)))
+  (play! sinusoid-wavetable-fast)
+
+  (define sinusoid-wavetable-slow
+    (wavetable-lookup sinusoid-table (osc:phasor (* 0.5 frequency))))
+
+  ;; should sound the same
+  (play! (osc:sine/// (* 0.5 frequency)))
+  (play! sinusoid-wavetable-slow)
+
+  (define sinusoid-wavetable-tri
+    (wavetable-lookup
+     sinusoid-table
+     (amplitude->phase (osc:tri/// frequency))))
+
+  ;; now they should sound different
+  (play! (osc:tri/// frequency))
+  (play! sinusoid-wavetable-tri)
+
+  (define sinusoid-wavetable-sine
+    (wavetable-lookup
+     sinusoid-table
+     (amplitude->phase (osc:sine/// 110.0))))
+
+  ;; should sound different
+  (play! (osc:sine/// 110.0))
+  (play! sinusoid-wavetable-sine)
+
+  (h!)
+#+END_SRC
+
+   Now let's try cross-fade two wavetables.
+
+#+BEGIN_SRC scheme
+  (define (unroll* signal frequency quality-factor)
+    (let* ([N (exact (round (* quality-factor (/ *sample-rate* frequency))))]
+           [table (make-vector N)])
+      (do-ec (: i N)
+             (vector-set!
+              table i
+              (signal (/ i *sample-rate* quality-factor) 0)))
+      (cut wavetable-lookup table <>)))
+
+  (define unroll (cut unroll* <> <> 16))
+
+  (define s1* (osc:sine/// 440.0))
+  (define s2* (osc:tri/// 440.0))
+
+  (define w1 (unroll s1* 440.0))
+  (define w2 (unroll s2* 440.0))
+
+  (define p (osc:phasor 440.0))
+
+  (define s1 (w1 p))
+  (define s2 (w2 p))
+
+  (play! s1)
+  (play! s2)
+
+  (define-values (toggle toggle!) (switch))
+  (define ramp (env:linear-transition (~< 2.0) toggle))
+
+  (play! (mix s1 (*~ ramp (-~ s2 s1))))
+
+  (toggle!)
+
+  (play! (mix s1* (*~ ramp (-~ s2* s1*))))
+
+  (toggle!)
+
+  (h!)
+#+END_SRC
+
 ** Sampling
 ** Enveloping samplers
 ** Timbre stretching
