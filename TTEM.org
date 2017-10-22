@@ -816,7 +816,62 @@
   (h!)
 #+END_SRC
 
+   Theoretically =wavetable-quality-factor= of 2 should be enough to rebuild
+   sinusoid without artifacts (hello Nyquist-Shannon), but in my experiments 16
+   was the lowest value for clear signal. Is it because of table being
+   non-time-aligned? If so, interpolating table should help.
+
+#+BEGIN_SRC scheme
+  (define (wavetable-lookup-linear table position)
+    (let* ([N (vector-length table)]
+           [n (fixnum->flonum N)])
+      (~< (let ([p (* n (<~ position))])
+            (let ([i (flonum->fixnum (fltruncate p))]
+                  [a (mod p 1.0)])
+              (+ (* (- 1.0 a) (vector-ref table (mod i N)))
+                 (* a (vector-ref table (mod (+ i 1) N)))))))))
+
+  (define (unroll* signal frequency quality-factor)
+    (let* ([N (exact (round (* quality-factor (/ *sample-rate* frequency))))]
+           [table (make-vector N)])
+      (do-ec (: i N)
+             (vector-set!
+              table i
+              (signal (/ i *sample-rate* quality-factor) 0)))
+      (cut wavetable-lookup-linear table <>)))
+
+  (define unroll (cut unroll* <> <> 2))
+
+  (define sinusoid-table (unroll (osc:sine/// 440.0) 440.0))
+
+  (define s (sinusoid-table (osc:phasor 440.0)))
+
+  (play! tuner)
+  (play! s)
+
+  (h!)
+#+END_SRC
+
+   Yes! It works!
+
 ** Sampling
+
+   The Transposition Formulas for Looping Wavetables.
+
+#+BEGIN_SRC scheme
+  (define (transposition-factor table frequency)
+    (/ (* (vector-length table) frequency) *sample-rate*))
+
+  (define (transposition-halfsteps table frequency)
+    (* 12.0 (log (transposition-factor table frequency) 2.0)))
+
+  (define (transposition-frequency table halfsteps)
+    (/ (* (expt 2.0 (/ halfsteps 12.0)) *sample-rate*) (vector-length table)))
+
+  (define (transposition-table-length frequency halfsteps)
+    (/ (* (expt 2.0 (/ halfsteps 12.0)) *sample-rate*) frequency))
+#+END_SRC
+
 ** Enveloping samplers
 ** Timbre stretching
 ** Interpolation

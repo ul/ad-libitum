@@ -4,7 +4,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
 <title>The Theory and Technique of Electronic Music Exercises in Ad Libitum</title>
-<!-- 2017-10-22 Sun 10:03 -->
+<!-- 2017-10-23 Mon 08:36 -->
 <meta  http-equiv="Content-Type" content="text/html;charset=utf-8" />
 <meta  name="generator" content="Org-mode" />
 <meta  name="author" content="Ruslan Prakapchuk" />
@@ -1215,12 +1215,78 @@ Now let's try cross-fade two wavetables.
 (h!)
 </pre>
 </div>
+
+<p>
+Theoretically <code>wavetable-quality-factor</code> of 2 should be enough to rebuild
+sinusoid without artifacts (hello Nyquist-Shannon), but in my experiments 16
+was the lowest value for clear signal. Is it because of table being
+non-time-aligned? If so, interpolating table should help.
+</p>
+
+<div class="org-src-container">
+
+<pre class="src src-scheme">(<span style="font-weight: bold;">define</span> (<span style="font-weight: bold;">wavetable-lookup-linear</span> table position)
+  (<span style="font-weight: bold;">let*</span> ([N (vector-length table)]
+         [n (fixnum-&gt;flonum N)])
+    (~&lt; (<span style="font-weight: bold;">let</span> ([p (* n (&lt;~ position))])
+          (<span style="font-weight: bold;">let</span> ([i (flonum-&gt;fixnum (fltruncate p))]
+                [a (mod p 1.0)])
+            (+ (* (- 1.0 a) (vector-ref table (mod i N)))
+               (* a (vector-ref table (mod (+ i 1) N)))))))))
+
+(<span style="font-weight: bold;">define</span> (<span style="font-weight: bold;">unroll*</span> signal frequency quality-factor)
+  (<span style="font-weight: bold;">let*</span> ([N (exact (round (* quality-factor (/ *sample-rate* frequency))))]
+         [table (make-vector N)])
+    (do-ec (: i N)
+           (vector-set!
+            table i
+            (signal (/ i *sample-rate* quality-factor) 0)))
+    (cut wavetable-lookup-linear table &lt;&gt;)))
+
+(<span style="font-weight: bold;">define</span> <span style="font-weight: bold;">unroll</span> (cut unroll* &lt;&gt; &lt;&gt; 2))
+
+(<span style="font-weight: bold;">define</span> <span style="font-weight: bold;">sinusoid-table</span> (unroll (osc:sine/// 440.0) 440.0))
+
+(<span style="font-weight: bold;">define</span> <span style="font-weight: bold;">s</span> (sinusoid-table (osc:phasor 440.0)))
+
+(play! tuner)
+(play! s)
+
+(h!)
+</pre>
+</div>
+
+<p>
+Yes! It works!
+</p>
 </div>
 </div>
 
 <div id="outline-container-sec-2-2" class="outline-3">
 <h3 id="sec-2-2"><span class="section-number-3">2.2</span> Sampling</h3>
+<div class="outline-text-3" id="text-2-2">
+<p>
+The Transposition Formulas for Looping Wavetables.
+</p>
+
+<div class="org-src-container">
+
+<pre class="src src-scheme">(<span style="font-weight: bold;">define</span> (<span style="font-weight: bold;">transposition-factor</span> table frequency)
+  (/ (* (vector-length table) frequency) *sample-rate*))
+
+(<span style="font-weight: bold;">define</span> (<span style="font-weight: bold;">transposition-halfsteps</span> table frequency)
+  (* 12.0 (log (transposition-factor table frequency) 2.0)))
+
+(<span style="font-weight: bold;">define</span> (<span style="font-weight: bold;">transposition-frequency</span> table halfsteps)
+  (/ (* (expt 2.0 (/ halfsteps 12.0)) *sample-rate*) (vector-length table)))
+
+(<span style="font-weight: bold;">define</span> (<span style="font-weight: bold;">transposition-table-length</span> frequency halfsteps)
+  (/ (* (expt 2.0 (/ halfsteps 12.0)) *sample-rate*) frequency))
+</pre>
 </div>
+</div>
+</div>
+
 <div id="outline-container-sec-2-3" class="outline-3">
 <h3 id="sec-2-3"><span class="section-number-3">2.3</span> Enveloping samplers</h3>
 </div>
@@ -1240,7 +1306,7 @@ Now let's try cross-fade two wavetables.
 </div>
 <div id="postamble" class="status">
 <p class="author">Author: Ruslan Prakapchuk</p>
-<p class="date">Created: 2017-10-22 Sun 10:03</p>
+<p class="date">Created: 2017-10-23 Mon 08:36</p>
 <p class="creator"><a href="http://www.gnu.org/software/emacs/">Emacs</a> 25.3.1 (<a href="http://orgmode.org">Org</a> mode 8.2.10)</p>
 <p class="validation"><a href="http://validator.w3.org/check?uri=referer">Validate</a></p>
 </div>
