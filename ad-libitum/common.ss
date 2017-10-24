@@ -1,7 +1,7 @@
 #!chezscheme
 (library (ad-libitum common (1))
   (export voodoo λ id >>> >> -> ->>
-          compose ∘ pi two-pi π 2π
+          compose ∘ pi two-pi π 2π clamp
           choice random-choice
           random-amplitude
           amp->dB dB->amp midi-pitch->frequency frequency->midi-pitch
@@ -44,6 +44,12 @@
   
   (define (random-amplitude)
     (- (random 2.0) 1.0))
+  
+  (define (clamp value start end)
+    (cond
+     [(< value start) start]
+     [(> value end) end]
+     [else value]))
   ;; </basic-math>
 
   (define (amp->dB x)

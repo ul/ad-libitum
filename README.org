@@ -687,6 +687,12 @@ licensing.
 
   (define (random-amplitude)
     (- (random 2.0) 1.0))
+
+  (define (clamp value start end)
+    (cond
+     [(< value start) start]
+     [(> value end) end]
+     [else value]))
   ;; </basic-math>
 #+END_SRC
 
@@ -962,8 +968,34 @@ licensing.
     (- (* 2.0 (<~ phase)) 1.0))
 
   (define (sampler table phase)
-    (let ([n (fixnum->flonum (vector-length table))])
-      (~< (vector-ref table (flonum->fixnum (fltruncate (fl* (<~ phase) n)))))))
+    (let* ([N (vector-length (vector-ref table 0))]
+           [N-1 (- N 1)]
+           [n (fixnum->flonum N)])
+      (~< (let ([position (* n (<~ phase))])
+            (let ([i (-> position
+                         (fltruncate)
+                         (flonum->fixnum)
+                         (clamp 0 N-1))]
+                  [a (mod position 1.0)]
+                  [table (channel-ref table)])
+              (+ (* (- 1.0 a) (vector-ref table i))
+                 (* a (vector-ref table (mod (+ i 1) N)))))))))
+
+  (define (unroll signal base-frequency)
+    (let* ([sample-rate (* 2.0 *sample-rate*)] ;; Kotelnikov-Nyquist-Shannon
+           [n (-> sample-rate (/ base-frequency) (round) (exact))]
+           [table (make-channel-vector)])
+      (do-ec (: channel *channels*)
+             (channel-set! table (make-vector n)))
+      ;; channel is in inner loop because many `signal' functions
+      ;; rely on ordered sample-by-sample execution
+      (do-ec (: sample n)
+             (: channel *channels*)
+             (vector-set!
+              (channel-ref table)
+              sample
+              (signal (/ sample sample-rate) 0)))
+      table))
 
   (define sine/// (∘ sine phasor))
   (define cosine/// (∘ cosine phasor))
@@ -1050,6 +1082,12 @@ licensing.
       (if (zero? channel)
           (- 1.0 p)
           p)))
+
+  (define~ (phase->interval phase start end)
+    (let ([phase (<~ phase)]
+          [start (<~ start)]
+          [end (<~ end)])
+      (+ start (* phase (- end start)))))
   ;; </signal-operators>
 #+END_SRC
 
@@ -1643,14 +1681,6 @@ licensing.
 #+NAME: sandbox
 #+BEGIN_SRC scheme
   ;; <sandbox>
-  (define (unroll signal period)
-    (let* ([n (exact (truncate (* period *sample-rate*)))]
-           [table (make-vector n)])
-      (do ([i 0 (+ i 1)])
-          ((= i n))
-        (vector-set! table i (inexact (signal (/ i *sample-rate*) 0))))
-      (cut sampler table <>)))
-
   (define (make-overtone amplitudes wave frequency phase0)
     (∑ (map
         (λ (amplitude factor)
@@ -1709,7 +1739,7 @@ licensing.
   #!chezscheme
   (library (ad-libitum common (1))
     (export voodoo λ id >>> >> -> ->>
-            compose ∘ pi two-pi π 2π
+            compose ∘ pi two-pi π 2π clamp
             choice random-choice
             random-amplitude
             amp->dB dB->amp midi-pitch->frequency frequency->midi-pitch
@@ -1779,7 +1809,7 @@ licensing.
             constant silence ∅ unit
             live-signal live-value
             signal-sum signal-prod signal-diff signal-div
-            +~ *~ -~ /~ ∑ ∏ mix pan)
+            +~ *~ -~ /~ ∑ ∏ mix pan phase->interval)
     (import (chezscheme)
             (srfi s26 cut)
             (ad-libitum common))
@@ -1800,10 +1830,11 @@ licensing.
   #!chezscheme
   (library (ad-libitum oscillator (1))
     (export phasor ///
-            sine cosine square pulse tri saw sampler
+            sine cosine square pulse tri saw sampler unroll
             sine/// cosine/// square/// pulse/// tri/// saw/// sampler///
             )
     (import (chezscheme)
+            (srfi s42 eager-comprehensions)
             (ad-libitum common)
             (ad-libitum signal))
 

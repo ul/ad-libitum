@@ -4,7 +4,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
 <title>Ad Libitum</title>
-<!-- 2017-10-23 Mon 08:36 -->
+<!-- 2017-10-25 Wed 08:21 -->
 <meta  http-equiv="Content-Type" content="text/html;charset=utf-8" />
 <meta  name="generator" content="Org-mode" />
 <meta  name="author" content="Ruslan Prakapchuk" />
@@ -1134,6 +1134,12 @@ basic math constants and functions.
 
 (<span style="font-weight: bold;">define</span> (<span style="font-weight: bold;">random-amplitude</span>)
   (- (random 2.0) 1.0))
+
+(<span style="font-weight: bold;">define</span> (<span style="font-weight: bold;">clamp</span> value start end)
+  (<span style="font-weight: bold;">cond</span>
+   [(&lt; value start) start]
+   [(&gt; value end) end]
+   [else value]))
 <span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;/basic-math&gt;</span>
 </pre>
 </div>
@@ -1463,8 +1469,34 @@ Then basic waveforms are defined in very clean way:
   (- (* 2.0 (&lt;~ phase)) 1.0))
 
 (<span style="font-weight: bold;">define</span> (<span style="font-weight: bold;">sampler</span> table phase)
-  (<span style="font-weight: bold;">let</span> ([n (fixnum-&gt;flonum (vector-length table))])
-    (~&lt; (vector-ref table (flonum-&gt;fixnum (fltruncate (fl* (&lt;~ phase) n)))))))
+  (<span style="font-weight: bold;">let*</span> ([N (vector-length (vector-ref table 0))]
+         [N-1 (- N 1)]
+         [n (fixnum-&gt;flonum N)])
+    (~&lt; (<span style="font-weight: bold;">let</span> ([position (* n (&lt;~ phase))])
+          (<span style="font-weight: bold;">let</span> ([i (-&gt; position
+                       (fltruncate)
+                       (flonum-&gt;fixnum)
+                       (clamp 0 N-1))]
+                [a (mod position 1.0)]
+                [table (channel-ref table)])
+            (+ (* (- 1.0 a) (vector-ref table i))
+               (* a (vector-ref table (mod (+ i 1) N)))))))))
+
+(<span style="font-weight: bold;">define</span> (<span style="font-weight: bold;">unroll</span> signal base-frequency)
+  (<span style="font-weight: bold;">let*</span> ([sample-rate (* 2.0 *sample-rate*)] <span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">Kotelnikov-Nyquist-Shannon</span>
+         [n (-&gt; sample-rate (/ base-frequency) (round) (exact))]
+         [table (make-channel-vector)])
+    (do-ec (: channel *channels*)
+           (channel-set! table (make-vector n)))
+    <span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">channel is in inner loop because many `signal' functions</span>
+    <span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">rely on ordered sample-by-sample execution</span>
+    (do-ec (: sample n)
+           (: channel *channels*)
+           (vector-set!
+            (channel-ref table)
+            sample
+            (signal (/ sample sample-rate) 0)))
+    table))
 
 (<span style="font-weight: bold;">define</span> <span style="font-weight: bold;">sine///</span> (&#8728; sine phasor))
 (<span style="font-weight: bold;">define</span> <span style="font-weight: bold;">cosine///</span> (&#8728; cosine phasor))
@@ -1560,6 +1592,12 @@ matching.
     (<span style="font-weight: bold;">if</span> (zero? channel)
         (- 1.0 p)
         p)))
+
+(define~ (phase-&gt;interval phase start end)
+  (<span style="font-weight: bold;">let</span> ([phase (&lt;~ phase)]
+        [start (&lt;~ start)]
+        [end (&lt;~ end)])
+    (+ start (* phase (- end start)))))
 <span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;/signal-operators&gt;</span>
 </pre>
 </div>
@@ -2253,14 +2291,6 @@ we'll come to them:
 <div class="org-src-container">
 
 <pre class="src src-scheme" id="sandbox"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;sandbox&gt;</span>
-(<span style="font-weight: bold;">define</span> (<span style="font-weight: bold;">unroll</span> signal period)
-  (<span style="font-weight: bold;">let*</span> ([n (exact (truncate (* period *sample-rate*)))]
-         [table (make-vector n)])
-    (<span style="font-weight: bold;">do</span> ([i 0 (+ i 1)])
-        ((= i n))
-      (vector-set! table i (inexact (signal (/ i *sample-rate*) 0))))
-    (cut sampler table &lt;&gt;)))
-
 (<span style="font-weight: bold;">define</span> (<span style="font-weight: bold;">make-overtone</span> amplitudes wave frequency phase0)
   (&#8721; (<span style="font-weight: bold;">map</span>
       (<span style="font-weight: bold;">&#955;</span> (amplitude factor)
@@ -2285,7 +2315,7 @@ we'll come to them:
 </div>
 <div id="postamble" class="status">
 <p class="author">Author: Ruslan Prakapchuk</p>
-<p class="date">Created: 2017-10-23 Mon 08:36</p>
+<p class="date">Created: 2017-10-25 Wed 08:21</p>
 <p class="creator"><a href="http://www.gnu.org/software/emacs/">Emacs</a> 25.3.1 (<a href="http://orgmode.org">Org</a> mode 8.2.10)</p>
 <p class="validation"><a href="http://validator.w3.org/check?uri=referer">Validate</a></p>
 </div>

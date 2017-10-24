@@ -1,14 +1,6 @@
 (load "ad-libitum.ss")
 
 ;; <sandbox>
-(define (unroll signal period)
-  (let* ([n (exact (truncate (* period *sample-rate*)))]
-         [table (make-vector n)])
-    (do ([i 0 (+ i 1)])
-        ((= i n))
-      (vector-set! table i (inexact (signal (/ i *sample-rate*) 0))))
-    (cut sampler table <>)))
-
 (define (make-overtone amplitudes wave frequency phase0)
   (∑ (map
       (λ (amplitude factor)

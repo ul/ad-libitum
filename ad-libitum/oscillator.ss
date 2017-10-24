@@ -1,10 +1,11 @@
 #!chezscheme
 (library (ad-libitum oscillator (1))
   (export phasor ///
-          sine cosine square pulse tri saw sampler
+          sine cosine square pulse tri saw sampler unroll
           sine/// cosine/// square/// pulse/// tri/// saw/// sampler///
           )
   (import (chezscheme)
+          (srfi s42 eager-comprehensions)
           (ad-libitum common)
           (ad-libitum signal))
 
@@ -71,8 +72,34 @@
     (- (* 2.0 (<~ phase)) 1.0))
   
   (define (sampler table phase)
-    (let ([n (fixnum->flonum (vector-length table))])
-      (~< (vector-ref table (flonum->fixnum (fltruncate (fl* (<~ phase) n)))))))
+    (let* ([N (vector-length (vector-ref table 0))]
+           [N-1 (- N 1)]
+           [n (fixnum->flonum N)])
+      (~< (let ([position (* n (<~ phase))])
+            (let ([i (-> position
+                         (fltruncate)
+                         (flonum->fixnum)
+                         (clamp 0 N-1))]
+                  [a (mod position 1.0)]
+                  [table (channel-ref table)])
+              (+ (* (- 1.0 a) (vector-ref table i))
+                 (* a (vector-ref table (mod (+ i 1) N)))))))))
+  
+  (define (unroll signal base-frequency)
+    (let* ([sample-rate (* 2.0 *sample-rate*)] ;; Kotelnikov-Nyquist-Shannon
+           [n (-> sample-rate (/ base-frequency) (round) (exact))]
+           [table (make-channel-vector)])
+      (do-ec (: channel *channels*)
+             (channel-set! table (make-vector n)))
+      ;; channel is in inner loop because many `signal' functions
+      ;; rely on ordered sample-by-sample execution
+      (do-ec (: sample n)
+             (: channel *channels*)
+             (vector-set!
+              (channel-ref table)
+              sample
+              (signal (/ sample sample-rate) 0)))
+      table))
   
   (define sine/// (∘ sine phasor))
   (define cosine/// (∘ cosine phasor))

@@ -5,7 +5,7 @@
           constant silence ∅ unit
           live-signal live-value
           signal-sum signal-prod signal-diff signal-div
-          +~ *~ -~ /~ ∑ ∏ mix pan)
+          +~ *~ -~ /~ ∑ ∏ mix pan phase->interval)
   (import (chezscheme)
           (srfi s26 cut)
           (ad-libitum common))
@@ -119,6 +119,12 @@
       (if (zero? channel)
           (- 1.0 p)
           p)))
+  
+  (define~ (phase->interval phase start end)
+    (let ([phase (<~ phase)]
+          [start (<~ start)]
+          [end (<~ end)])
+      (+ start (* phase (- end start)))))
   ;; </signal-operators>
 
   )

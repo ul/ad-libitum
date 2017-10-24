@@ -854,6 +854,45 @@
 
    Yes! It works!
 
+   Now, let's write channel-aware =unroll= and wavetable lookup, which we'll call sampler.
+
+#+BEGIN_SRC scheme
+  (define (sampler table phase)
+    (let* ([N (vector-length (vector-ref table 0))]
+           [n (fixnum->flonum N)])
+      (~< (let ([p (* n (<~ phase))])
+            (let ([i (flonum->fixnum (fltruncate p))]
+                  [a (mod p 1.0)]
+                  [table (channel-ref table)])
+              (+ (* (- 1.0 a) (vector-ref table (mod i N)))
+                 (* a (vector-ref table (mod (+ i 1) N)))))))))
+
+  (define (unroll signal base-frequency)
+    (let* ([sample-rate (* 2.0 *sample-rate*)] ;; Kotelnikov-Nyquist-Shannon
+           [n (-> sample-rate (/ base-frequency) (round) (exact))]
+           [table (make-channel-vector)])
+      (do-ec (: channel *channels*)
+             (channel-set! table (make-vector n)))
+      ;; channel is in inner loop because many `signal' functions
+      ;; rely on ordered sample-by-sample execution
+      (do-ec (: sample n)
+             (: channel *channels*)
+             (vector-set!
+              (channel-ref table)
+              sample
+              (signal (/ sample sample-rate) 0)))
+      (cut sampler table <>)))
+
+  (define sinusoid-table (unroll (osc:sine/// 440.0) 440.0))
+
+  (define s (sinusoid-table (osc:phasor 440.0)))
+
+  (play! tuner)
+  (play! s)
+
+  (h!)
+#+END_SRC
+
 ** Sampling
 
    The Transposition Formulas for Looping Wavetables.
@@ -873,7 +912,130 @@
 #+END_SRC
 
 ** Enveloping samplers
+
+#+BEGIN_SRC scheme
+  (define sinusoid-table (unroll (osc:sine/// 55.0) 55.0))
+
+  (define s (sinusoid-table (amplitude->phase (osc:sine/// 440.0))))
+
+  (play! tuner)
+  (play! s)
+
+  (h!)
+#+END_SRC
+
 ** Timbre stretching
+
+   For that exercise we need to extend our =sampler= to accept arbitrary =N=
+   instead of having it strictly equal table length, and also use =clamp=
+   instead of =wrap= (implemented by =mod= earlier). Another useful signal
+   transformer would be =phase->interval= which projects unit interval to
+   arbitrary one. Combining clamping sampler and interval projection we could
+   achieve any desired padding of table. Then we need just to superpose such
+   padded tables with phase shift to get desired effect.
+
+   Another small improvement is to make unroll to return just table, not a
+   partially applied sampler. It would enable us to experiment with different
+   sample implementations without re-implementing unroll.
+
+#+BEGIN_SRC scheme
+  (define (clamp value start end)
+    (cond
+     [(< value start) start]
+     [(> value end) end]
+     [else value]))
+
+  (define (sampler table phase)
+    (let* ([N (vector-length (vector-ref table 0))]
+           [N-1 (- N 1)]
+           [n (fixnum->flonum N)])
+      (~< (let ([position (* n (<~ phase))])
+            (let ([i (-> position
+                         (fltruncate)
+                         (flonum->fixnum)
+                         (clamp 0 N-1))]
+                  [a (mod position 1.0)]
+                  [table (channel-ref table)])
+              (+ (* (- 1.0 a) (vector-ref table i))
+                 (* a (vector-ref table (mod (+ i 1) N)))))))))
+
+  (define (unroll signal base-frequency)
+    (let* ([sample-rate (* 2.0 *sample-rate*)] ;; Kotelnikov-Nyquist-Shannon
+           [n (-> sample-rate (/ base-frequency) (round) (exact))]
+           [table (make-channel-vector)])
+      (do-ec (: channel *channels*)
+             (channel-set! table (make-vector n)))
+      ;; channel is in inner loop because many `signal' functions
+      ;; rely on ordered sample-by-sample execution
+      (do-ec (: sample n)
+             (: channel *channels*)
+             (vector-set!
+              (channel-ref table)
+              sample
+              (signal (/ sample sample-rate) 0)))
+      table))
+
+  (define~ (phase->interval phase start end)
+    (let ([phase (<~ phase)]
+          [start (<~ start)]
+          [end (<~ end)])
+      (+ start (* phase (- end start)))))
+
+  (define sinusoid-table (unroll (osc:sine/// 440.0) 440.0))
+
+  (define (make-control x)
+    (let-values ([(signal setter) (ctrl:make-control x)])
+      (values
+       (env:linear-transition (~< 0.05) signal)
+       setter)))
+
+  (define-values (frequency set-frequency!) (make-control 440.0))
+
+  (define-values (start1 set-start1!) (make-control 0.0))
+  (define-values (end1 set-end1!) (make-control 1.0))
+
+  (define-values (start2 set-start2!) (make-control 0.0))
+  (define-values (end2 set-end2!) (make-control 1.0))
+
+  (define phasor1 (phase->interval
+                   (osc:phasor frequency)
+                   start1
+                   end1))
+
+  (define phasor2 (phase->interval
+                   (osc:phasor frequency)
+                   start2
+                   end2))
+
+  (define s1 (sampler sinusoid-table phasor1))
+  (define s2 (sampler sinusoid-table phasor2))
+
+  ;; ^v^v^
+  (play! tuner)
+  (play! s1)
+
+  ;; ....^v^v^....
+  (set-start1! -1.0)
+  (set-end1! 2.0)
+
+  ;; ^v^v^...
+  ;; ...^v^v^
+  (set-start1! 0.0)
+  (set-end1! 1.5)
+  (set-start2! -0.5)
+  (set-end2! 1.0)
+  (set-frequency! 220.0)
+  (play! (mix s1 s2))
+
+  ;; ^v^
+  (play! s1)
+  (set-start1! 0.3)
+  (set-end1! 0.6)
+  (set-frequency! 440.0)
+
+  (h!)
+#+END_SRC
+
 ** Interpolation
 ** Examples
 ** Exercises
