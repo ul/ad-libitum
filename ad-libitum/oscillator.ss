@@ -86,8 +86,7 @@
                  (* a (vector-ref table (mod (+ i 1) N)))))))))
   
   (define (unroll signal base-frequency)
-    (let* ([sample-rate (* 2.0 *sample-rate*)] ;; Kotelnikov-Nyquist-Shannon
-           [n (-> sample-rate (/ base-frequency) (round) (exact))]
+    (let* ([n (-> *sample-rate* (/ base-frequency) (round) (exact))]
            [table (make-channel-vector)])
       (do-ec (: channel *channels*)
              (channel-set! table (make-vector n)))
@@ -98,7 +97,7 @@
              (vector-set!
               (channel-ref table)
               sample
-              (signal (/ sample sample-rate) 0)))
+              (signal (/ sample *sample-rate*) channel)))
       table))
   
   (define sine/// (∘ sine phasor))

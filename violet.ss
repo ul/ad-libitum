@@ -14,9 +14,6 @@
   (let* ([start (now)]
          [end (+ start duration)])
     (values (~< start) (~< end))))
-
-(define~ (amplitude->phase s)
-  (* 0.5 (+ 1.0 (<~ s))))
 ;; </sandbox>
 
 ;; <simplest-oscillator>

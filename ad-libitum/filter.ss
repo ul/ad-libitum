@@ -18,7 +18,7 @@
   (define *max-line-duration-fast* 1)
   
   (define (make-echo max-line-duration)
-    (λ (echo delay feedback signal)
+    (λ (delay feedback signal)
       (let ([line-size (* max-line-duration *sample-rate*)]
             [lines (make-channel-vector)]
             [cursor -1])

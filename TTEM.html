@@ -4,7 +4,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
 <title>The Theory and Technique of Electronic Music Exercises in Ad Libitum</title>
-<!-- 2017-10-25 Wed 08:21 -->
+<!-- 2017-10-25 Wed 19:34 -->
 <meta  http-equiv="Content-Type" content="text/html;charset=utf-8" />
 <meta  name="generator" content="Org-mode" />
 <meta  name="author" content="Ruslan Prakapchuk" />
@@ -1217,10 +1217,10 @@ Now let's try cross-fade two wavetables.
 </div>
 
 <p>
-Theoretically <code>wavetable-quality-factor</code> of 2 should be enough to rebuild
-sinusoid without artifacts (hello Nyquist-Shannon), but in my experiments 16
-was the lowest value for clear signal. Is it because of table being
-non-time-aligned? If so, interpolating table should help.
+Theoretically <code>wavetable-quality-factor</code> of 1 should be enough to rebuild
+sinusoid without artifacts, but in my experiments 16 was the lowest value for
+clear signal. Is it because of table being non-time-aligned? If so,
+interpolating table should help.
 </p>
 
 <div class="org-src-container">
@@ -1243,7 +1243,7 @@ non-time-aligned? If so, interpolating table should help.
             (signal (/ i *sample-rate* quality-factor) 0)))
     (cut wavetable-lookup-linear table &lt;&gt;)))
 
-(<span style="font-weight: bold;">define</span> <span style="font-weight: bold;">unroll</span> (cut unroll* &lt;&gt; &lt;&gt; 2))
+(<span style="font-weight: bold;">define</span> <span style="font-weight: bold;">unroll</span> (cut unroll* &lt;&gt; &lt;&gt; 1))
 
 (<span style="font-weight: bold;">define</span> <span style="font-weight: bold;">sinusoid-table</span> (unroll (osc:sine/// 440.0) 440.0))
 
@@ -1277,8 +1277,7 @@ Now, let's write channel-aware <code>unroll</code> and wavetable lookup, which w
                (* a (vector-ref table (mod (+ i 1) N)))))))))
 
 (<span style="font-weight: bold;">define</span> (<span style="font-weight: bold;">unroll</span> signal base-frequency)
-  (<span style="font-weight: bold;">let*</span> ([sample-rate (* 2.0 *sample-rate*)] <span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">Kotelnikov-Nyquist-Shannon</span>
-         [n (-&gt; sample-rate (/ base-frequency) (round) (exact))]
+  (<span style="font-weight: bold;">let*</span> ([n (-&gt; *sample-rate* (/ base-frequency) (round) (exact))]
          [table (make-channel-vector)])
     (do-ec (: channel *channels*)
            (channel-set! table (make-vector n)))
@@ -1289,7 +1288,7 @@ Now, let's write channel-aware <code>unroll</code> and wavetable lookup, which w
            (vector-set!
             (channel-ref table)
             sample
-            (signal (/ sample sample-rate) 0)))
+            (signal (/ sample *sample-rate*) channel)))
     (cut sampler table &lt;&gt;)))
 
 (<span style="font-weight: bold;">define</span> <span style="font-weight: bold;">sinusoid-table</span> (unroll (osc:sine/// 440.0) 440.0))
@@ -1390,8 +1389,7 @@ sample implementations without re-implementing unroll.
                (* a (vector-ref table (mod (+ i 1) N)))))))))
 
 (<span style="font-weight: bold;">define</span> (<span style="font-weight: bold;">unroll</span> signal base-frequency)
-  (<span style="font-weight: bold;">let*</span> ([sample-rate (* 2.0 *sample-rate*)] <span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">Kotelnikov-Nyquist-Shannon</span>
-         [n (-&gt; sample-rate (/ base-frequency) (round) (exact))]
+  (<span style="font-weight: bold;">let*</span> ([n (-&gt; *sample-rate* (/ base-frequency) (round) (exact))]
          [table (make-channel-vector)])
     (do-ec (: channel *channels*)
            (channel-set! table (make-vector n)))
@@ -1402,7 +1400,7 @@ sample implementations without re-implementing unroll.
            (vector-set!
             (channel-ref table)
             sample
-            (signal (/ sample sample-rate) 0)))
+            (signal (/ sample *sample-rate*) channel)))
     table))
 
 (define~ (phase-&gt;interval phase start end)
@@ -1482,7 +1480,7 @@ sample implementations without re-implementing unroll.
 </div>
 <div id="postamble" class="status">
 <p class="author">Author: Ruslan Prakapchuk</p>
-<p class="date">Created: 2017-10-25 Wed 08:21</p>
+<p class="date">Created: 2017-10-25 Wed 19:34</p>
 <p class="creator"><a href="http://www.gnu.org/software/emacs/">Emacs</a> 25.3.1 (<a href="http://orgmode.org">Org</a> mode 8.2.10)</p>
 <p class="validation"><a href="http://validator.w3.org/check?uri=referer">Validate</a></p>
 </div>

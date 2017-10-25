@@ -790,6 +790,9 @@ licensing.
   ;; </signal>
 #+END_SRC
 
+   Usage of that syntax sugar is highly encouraged as it eases refactor in case
+   of arguments change, e.g. adding sample from audio input.
+
    The most basic signal is just a constant one, which is essentially created by
    our shiny new syntax =(~< amplitude)=. But =~<= is a macro and having
    function is useful for composition matters:
@@ -889,6 +892,23 @@ licensing.
          #'(signal time channel))]))
 #+END_SRC
 
+   There is a need trick to increase performance w/o breaching abstraction. If
+   you have composite signal which you are sure produces same samples for every
+   channel then you can build composite signal as usual, but wrap it in =mono=
+   in the end to reduce load.
+
+#+NAME: mono
+#+BEGIN_SRC scheme
+  ;; <mono>
+  (define (mono signal)
+    (let ([x 0.0])
+      (~<
+       (when (zero? channel)
+         (set! x (<~ signal)))
+       x)))
+  ;; </mono>
+#+END_SRC
+
    Let's use it in our phasor signal. Phasor is used so frequently that we want
    to provide a small optimization for the case when frequency is known to be
    constant.
@@ -982,8 +1002,7 @@ licensing.
                  (* a (vector-ref table (mod (+ i 1) N)))))))))
 
   (define (unroll signal base-frequency)
-    (let* ([sample-rate (* 2.0 *sample-rate*)] ;; Kotelnikov-Nyquist-Shannon
-           [n (-> sample-rate (/ base-frequency) (round) (exact))]
+    (let* ([n (-> *sample-rate* (/ base-frequency) (round) (exact))]
            [table (make-channel-vector)])
       (do-ec (: channel *channels*)
              (channel-set! table (make-vector n)))
@@ -994,7 +1013,7 @@ licensing.
              (vector-set!
               (channel-ref table)
               sample
-              (signal (/ sample sample-rate) 0)))
+              (signal (/ sample *sample-rate*) channel)))
       table))
 
   (define sine/// (∘ sine phasor))
@@ -1088,6 +1107,9 @@ licensing.
           [start (<~ start)]
           [end (<~ end)])
       (+ start (* phase (- end start)))))
+
+  (define~ (amplitude->phase s)
+    (* 0.5 (+ 1.0 (<~ s))))
   ;; </signal-operators>
 #+END_SRC
 
@@ -1301,7 +1323,7 @@ licensing.
   (define *max-line-duration-fast* 1)
 
   (define (make-echo max-line-duration)
-    (λ (echo delay feedback signal)
+    (λ (delay feedback signal)
       (let ([line-size (* max-line-duration *sample-rate*)]
             [lines (make-channel-vector)]
             [cursor -1])
@@ -1694,9 +1716,6 @@ licensing.
     (let* ([start (now)]
            [end (+ start duration)])
       (values (~< start) (~< end))))
-
-  (define~ (amplitude->phase s)
-    (* 0.5 (+ 1.0 (<~ s))))
   ;; </sandbox>
 #+END_SRC
 
@@ -1807,9 +1826,10 @@ licensing.
     (export signal ~< <~ define-signal define~
             make-channel-vector channel-ref channel-set!
             constant silence ∅ unit
+            mono
             live-signal live-value
             signal-sum signal-prod signal-diff signal-div
-            +~ *~ -~ /~ ∑ ∏ mix pan phase->interval)
+            +~ *~ -~ /~ ∑ ∏ mix pan phase->interval amplitude->phase)
     (import (chezscheme)
             (srfi s26 cut)
             (ad-libitum common))
@@ -1819,6 +1839,7 @@ licensing.
     <<silence>>
     <<unit>>
     <<deref-signal>>
+    <<mono>>
     <<live-signal>>
     <<live-value>>
     <<signal-operators>>

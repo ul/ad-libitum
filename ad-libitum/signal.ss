@@ -3,9 +3,10 @@
   (export signal ~< <~ define-signal define~
           make-channel-vector channel-ref channel-set!
           constant silence ∅ unit
+          mono
           live-signal live-value
           signal-sum signal-prod signal-diff signal-div
-          +~ *~ -~ /~ ∑ ∏ mix pan phase->interval)
+          +~ *~ -~ /~ ∑ ∏ mix pan phase->interval amplitude->phase)
   (import (chezscheme)
           (srfi s26 cut)
           (ad-libitum common))
@@ -72,6 +73,15 @@
                      [channel (datum->syntax #'k 'channel)])
          #'(signal time channel))]))
 
+  ;; <mono>
+  (define (mono signal)
+    (let ([x 0.0])
+      (~<
+       (when (zero? channel)
+         (set! x (<~ signal)))
+       x)))
+  ;; </mono>
+
   ;; <live-signal>
   (define~ (live-signal symbol) (<~ (top-level-value symbol)))
   ;; </live-signal>
@@ -125,6 +135,9 @@
           [start (<~ start)]
           [end (<~ end)])
       (+ start (* phase (- end start)))))
+  
+  (define~ (amplitude->phase s)
+    (* 0.5 (+ 1.0 (<~ s))))
   ;; </signal-operators>
 
   )

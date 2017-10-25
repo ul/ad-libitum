@@ -1,36 +1,7 @@
-;;; perf sake
-
-(define~ (simple-sine frequency)
-  (if (zero? channel)
-    (sin (* 2π frequency time))
-    0.0))
-
-(define~ (simple-sine* frequency)
-  (if (zero? channel)
-      (sin (* 2π (<~ frequency) time))
-      0.0))
-
-(define~ (simple-tri frequency)
-  (if (zero? channel)
-      (let ([phase (mod (* frequency time) 1.0)])
-        (if (< phase 0.5)
-            (- (* 4.0 phase) 1.0)
-            (+ (* -4.0 phase) 3.0)))
-      0.0))
-
-(define (stereo signal)
-  (let ([x 0.0])
-    (~<
-     (when (zero? channel)
-       (set! x (<~ signal)))
-     x)))
-
-;;; /perf sake
-
 (define (make-kick-note frequency duration)
   (let-values ([(start end) (fix-duration (* 0.25 duration))])
     (*~
-     (simple-sine frequency)
+     (osc:sine/// frequency)
      (env:impulse start end))))
 
 (define-values (kick~ play-kick) (inst:make-polyphony 4 make-kick-note))
@@ -70,13 +41,14 @@
 (test-perc)
 
 (set-bpm! 120.0)
+(set! test-perc id)
 
 (define frequencies (make-vector 16 0.0))
 (define step (* 0.02 (+ 6 (random 3))))
 (define frequencies~
   (map (λ (i) (~< (vector-ref frequencies i)))
        (iota (vector-length frequencies))))
-(define sinusoids (map simple-sine* frequencies~))
+(define sinusoids (map osc:sine/// frequencies~))
 (define curve* (∑ sinusoids))
 (define f 0.0)
 (define~ curve
@@ -112,14 +84,14 @@
 
 (quick-test curve)
 
-(play! (stereo (mix kick~ snare~ curve)))
+(play! (mono (mix kick~ snare~ curve)))
 
 ;;;;
 
 (define (make-snare-note frequency duration)
   (let-values ([(start end) (fix-duration (* 0.25 duration))])
     (*~
-     (simple-tri frequency)
+     (osc:tri/// frequency)
      (env:impulse start end))))
 
 (define-values (snare~ play-snare) (inst:make-polyphony 4 make-snare-note))
@@ -140,8 +112,10 @@
 ;; (define dl (env:linear-transition (~< 15.0) dly))
 (define dl (filter:echo* (~< 0.03) (~< 0.1) (env:linear-transition (~< 15.0) dly)))
 
-;; (play! (*~ (~< 0.5) (stereo (filter:echo* dl fb (mix kick~ snare~ curve)))))
-(play! (*~ (stereo (filter:echo* dl fb (mix kick~ snare~)))))
+;; (play! (*~ (~< 0.5) (mono (filter:echo* dl fb (mix kick~ snare~ curve)))))
+(play! (mono (filter:echo* dl fb (mix kick~ snare~))))
+(test-perc)
+(set! test-perc id)
 
 (set-bpm! 260.0)
 

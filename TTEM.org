@@ -816,10 +816,10 @@
   (h!)
 #+END_SRC
 
-   Theoretically =wavetable-quality-factor= of 2 should be enough to rebuild
-   sinusoid without artifacts (hello Nyquist-Shannon), but in my experiments 16
-   was the lowest value for clear signal. Is it because of table being
-   non-time-aligned? If so, interpolating table should help.
+   Theoretically =wavetable-quality-factor= of 1 should be enough to rebuild
+   sinusoid without artifacts, but in my experiments 16 was the lowest value for
+   clear signal. Is it because of table being non-time-aligned? If so,
+   interpolating table should help.
 
 #+BEGIN_SRC scheme
   (define (wavetable-lookup-linear table position)
@@ -840,7 +840,7 @@
               (signal (/ i *sample-rate* quality-factor) 0)))
       (cut wavetable-lookup-linear table <>)))
 
-  (define unroll (cut unroll* <> <> 2))
+  (define unroll (cut unroll* <> <> 1))
 
   (define sinusoid-table (unroll (osc:sine/// 440.0) 440.0))
 
@@ -868,8 +868,7 @@
                  (* a (vector-ref table (mod (+ i 1) N)))))))))
 
   (define (unroll signal base-frequency)
-    (let* ([sample-rate (* 2.0 *sample-rate*)] ;; Kotelnikov-Nyquist-Shannon
-           [n (-> sample-rate (/ base-frequency) (round) (exact))]
+    (let* ([n (-> *sample-rate* (/ base-frequency) (round) (exact))]
            [table (make-channel-vector)])
       (do-ec (: channel *channels*)
              (channel-set! table (make-vector n)))
@@ -880,7 +879,7 @@
              (vector-set!
               (channel-ref table)
               sample
-              (signal (/ sample sample-rate) 0)))
+              (signal (/ sample *sample-rate*) channel)))
       (cut sampler table <>)))
 
   (define sinusoid-table (unroll (osc:sine/// 440.0) 440.0))
@@ -960,8 +959,7 @@
                  (* a (vector-ref table (mod (+ i 1) N)))))))))
 
   (define (unroll signal base-frequency)
-    (let* ([sample-rate (* 2.0 *sample-rate*)] ;; Kotelnikov-Nyquist-Shannon
-           [n (-> sample-rate (/ base-frequency) (round) (exact))]
+    (let* ([n (-> *sample-rate* (/ base-frequency) (round) (exact))]
            [table (make-channel-vector)])
       (do-ec (: channel *channels*)
              (channel-set! table (make-vector n)))
@@ -972,7 +970,7 @@
              (vector-set!
               (channel-ref table)
               sample
-              (signal (/ sample sample-rate) 0)))
+              (signal (/ sample *sample-rate*) channel)))
       table))
 
   (define~ (phase->interval phase start end)

@@ -4,7 +4,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
 <title>Ad Libitum</title>
-<!-- 2017-10-25 Wed 08:21 -->
+<!-- 2017-10-25 Wed 19:34 -->
 <meta  http-equiv="Content-Type" content="text/html;charset=utf-8" />
 <meta  name="generator" content="Org-mode" />
 <meta  name="author" content="Ruslan Prakapchuk" />
@@ -1263,6 +1263,11 @@ small helper:
 </div>
 
 <p>
+Usage of that syntax sugar is highly encouraged as it eases refactor in case
+of arguments change, e.g. adding sample from audio input.
+</p>
+
+<p>
 The most basic signal is just a constant one, which is essentially created by
 our shiny new syntax <code>(~&lt; amplitude)</code>. But <code>~&lt;</code> is a macro and having
 function is useful for composition matters:
@@ -1384,6 +1389,26 @@ current scope is very common. Let's create a special syntax for it.
 </div>
 
 <p>
+There is a need trick to increase performance w/o breaching abstraction. If
+you have composite signal which you are sure produces same samples for every
+channel then you can build composite signal as usual, but wrap it in <code>mono</code>
+in the end to reduce load.
+</p>
+
+<div class="org-src-container">
+
+<pre class="src src-scheme" id="mono"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;mono&gt;</span>
+(<span style="font-weight: bold;">define</span> (<span style="font-weight: bold;">mono</span> signal)
+  (<span style="font-weight: bold;">let</span> ([x 0.0])
+    (~&lt;
+     (when (zero? channel)
+       (set! x (&lt;~ signal)))
+     x)))
+<span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;/mono&gt;</span>
+</pre>
+</div>
+
+<p>
 Let's use it in our phasor signal. Phasor is used so frequently that we want
 to provide a small optimization for the case when frequency is known to be
 constant.
@@ -1483,8 +1508,7 @@ Then basic waveforms are defined in very clean way:
                (* a (vector-ref table (mod (+ i 1) N)))))))))
 
 (<span style="font-weight: bold;">define</span> (<span style="font-weight: bold;">unroll</span> signal base-frequency)
-  (<span style="font-weight: bold;">let*</span> ([sample-rate (* 2.0 *sample-rate*)] <span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">Kotelnikov-Nyquist-Shannon</span>
-         [n (-&gt; sample-rate (/ base-frequency) (round) (exact))]
+  (<span style="font-weight: bold;">let*</span> ([n (-&gt; *sample-rate* (/ base-frequency) (round) (exact))]
          [table (make-channel-vector)])
     (do-ec (: channel *channels*)
            (channel-set! table (make-vector n)))
@@ -1495,7 +1519,7 @@ Then basic waveforms are defined in very clean way:
            (vector-set!
             (channel-ref table)
             sample
-            (signal (/ sample sample-rate) 0)))
+            (signal (/ sample *sample-rate*) channel)))
     table))
 
 (<span style="font-weight: bold;">define</span> <span style="font-weight: bold;">sine///</span> (&#8728; sine phasor))
@@ -1598,6 +1622,9 @@ matching.
         [start (&lt;~ start)]
         [end (&lt;~ end)])
     (+ start (* phase (- end start)))))
+
+(define~ (amplitude-&gt;phase s)
+  (* 0.5 (+ 1.0 (&lt;~ s))))
 <span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;/signal-operators&gt;</span>
 </pre>
 </div>
@@ -1863,7 +1890,7 @@ Metronome is a mean to align scheduling with some periodic beat.
 (<span style="font-weight: bold;">define</span> <span style="font-weight: bold;">*max-line-duration-fast*</span> 1)
 
 (<span style="font-weight: bold;">define</span> (<span style="font-weight: bold;">make-echo</span> max-line-duration)
-  (<span style="font-weight: bold;">&#955;</span> (echo delay feedback signal)
+  (<span style="font-weight: bold;">&#955;</span> (<span style="font-weight: bold;">delay</span> feedback signal)
     (<span style="font-weight: bold;">let</span> ([line-size (* max-line-duration *sample-rate*)]
           [lines (make-channel-vector)]
           [cursor -1])
@@ -2304,9 +2331,6 @@ we'll come to them:
   (<span style="font-weight: bold;">let*</span> ([start (now)]
          [end (+ start duration)])
     (values (~&lt; start) (~&lt; end))))
-
-(define~ (amplitude-&gt;phase s)
-  (* 0.5 (+ 1.0 (&lt;~ s))))
 <span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;/sandbox&gt;</span>
 </pre>
 </div>
@@ -2315,7 +2339,7 @@ we'll come to them:
 </div>
 <div id="postamble" class="status">
 <p class="author">Author: Ruslan Prakapchuk</p>
-<p class="date">Created: 2017-10-25 Wed 08:21</p>
+<p class="date">Created: 2017-10-25 Wed 19:34</p>
 <p class="creator"><a href="http://www.gnu.org/software/emacs/">Emacs</a> 25.3.1 (<a href="http://orgmode.org">Org</a> mode 8.2.10)</p>
 <p class="validation"><a href="http://validator.w3.org/check?uri=referer">Validate</a></p>
 </div>
