@@ -1259,22 +1259,6 @@ licensing.
 
   Metronome is a mean to align scheduling with some periodic beat.
 
-** Control signals
-
-#+NAME: control-signal
-#+BEGIN_SRC scheme
-  ;; <control-signal>
-  (define make-control
-    (case-lambda
-      [(x)
-       (if (number? x)
-           (make-control id x)
-           (make-control x 0.0))]
-      [(f x)
-       (values (~< x) (λ args (set! x (apply f args))))]))
-  ;; </control-signal>
-#+END_SRC
-
 #+NAME: beat
 #+BEGIN_SRC scheme
   ;; <beat>
@@ -1301,6 +1285,47 @@ licensing.
   (define (*metro* . args)
     (apply metro *bpm* args))
   ;; </beat>
+#+END_SRC
+
+** Control signals
+
+#+NAME: control-signal
+#+BEGIN_SRC scheme
+  ;; <control-signal>
+  (define make-control
+    (case-lambda
+      [(x)
+       (if (number? x)
+           (make-control id x)
+           (make-control x 0.0))]
+      [(f x)
+       (values (~< x) (λ args (set! x (apply f args))))]))
+  ;; </control-signal>
+#+END_SRC
+
+    Hand by hand with control signal go various measurements. For them
+    signal-proxy =window= is very useful. It's result also could be used as the
+    input table for =osc:sampler=.
+
+#+NAME: window
+#+BEGIN_SRC scheme
+  ;; <window>
+  (define (window width signal)
+    (let ([windows (make-vector *channels*)]
+          [N (-> width (* *sample-rate*) (ceiling) (exact))]
+          [cursor -1])
+      (do-ec (: i *channels*)
+             (vector-set! windows i (make-vector N 0.0)))
+      (values
+       (~<
+        (when (zero? channel)
+          (set! cursor (mod (+ cursor 1) N)))
+        (let ([sample (<~ signal)]
+              [window (channel-ref windows)])
+          (vector-set! window cursor sample)
+          sample))
+       (λ () windows))))
+  ;; </window>
 #+END_SRC
 
 * Std
@@ -1925,12 +1950,14 @@ licensing.
 #+NAME: control.ss
 #+BEGIN_SRC scheme :tangle ad-libitum/control.ss :noweb yes :mkdirp yes :paddle no
   (library (ad-libitum control (1))
-    (export make-control)
+    (export make-control window)
     (import (chezscheme)
+            (srfi s42 eager-comprehensions)
             (ad-libitum common)
             (ad-libitum signal)
             )
     <<control-signal>>
+    <<window>>
     )
 #+END_SRC
 

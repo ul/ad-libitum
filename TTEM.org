@@ -1035,5 +1035,80 @@
 #+END_SRC
 
 ** Interpolation
+
+   We've already done sampler with linear interpolation, let's do cubic one.
+
+ #+BEGIN_SRC scheme
+   (define (sampler table phase)
+     (let* ([N (vector-length (vector-ref table 0))]
+            [N-1 (- N 1)]
+            [n (fixnum->flonum N)]
+            [/6 (/ 1.0 6.0)]
+            [/2 0.5])
+       (~< (let ([position (* n (<~ phase))])
+             (let ([i (-> position
+                          (fltruncate)
+                          (flonum->fixnum)
+                          (clamp 0 N-1)
+                          )]
+                   [f (mod position 1.0)]
+                   [table (channel-ref table)])
+               (let ([y-0 (vector-ref table i)]
+                     [y-1 (vector-ref table (mod (- i 1) N))]
+                     [y+1 (vector-ref table (mod (+ i 1) N))]
+                     [y+2 (vector-ref table (mod (+ i 2) N))]
+                     [f-2 (- f 2.0)]
+                     [f-1 (- f 1.0)]
+                     [f+1 (+ f 1.0)]
+                     [-f  (- f)])
+                 (+ (* -f f-1 f-2 /6 y-1)
+                    (* f+1 f-1 f-2 /2 y-0)
+                    (* -f f+1 f-2 /2 y+1)
+                    (* f+1 f f-1 /6 y+2))))))))
+
+   (define sinusoid-table (osc:unroll (osc:sine/// 440.0) 440.0))
+
+   (define s (sampler sinusoid-table (osc:phasor 440.0)))
+
+   (play! tuner)
+   (play! s)
+   (h!)
+ #+END_SRC
+
+  Now I clearly hear subtle humming in both linear and cubic sampler. Need to
+  figure out why it happens. Is it precession?
+
+  At that moment let's try to just mitigate that issue by using LPF.
+
+#+BEGIN_SRC scheme
+  (define s (filter:biquad-lpf (~< 1.0) (~< 4400.0) (sampler sinusoid-table (osc:phasor 440.0))))
+
+  (play! tuner)
+  (play! s)
+  (h!)
+#+END_SRC
+
+  Yep, it works. But still not sure how eliminate it on unroll/sampler level.
+
 ** Examples
+
+*** Wavetable oscillator
+
+    We already explored that topic in [[Timbre stretching]].
+
+*** Wavetable lookup in general
+
+    =tabread= in *𝔄𝔏* is performed by the same =sampler= to which you pass
+    non-periodic signal instead of phasor. =tabwrite= is even simpler, use
+    Scheme's =vector-set!= for that in control-mode and =ctrl:window= to record
+    audio-signal.
+
+*** Using wavetable as a sampler
+
+    Ditto sans mouse-control.
+
+*** Looping sampler
+
+*** Overlapping sample looper
+
 ** Exercises

@@ -4,7 +4,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
 <title>The Theory and Technique of Electronic Music Exercises in Ad Libitum</title>
-<!-- 2017-10-25 Wed 19:34 -->
+<!-- 2017-10-28 Sat 10:09 -->
 <meta  http-equiv="Content-Type" content="text/html;charset=utf-8" />
 <meta  name="generator" content="Org-mode" />
 <meta  name="author" content="Ruslan Prakapchuk" />
@@ -178,7 +178,15 @@ for the JavaScript code in this tag.
 <li><a href="#sec-2-3">2.3. Enveloping samplers</a></li>
 <li><a href="#sec-2-4">2.4. Timbre stretching</a></li>
 <li><a href="#sec-2-5">2.5. Interpolation</a></li>
-<li><a href="#sec-2-6">2.6. Examples</a></li>
+<li><a href="#sec-2-6">2.6. Examples</a>
+<ul>
+<li><a href="#sec-2-6-1">2.6.1. Wavetable oscillator</a></li>
+<li><a href="#sec-2-6-2">2.6.2. Wavetable lookup in general</a></li>
+<li><a href="#sec-2-6-3">2.6.3. Using wavetable as a sampler</a></li>
+<li><a href="#sec-2-6-4">2.6.4. Looping sampler</a></li>
+<li><a href="#sec-2-6-5">2.6.5. Overlapping sample looper</a></li>
+</ul>
+</li>
 <li><a href="#sec-2-7">2.7. Exercises</a></li>
 </ul>
 </li>
@@ -1469,10 +1477,117 @@ sample implementations without re-implementing unroll.
 
 <div id="outline-container-sec-2-5" class="outline-3">
 <h3 id="sec-2-5"><span class="section-number-3">2.5</span> Interpolation</h3>
+<div class="outline-text-3" id="text-2-5">
+<p>
+We've already done sampler with linear interpolation, let's do cubic one.
+</p>
+
+<div class="org-src-container">
+
+<pre class="src src-scheme">(<span style="font-weight: bold;">define</span> (<span style="font-weight: bold;">sampler</span> table phase)
+  (<span style="font-weight: bold;">let*</span> ([N (vector-length (vector-ref table 0))]
+         [N-1 (- N 1)]
+         [n (fixnum-&gt;flonum N)]
+         [/6 (/ 1.0 6.0)]
+         [/2 0.5])
+    (~&lt; (<span style="font-weight: bold;">let</span> ([position (* n (&lt;~ phase))])
+          (<span style="font-weight: bold;">let</span> ([i (-&gt; position
+                       (fltruncate)
+                       (flonum-&gt;fixnum)
+                       (clamp 0 N-1)
+                       )]
+                [f (mod position 1.0)]
+                [table (channel-ref table)])
+            (<span style="font-weight: bold;">let</span> ([y-0 (vector-ref table i)]
+                  [y-1 (vector-ref table (mod (- i 1) N))]
+                  [y+1 (vector-ref table (mod (+ i 1) N))]
+                  [y+2 (vector-ref table (mod (+ i 2) N))]
+                  [f-2 (- f 2.0)]
+                  [f-1 (- f 1.0)]
+                  [f+1 (+ f 1.0)]
+                  [-f  (- f)])
+              (+ (* -f f-1 f-2 /6 y-1)
+                 (* f+1 f-1 f-2 /2 y-0)
+                 (* -f f+1 f-2 /2 y+1)
+                 (* f+1 f f-1 /6 y+2))))))))
+
+(<span style="font-weight: bold;">define</span> <span style="font-weight: bold;">sinusoid-table</span> (osc:unroll (osc:sine/// 440.0) 440.0))
+
+(<span style="font-weight: bold;">define</span> <span style="font-weight: bold;">s</span> (sampler sinusoid-table (osc:phasor 440.0)))
+
+(play! tuner)
+(play! s)
+(h!)
+</pre>
 </div>
+
+<p>
+Now I clearly hear subtle humming in both linear and cubic sampler. Need to
+figure out why it happens. Is it precession?
+</p>
+
+<p>
+At that moment let's try to just mitigate that issue by using LPF.
+</p>
+
+<div class="org-src-container">
+
+<pre class="src src-scheme">(<span style="font-weight: bold;">define</span> <span style="font-weight: bold;">s</span> (filter:biquad-lpf (~&lt; 1.0) (~&lt; 4400.0) (sampler sinusoid-table (osc:phasor 440.0))))
+
+(play! tuner)
+(play! s)
+(h!)
+</pre>
+</div>
+
+<p>
+Yep, it works. But still not sure how eliminate it on unroll/sampler level.
+</p>
+</div>
+</div>
+
 <div id="outline-container-sec-2-6" class="outline-3">
 <h3 id="sec-2-6"><span class="section-number-3">2.6</span> Examples</h3>
+<div class="outline-text-3" id="text-2-6">
+</div><div id="outline-container-sec-2-6-1" class="outline-4">
+<h4 id="sec-2-6-1"><span class="section-number-4">2.6.1</span> Wavetable oscillator</h4>
+<div class="outline-text-4" id="text-2-6-1">
+<p>
+We already explored that topic in <a href="#sec-2-4">2.4</a>.
+</p>
 </div>
+</div>
+
+<div id="outline-container-sec-2-6-2" class="outline-4">
+<h4 id="sec-2-6-2"><span class="section-number-4">2.6.2</span> Wavetable lookup in general</h4>
+<div class="outline-text-4" id="text-2-6-2">
+<p>
+<code>tabread</code> in <b>𝔄𝔏</b> is performed by the same <code>sampler</code> to which you pass
+non-periodic signal instead of phasor. <code>tabwrite</code> is even simpler, use
+Scheme's <code>vector-set!</code> for that in control-mode and <code>ctrl:window</code> to record
+audio-signal.
+</p>
+</div>
+</div>
+
+<div id="outline-container-sec-2-6-3" class="outline-4">
+<h4 id="sec-2-6-3"><span class="section-number-4">2.6.3</span> Using wavetable as a sampler</h4>
+<div class="outline-text-4" id="text-2-6-3">
+<p>
+Ditto sans mouse-control.
+</p>
+</div>
+</div>
+
+<div id="outline-container-sec-2-6-4" class="outline-4">
+<h4 id="sec-2-6-4"><span class="section-number-4">2.6.4</span> Looping sampler</h4>
+</div>
+
+<div id="outline-container-sec-2-6-5" class="outline-4">
+<h4 id="sec-2-6-5"><span class="section-number-4">2.6.5</span> Overlapping sample looper</h4>
+</div>
+</div>
+
 <div id="outline-container-sec-2-7" class="outline-3">
 <h3 id="sec-2-7"><span class="section-number-3">2.7</span> Exercises</h3>
 </div>
@@ -1480,7 +1595,7 @@ sample implementations without re-implementing unroll.
 </div>
 <div id="postamble" class="status">
 <p class="author">Author: Ruslan Prakapchuk</p>
-<p class="date">Created: 2017-10-25 Wed 19:34</p>
+<p class="date">Created: 2017-10-28 Sat 10:09</p>
 <p class="creator"><a href="http://www.gnu.org/software/emacs/">Emacs</a> 25.3.1 (<a href="http://orgmode.org">Org</a> mode 8.2.10)</p>
 <p class="validation"><a href="http://validator.w3.org/check?uri=referer">Validate</a></p>
 </div>
