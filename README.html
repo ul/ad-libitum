@@ -4,7 +4,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
 <title>Ad Libitum</title>
-<!-- 2017-10-28 Sat 10:09 -->
+<!-- 2017-10-28 Sat 12:12 -->
 <meta  http-equiv="Content-Type" content="text/html;charset=utf-8" />
 <meta  name="generator" content="Org-mode" />
 <meta  name="author" content="Ruslan Prakapchuk" />
@@ -1771,21 +1771,25 @@ Another simple though useful envelope is impulse.
 (<span style="font-weight: bold;">define</span> (<span style="font-weight: bold;">transition</span> curve &#916;t signal)
   (<span style="font-weight: bold;">let</span> ([starts (make-channel-vector (now))]
         [previous-values (make-channel-vector 0.0)]
+        [current-values (make-channel-vector 0.0)]
         [next-values (make-channel-vector 0.0)])
     (~&lt;
      (<span style="font-weight: bold;">let</span> ([&#916;t (&lt;~ &#916;t)]
            [current-value (&lt;~ signal)]
            [next-value (channel-ref next-values)])
        (unless (= current-value next-value)
-         (channel-set! previous-values next-value)
+         (channel-set! previous-values (channel-ref current-values))
          (channel-set! next-values current-value)
          (channel-set! starts time))
-       (<span style="font-weight: bold;">let</span> ([&#948;t (- time (channel-ref starts))])
-         (<span style="font-weight: bold;">if</span> (<span style="font-weight: bold;">and</span> (positive? &#916;t) (&lt; &#948;t &#916;t))
-             (<span style="font-weight: bold;">let</span> ([previous-value (channel-ref previous-values)])
-               (+ previous-value
-                  (curve (/ &#948;t &#916;t) (- current-value previous-value))))
-             current-value))))))
+       (<span style="font-weight: bold;">let</span> ([current-value
+              (<span style="font-weight: bold;">let</span> ([&#948;t (- time (channel-ref starts))])
+                (<span style="font-weight: bold;">if</span> (<span style="font-weight: bold;">and</span> (positive? &#916;t) (&lt; &#948;t &#916;t))
+                    (<span style="font-weight: bold;">let</span> ([previous-value (channel-ref previous-values)])
+                      (+ previous-value
+                         (curve (/ &#948;t &#916;t) (- current-value previous-value))))
+                    current-value))])
+         (channel-set! current-values current-value)
+         current-value)))))
 
 (<span style="font-weight: bold;">define</span> (<span style="font-weight: bold;">instant-curve</span> a &#916;x)
   &#916;x)
@@ -2367,7 +2371,7 @@ we'll come to them:
 </div>
 <div id="postamble" class="status">
 <p class="author">Author: Ruslan Prakapchuk</p>
-<p class="date">Created: 2017-10-28 Sat 10:09</p>
+<p class="date">Created: 2017-10-28 Sat 12:12</p>
 <p class="creator"><a href="http://www.gnu.org/software/emacs/">Emacs</a> 25.3.1 (<a href="http://orgmode.org">Org</a> mode 8.2.10)</p>
 <p class="validation"><a href="http://validator.w3.org/check?uri=referer">Validate</a></p>
 </div>
