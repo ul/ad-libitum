@@ -29,14 +29,14 @@
                   (env:impulse start end))])
           ;; (*~ s (pan (osc:sine/// 440.0)))
           ;; (my-lpf (filter:echo (~< 0.3) (~< 0.8) s))
-          (my-lpf (filter:echo (~< 0.05) (~< 0.5) s))
-          ;; s
+          ;; (my-lpf (filter:echo (~< 0.05) (~< 0.5) s))
+          s
           ))))
 
   (define-values (my-dsp1 play-note1) (inst:make-polyphony 12 make-note1))
 
   (define my-dsp (my-lpf (filter:echo (*~ (~< 0.1) (amplitude->phase (osc:sine/// 0.001))) (~< 0.9) my-dsp1))))
-;; (define my-dsp (my-lpf my-dsp1))
+(define my-dsp (my-lpf my-dsp1))
 
 
 (begin
@@ -60,7 +60,7 @@
 
 (play-my-perc)
 
-(sound:set-dsp! (live-signal 'my-dsp))
+(sound:set-dsp! (mono (live-signal 'my-dsp)))
 (h!)
 
 ;;;;

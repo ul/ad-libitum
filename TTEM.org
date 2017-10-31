@@ -243,16 +243,16 @@
    signal which is updated in non-audio rate by calling its setter.
 
 #+BEGIN_SRC scheme
-  (define-values (frequency set-frequency!) (ctrl:make-control 440.0))
+  (ctrl:define-control frequency 440.0)
 #+END_SRC
 
    Let's set callback which will be called for every control change MIDI event.
 
 #+BEGIN_SRC scheme
   (midi:set-cc! (λ (t knob value channel)
-                  (set-frequency! (midi-pitch->frequency value))))
+                  (frequency-set! (midi-pitch->frequency value))))
 
-  (play! (osc:sine/// frequency))
+  (play! (osc:sine/// frequency~))
   (h!)
 #+END_SRC
 
@@ -263,9 +263,9 @@
    To make transition smooth we could use built-in =env:linear-transition=
 
 #+BEGIN_SRC scheme
-  (define-values (frequency set-frequency!) (ctrl:make-control 440.0))
+  (ctrl:define-control frequency 440.0)
 
-  (play! (osc:sine/// (env:linear-transition (~< 0.05) frequency)))
+  (play! (osc:sine/// (env:linear-transition (~< 0.05) frequency~)))
   (h!)
 #+END_SRC
 
@@ -276,15 +276,15 @@
 #+BEGIN_SRC scheme
   (define (swap-frequency i)
     (if (zero? i)
-        (set-frequency! 440.0)
-        (set-frequency! 220.0))
+        (frequency-set! 440.0)
+        (frequency-set! 220.0))
     (schedule (+ (now) 1/4) 'swap-frequency (- 1 i)))
 
   (swap-frequency 0)
 
-  (play! (osc:sine/// frequency))
-  (play! (osc:sine/// (env:linear-transition (~< 0.05) frequency)))
-  (play! (osc:sine/// (env:quadratic-transition (~< 0.05) frequency)))
+  (play! (osc:sine/// frequency~))
+  (play! (osc:sine/// (env:linear-transition (~< 0.05) frequency~)))
+  (play! (osc:sine/// (env:quadratic-transition (~< 0.05) frequency~)))
   (h!)
 #+END_SRC
 
@@ -500,12 +500,12 @@
 
 #+BEGIN_SRC scheme
   (define (make-line)
-    (let-values ([(value set-value!) (ctrl:make-control 0.0)]
-                 [(Δt set-Δt!) (ctrl:make-control 0.0)])
-      (values
-       (env:linear-transition Δt value)
-       set-value!
-       set-Δt!)))
+    (ctrl:define-control value 0.0)
+    (ctrl:define-control Δt 0.0)
+    (values
+     (env:linear-transition Δt~ value~)
+     value-set!
+     Δt-set!))
 
   (define-values (line~ set-amplitude! set-Δt!) (make-line))
 
@@ -569,14 +569,13 @@
 
 
 #+BEGIN_SRC scheme
-  (define-values
-    (frequency set-pitch!)
-    (ctrl:make-control midi-pitch->frequency 0.0))
+  (ctrl:define-control frequency 0.0)
+  (define set-pitch! (∘ frequency-set! midi-pitch->frequency))
 
-  (define s1 (osc:sine/// frequency))
-  (define s2 (*~ (~< 0.1) (osc:sine/// (*~ (~< 2.0) frequency))))
-  (define s3 (*~ (~< 0.2) (osc:sine/// (*~ (~< 3.0) frequency))))
-  (define s4 (*~ (~< 0.5) (osc:sine/// (*~ (~< 4.0) frequency))))
+  (define s1 (osc:sine/// frequency~))
+  (define s2 (*~ (~< 0.1) (osc:sine/// (*~ (~< 2.0) frequency~))))
+  (define s3 (*~ (~< 0.2) (osc:sine/// (*~ (~< 3.0) frequency~))))
+  (define s4 (*~ (~< 0.5) (osc:sine/// (*~ (~< 4.0) frequency~))))
 
   (define (switch)
     (let ([value 0.0])
@@ -982,10 +981,10 @@
   (define sinusoid-table (unroll (osc:sine/// 440.0) 440.0))
 
   (define (make-control x)
-    (let-values ([(signal setter) (ctrl:make-control x)])
-      (values
-       (env:linear-transition (~< 0.05) signal)
-       setter)))
+    (ctrl:define-control x x)
+    (values
+     (env:linear-transition (~< 0.05) x~)
+     x-set!))
 
   (define-values (frequency set-frequency!) (make-control 440.0))
 
@@ -1109,6 +1108,24 @@
 
 *** Looping sampler
 
+    Overly boring stuff partially already covered earlier and I have no idea how
+    to make it fun atm. Perhaps will return later.
+
 *** Overlapping sample looper
 
+    Ditto.
+
 ** Exercises
+
+* Audio and control computations
+
+** The sampling theorem
+
+** Control
+
+** Control streams
+
+   Control streams in *𝔄𝔏* are represented by a pair of audiosignal with a value
+   in a box. I'm thinking about building streams with push semantics, but it
+   will come later naturally in case of need. Atm less magic is the better and
+   bare closure works quite well.

@@ -25,12 +25,12 @@
 
 (define (snare!) (play-snare 2000.0 1/32))
 
-(play! (mix kick~ snare~))
+(play! (mix kick~ (*~ (~< 0.3) snare~)))
 
 (kick!)
 (snare!)
 
-(define pat1 '(1 0 0 1))
+(define pat1 '(1 0 0 1 1))
 (define pat2 '(0 0 1 0 1))
 
 (define (test-perc)
@@ -40,7 +40,7 @@
 
 (test-perc)
 
-(set-bpm! 120.0)
+(set-bpm! 260.0)
 (set! test-perc id)
 
 (define frequencies (make-vector 16 0.0))
@@ -105,12 +105,11 @@
 (define instruments
   (list kick! snare! kick2! snare2! kick! snare! kick3! snare3!))
 
-(define-values (feedback set-feedback!) (ctrl:make-control 0.0))
-(define-values (dly set-delay!) (ctrl:make-control 0.0))
+(ctrl:define-control feedback 0.0)
+(ctrl:define-control delay 0.0)
 
-(define fb (env:linear-transition (~< 15.0) feedback))
-;; (define dl (env:linear-transition (~< 15.0) dly))
-(define dl (filter:echo* (~< 0.03) (~< 0.1) (env:linear-transition (~< 15.0) dly)))
+(define fb (env:linear-transition (~< 15.0) feedback~))
+(define dl (filter:echo* (~< 0.03) (~< 0.1) (env:linear-transition (~< 15.0) delay~)))
 
 ;; (play! (*~ (~< 0.5) (mono (filter:echo* dl fb (mix kick~ snare~ curve)))))
 (play! (mono (filter:echo* dl fb (mix kick~ snare~))))
@@ -119,26 +118,26 @@
 
 (set-bpm! 260.0)
 
-(set-feedback! 0.9)
-(set-feedback! 0.5)
-(set-feedback! 0.1)
+(feedback-set! 0.9)
+(feedback-set! 0.5)
+(feedback-set! 0.1)
 
-(set-delay! step)
-(set-delay! (* 0.1 step))
-(set-delay! (* 0.5 step))
-(set-delay! (* 2.0 step))
-(set-delay! (* 20.0 step))
+(delay-set! step)
+(delay-set! (* 0.1 step))
+(delay-set! (* 0.5 step))
+(delay-set! (* 2.0 step))
+(delay-set! (* 20.0 step))
 
-(set-delay! 0.01)
-(set-delay! 0.03)
-(set-delay! 0.05)
-(set-delay! 0.1)
-(set-delay! 0.5)
-(set-delay! 1.0)
-(set-delay! 5.0)
+(delay-set! 0.01)
+(delay-set! 0.03)
+(delay-set! 0.05)
+(delay-set! 0.1)
+(delay-set! 0.5)
+(delay-set! 1.0)
+(delay-set! 5.0)
 
 (define (change-delay)
-  (set-delay! (+ 0.01 (random 5.0)))
+  (delay-set! (+ 0.01 (random 5.0)))
   (schedule (+ (now) 15.0) 'change-delay))
 
 (change-delay)

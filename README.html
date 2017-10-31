@@ -4,7 +4,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
 <title>Ad Libitum</title>
-<!-- 2017-10-28 Sat 12:12 -->
+<!-- 2017-11-01 Wed 09:04 -->
 <meta  http-equiv="Content-Type" content="text/html;charset=utf-8" />
 <meta  name="generator" content="Org-mode" />
 <meta  name="author" content="Ruslan Prakapchuk" />
@@ -1854,14 +1854,31 @@ Metronome is a mean to align scheduling with some periodic beat.
 <div class="org-src-container">
 
 <pre class="src src-scheme" id="control-signal"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;control-signal&gt;</span>
-(<span style="font-weight: bold;">define</span> <span style="font-weight: bold;">make-control</span>
-  (case-lambda
-    [(x)
-     (<span style="font-weight: bold;">if</span> (number? x)
-         (make-control id x)
-         (make-control x 0.0))]
-    [(f x)
-     (values (~&lt; x) (<span style="font-weight: bold;">&#955;</span> args (set! x (apply f args))))]))
+(<span style="font-weight: bold;">define</span> (<span style="font-weight: bold;">make-control</span> x)
+  (<span style="font-weight: bold;">let</span> ([b (box x)])
+    (values (~&lt; (unbox b)) b)))
+
+(<span style="font-weight: bold;">define-syntax</span> (<span style="font-weight: bold; font-style: italic;">define-control</span> stx)
+  (<span style="font-weight: bold;">define</span> <span style="font-weight: bold;">construct-name</span>
+    (<span style="font-weight: bold;">lambda</span> (template-identifier . args)
+      (datum-&gt;syntax
+       template-identifier
+       (string-&gt;symbol
+        (apply string-append
+               (<span style="font-weight: bold;">map</span> (<span style="font-weight: bold;">lambda</span> (x)
+                      (<span style="font-weight: bold;">if</span> (string? x)
+                          x
+                          (symbol-&gt;string (syntax-&gt;datum x))))
+                    args))))))
+  (syntax-case stx ()
+    [(_ name initial-value)
+     (with-syntax ([s (construct-name #'name #'name '~)]
+                   [ref (construct-name #'name #'name '-ref)]
+                   [set (construct-name #'name #'name '-set!)])
+       #'(<span style="font-weight: bold;">begin</span>
+           (define-values (s name) (make-control initial-value))
+           (<span style="font-weight: bold;">define</span> (<span style="font-weight: bold;">ref</span>) (unbox name))
+           (<span style="font-weight: bold;">define</span> (<span style="font-weight: bold;">set</span> value) (set-box! name value))))]))
 <span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;/control-signal&gt;</span>
 </pre>
 </div>
@@ -2371,7 +2388,7 @@ we'll come to them:
 </div>
 <div id="postamble" class="status">
 <p class="author">Author: Ruslan Prakapchuk</p>
-<p class="date">Created: 2017-10-28 Sat 12:12</p>
+<p class="date">Created: 2017-11-01 Wed 09:04</p>
 <p class="creator"><a href="http://www.gnu.org/software/emacs/">Emacs</a> 25.3.1 (<a href="http://orgmode.org">Org</a> mode 8.2.10)</p>
 <p class="validation"><a href="http://validator.w3.org/check?uri=referer">Validate</a></p>
 </div>

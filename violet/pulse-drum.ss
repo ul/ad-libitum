@@ -46,51 +46,35 @@
 
 (be-playful-with-frequency)
 
-(define-values (frequency set-frequency!) (ctrl:make-control 440.0))
-(define-values (transition set-transition!) (ctrl:make-control 15.0))
-(define-values (feedback set-feedback!) (ctrl:make-control 0.0))
-(define-values (dly set-delay!) (ctrl:make-control 0.0))
-(define feedback~ (env:linear-transition transition feedback))
-(define delay~ (env:linear-transition transition dly))
-(define frequency~ (env:linear-transition transition frequency))
+(ctrl:define-control frequency 440.0)
+(ctrl:define-control transition 15.0)
+(ctrl:define-control feedback 0.0)
+(ctrl:define-control delay 0.0)
+(define feedback~ (env:linear-transition transition~ feedback~))
+(define delay~ (env:linear-transition transition~ delay~))
+(define frequency~ (env:linear-transition transition~ frequency~))
 (quick-test feedback~)
 
 (play! (mono (filter:echo* delay~ feedback~ (live-signal 'my-dsp))))
 (h!)
 
-(set-delay! 1.0)
-(set-delay! 0.1)
-(set-delay! 0.03)
-(set-delay! 0.01)
-(set-feedback! 0.999)
-(set-feedback! 0.5)
-(set-feedback! 0.1)
-(set-transition! 1.0)
+(delay-set! 1.0)
+(delay-set! 0.1)
+(delay-set! 0.03)
+(delay-set! 0.01)
+(feedback-set! 0.999)
+(feedback-set! 0.5)
+(feedback-set! 0.1)
+(transition-set! 1.0)
 
 (midi:start now)
 
-(define (debounce Δt f)
-  (let* ([i 0]
-         [f* (λ (i* args)
-               (when (= i i*)
-                 (apply f args)))])
-    (λ args
-      (set! i (+ i 1))
-      (schedule (+ (now) (Δt)) f* i args))))
-
-;; (define Δt* 0.1)
-;; (define (Δt) Δt*)
-;; (define midi-set-delay! (debounce Δt set-delay!))
-;; (define midi-set-feedback! (debounce Δt set-feedback!))
-;; (define midi-set-transition! (debounce Δt set-transition!))
-;; (define midi-set-frequency! (debounce Δt set-frequency!))
-
 (midi:set-cc! (λ (t knob value channel)
                 (case knob
-                  [(19) (set-delay! (/ value 16.0))]
-                  [(23) (set-feedback! (/ value 128.0))]
-                  [(27) (set-transition! (/ value 8.0))]
-                  [(31) (set-frequency! (midi-pitch->frequency value))]
+                  [(19) (delay-set! (/ value 16.0))]
+                  [(23) (feedback-set! (/ value 128.0))]
+                  [(27) (transition-set! (/ value 8.0))]
+                  [(31) (frequency-set! (midi-pitch->frequency value))]
                   ;; [(31) (midi-set-frequency! (midi-pitch->frequency value))]
                   )
                 )

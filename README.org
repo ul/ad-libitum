@@ -1296,14 +1296,31 @@ licensing.
 #+NAME: control-signal
 #+BEGIN_SRC scheme
   ;; <control-signal>
-  (define make-control
-    (case-lambda
-      [(x)
-       (if (number? x)
-           (make-control id x)
-           (make-control x 0.0))]
-      [(f x)
-       (values (~< x) (λ args (set! x (apply f args))))]))
+  (define (make-control x)
+    (let ([b (box x)])
+      (values (~< (unbox b)) b)))
+
+  (define-syntax (define-control stx)
+    (define construct-name
+      (lambda (template-identifier . args)
+        (datum->syntax
+         template-identifier
+         (string->symbol
+          (apply string-append
+                 (map (lambda (x)
+                        (if (string? x)
+                            x
+                            (symbol->string (syntax->datum x))))
+                      args))))))
+    (syntax-case stx ()
+      [(_ name initial-value)
+       (with-syntax ([s (construct-name #'name #'name '~)]
+                     [ref (construct-name #'name #'name '-ref)]
+                     [set (construct-name #'name #'name '-set!)])
+         #'(begin
+             (define-values (s name) (make-control initial-value))
+             (define (ref) (unbox name))
+             (define (set value) (set-box! name value))))]))
   ;; </control-signal>
 #+END_SRC
 
@@ -1953,8 +1970,9 @@ licensing.
 
 #+NAME: control.ss
 #+BEGIN_SRC scheme :tangle ad-libitum/control.ss :noweb yes :mkdirp yes :paddle no
+  #!chezscheme
   (library (ad-libitum control (1))
-    (export make-control window)
+    (export make-control define-control window)
     (import (chezscheme)
             (srfi s42 eager-comprehensions)
             (ad-libitum common)
