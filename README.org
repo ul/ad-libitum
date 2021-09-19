@@ -1,5 +1,5 @@
 #+TITLE: Ad Libitum
-#+SETUPFILE: org-html-themes/setup/theme-readtheorg.setup
+#+SETUPFILE: org-html-themes/org/theme-readtheorg.setup
 
   The Scheme Live Coding Environment. Built on Chez Scheme and libsoundio.
 
@@ -16,42 +16,31 @@
 
 ** Chez Scheme
 
-   First, you need Chez Scheme itself. Ad Libitum requires threaded version and
-   you probably don't want to install x11 dependency, that's why better to do it
-   from source, not brew.
+First, you need Chez Scheme itself. Ad Libitum requires threaded version and
+you probably don't want to install x11 dependency, that's why better to do it
+from source, not brew. Also we are using Racket's fork to be able to build on M1
+while https://github.com/cisco/ChezScheme/issues/544 is in progress.
 
 *** Clone Chez Scheme repository
 
 #+BEGIN_SRC shell
-git clone https://github.com/cisco/ChezScheme.git
+git clone https://github.com/racket/ChezScheme.git
 cd ChezScheme
-#+END_SRC
-
-*** Exclude X11 from dependencies
-
-   Open =c/version.h= file in your favorite text editor and comment out line
-   containing =libX11.dylib= reference:
-
-#+BEGIN_SRC diff
-modified   c/version.h
-@@ -280,7 +280,7 @@ typedef char *memcpy_t;
- typedef int tputsputcchar;
- #define LOCKF
- #define DIRMARKERP(c) ((c) == '/')
--#define LIBX11 "/usr/X11R6/lib/libX11.dylib"
-+/* #define LIBX11 "/usr/X11R6/lib/libX11.dylib" */
- #define _DARWIN_USE_64_BIT_INODE
- #define SECATIME(sb) (sb).st_atimespec.tv_sec
- #define SECCTIME(sb) (sb).st_ctimespec.tv_sec
 #+END_SRC
 
 *** Configure, build and install Chez Scheme
 
 #+BEGIN_SRC shell
-./configure --threads
+./configure --disable-x11
 make
 sudo make install
 #+END_SRC
+
+The first command may suggest you to build boot image first, e.g. on M1:
+#+begin_src shell
+./configure --pb
+make tarm64osx.bootquick
+#+end_src
 
 *** Test it's working
 
@@ -60,8 +49,8 @@ sudo make install
 #+BEGIN_SRC shell
 ~/ChezScheme> scheme
 
-Chez Scheme Version 9.5.1
-Copyright 1984-2017 Cisco Systems, Inc.
+Chez Scheme Version 9.5.5.5
+Copyright 1984-2020 Cisco Systems, Inc.
 
 > (+ 1 2 3)
 6
@@ -89,13 +78,15 @@ brew install portmidi
 
 *** Install
 
-   You need to clone repository and build several helping libraries.
+   You need to clone repository and build several helping libraries. You may
+   need to set ~SCHEMEH~ environment variable to your platform-specific
+   location (default value is ~/usr/local/lib/csv9.5.5.5/tarm64osx/~).
 
 #+BEGIN_SRC shell
 git clone https://github.com/ul/ad-libitum.git
 cd ad-libitum
 git submodule update --init --recursive --remote
-make
+make libs
 #+END_SRC
 
 *** Test
@@ -416,6 +407,9 @@ licensing.
 #+END_SRC
 
 ** Remote REPL
+
+NB. REPL is currently disabled as sockets library doesn't work on M1.
+To enable it back uncomment ~(repl:start-repl-server)~ in ~ad-libitum-init~.
 
    We need own repl server because music doesn't work in geiser repl for
    somewhat reason. The most universal solution would be to have REPL over
@@ -1707,7 +1701,7 @@ licensing.
   (sound:start)
   (scheduler:init now)
   (scheduler:start)
-  (repl:start-repl-server)
+  ;; (repl:start-repl-server)
   ;; </ad-libitum-init>
 #+END_SRC
 
@@ -1818,7 +1812,7 @@ licensing.
     (alias *channels* sound:*channels*)
 
     (define (voodoo)
-      (collect-maximum-generation 254)
+      (collect-maximum-generation 6)
       (collect-generation-radix 2)
       ;; (eval-when (compile) (optimize-level 3))
       (optimize-level 2)

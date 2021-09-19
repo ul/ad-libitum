@@ -1,4 +1,4 @@
-SCHEMEH=/usr/local/lib/csv9.5.1/ta6osx
+SCHEMEH=/usr/local/lib/csv9.5.5.5/tarm64osx/
 
 .PHONY: tangle
 

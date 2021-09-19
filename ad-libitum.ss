@@ -52,7 +52,7 @@
 (sound:start)
 (scheduler:init now)
 (scheduler:start)
-(repl:start-repl-server)
+;; (repl:start-repl-server)
 ;; </ad-libitum-init>
 
 ;; <tuner-constants>

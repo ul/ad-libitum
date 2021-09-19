@@ -15,7 +15,7 @@
   (alias *channels* sound:*channels*)
 
   (define (voodoo)
-    (collect-maximum-generation 254)
+    (collect-maximum-generation 6)
     (collect-generation-radix 2)
     ;; (eval-when (compile) (optimize-level 3))
     (optimize-level 2)

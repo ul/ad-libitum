@@ -3,23 +3,30 @@
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
+<!-- 2021-09-20 Mon 09:10 -->
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Ad Libitum</title>
-<!-- 2017-11-01 Wed 09:04 -->
-<meta  http-equiv="Content-Type" content="text/html;charset=utf-8" />
-<meta  name="generator" content="Org-mode" />
-<meta  name="author" content="Ruslan Prakapchuk" />
+<meta name="generator" content="Org mode" />
+<meta name="author" content="Ruslan Prakapchuk" />
 <style type="text/css">
  <!--/*--><![CDATA[/*><!--*/
-  .title  { text-align: center; }
+  .title  { text-align: center;
+             margin-bottom: .2em; }
+  .subtitle { text-align: center;
+              font-size: medium;
+              font-weight: bold;
+              margin-top:0; }
   .todo   { font-family: monospace; color: red; }
-  .done   { color: green; }
+  .done   { font-family: monospace; color: green; }
+  .priority { font-family: monospace; color: orange; }
   .tag    { background-color: #eee; font-family: monospace;
             padding: 2px; font-size: 80%; font-weight: normal; }
   .timestamp { color: #bebebe; }
   .timestamp-kwd { color: #5f9ea0; }
-  .right  { margin-left: auto; margin-right: 0px;  text-align: right; }
-  .left   { margin-left: 0px;  margin-right: auto; text-align: left; }
-  .center { margin-left: auto; margin-right: auto; text-align: center; }
+  .org-right  { margin-left: auto; margin-right: 0px;  text-align: right; }
+  .org-left   { margin-left: 0px;  margin-right: auto; text-align: left; }
+  .org-center { margin-left: auto; margin-right: auto; text-align: center; }
   .underline { text-decoration: underline; }
   #postamble p, #preamble p { font-size: 90%; margin: .2em; }
   p.verse { margin-left: 3%; }
@@ -33,7 +40,7 @@
   }
   pre.src {
     position: relative;
-    overflow: visible;
+    overflow: auto;
     padding-top: 1.2em;
   }
   pre.src:before {
@@ -45,31 +52,128 @@
     padding: 3px;
     border: 1px solid black;
   }
-  pre.src:hover:before { display: inline;}
-  pre.src-sh:before    { content: 'sh'; }
-  pre.src-bash:before  { content: 'sh'; }
+  pre.src:hover:before { display: inline; margin-top: 14px;}
+  /* Languages per Org manual */
+  pre.src-asymptote:before { content: 'Asymptote'; }
+  pre.src-awk:before { content: 'Awk'; }
+  pre.src-C:before { content: 'C'; }
+  /* pre.src-C++ doesn't work in CSS */
+  pre.src-clojure:before { content: 'Clojure'; }
+  pre.src-css:before { content: 'CSS'; }
+  pre.src-D:before { content: 'D'; }
+  pre.src-ditaa:before { content: 'ditaa'; }
+  pre.src-dot:before { content: 'Graphviz'; }
+  pre.src-calc:before { content: 'Emacs Calc'; }
   pre.src-emacs-lisp:before { content: 'Emacs Lisp'; }
-  pre.src-R:before     { content: 'R'; }
-  pre.src-perl:before  { content: 'Perl'; }
-  pre.src-java:before  { content: 'Java'; }
-  pre.src-sql:before   { content: 'SQL'; }
+  pre.src-fortran:before { content: 'Fortran'; }
+  pre.src-gnuplot:before { content: 'gnuplot'; }
+  pre.src-haskell:before { content: 'Haskell'; }
+  pre.src-hledger:before { content: 'hledger'; }
+  pre.src-java:before { content: 'Java'; }
+  pre.src-js:before { content: 'Javascript'; }
+  pre.src-latex:before { content: 'LaTeX'; }
+  pre.src-ledger:before { content: 'Ledger'; }
+  pre.src-lisp:before { content: 'Lisp'; }
+  pre.src-lilypond:before { content: 'Lilypond'; }
+  pre.src-lua:before { content: 'Lua'; }
+  pre.src-matlab:before { content: 'MATLAB'; }
+  pre.src-mscgen:before { content: 'Mscgen'; }
+  pre.src-ocaml:before { content: 'Objective Caml'; }
+  pre.src-octave:before { content: 'Octave'; }
+  pre.src-org:before { content: 'Org mode'; }
+  pre.src-oz:before { content: 'OZ'; }
+  pre.src-plantuml:before { content: 'Plantuml'; }
+  pre.src-processing:before { content: 'Processing.js'; }
+  pre.src-python:before { content: 'Python'; }
+  pre.src-R:before { content: 'R'; }
+  pre.src-ruby:before { content: 'Ruby'; }
+  pre.src-sass:before { content: 'Sass'; }
+  pre.src-scheme:before { content: 'Scheme'; }
+  pre.src-screen:before { content: 'Gnu Screen'; }
+  pre.src-sed:before { content: 'Sed'; }
+  pre.src-sh:before { content: 'shell'; }
+  pre.src-sql:before { content: 'SQL'; }
+  pre.src-sqlite:before { content: 'SQLite'; }
+  /* additional languages in org.el's org-babel-load-languages alist */
+  pre.src-forth:before { content: 'Forth'; }
+  pre.src-io:before { content: 'IO'; }
+  pre.src-J:before { content: 'J'; }
+  pre.src-makefile:before { content: 'Makefile'; }
+  pre.src-maxima:before { content: 'Maxima'; }
+  pre.src-perl:before { content: 'Perl'; }
+  pre.src-picolisp:before { content: 'Pico Lisp'; }
+  pre.src-scala:before { content: 'Scala'; }
+  pre.src-shell:before { content: 'Shell Script'; }
+  pre.src-ebnf2ps:before { content: 'ebfn2ps'; }
+  /* additional language identifiers per "defun org-babel-execute"
+       in ob-*.el */
+  pre.src-cpp:before  { content: 'C++'; }
+  pre.src-abc:before  { content: 'ABC'; }
+  pre.src-coq:before  { content: 'Coq'; }
+  pre.src-groovy:before  { content: 'Groovy'; }
+  /* additional language identifiers from org-babel-shell-names in
+     ob-shell.el: ob-shell is the only babel language using a lambda to put
+     the execution function name together. */
+  pre.src-bash:before  { content: 'bash'; }
+  pre.src-csh:before  { content: 'csh'; }
+  pre.src-ash:before  { content: 'ash'; }
+  pre.src-dash:before  { content: 'dash'; }
+  pre.src-ksh:before  { content: 'ksh'; }
+  pre.src-mksh:before  { content: 'mksh'; }
+  pre.src-posh:before  { content: 'posh'; }
+  /* Additional Emacs modes also supported by the LaTeX listings package */
+  pre.src-ada:before { content: 'Ada'; }
+  pre.src-asm:before { content: 'Assembler'; }
+  pre.src-caml:before { content: 'Caml'; }
+  pre.src-delphi:before { content: 'Delphi'; }
+  pre.src-html:before { content: 'HTML'; }
+  pre.src-idl:before { content: 'IDL'; }
+  pre.src-mercury:before { content: 'Mercury'; }
+  pre.src-metapost:before { content: 'MetaPost'; }
+  pre.src-modula-2:before { content: 'Modula-2'; }
+  pre.src-pascal:before { content: 'Pascal'; }
+  pre.src-ps:before { content: 'PostScript'; }
+  pre.src-prolog:before { content: 'Prolog'; }
+  pre.src-simula:before { content: 'Simula'; }
+  pre.src-tcl:before { content: 'tcl'; }
+  pre.src-tex:before { content: 'TeX'; }
+  pre.src-plain-tex:before { content: 'Plain TeX'; }
+  pre.src-verilog:before { content: 'Verilog'; }
+  pre.src-vhdl:before { content: 'VHDL'; }
+  pre.src-xml:before { content: 'XML'; }
+  pre.src-nxml:before { content: 'XML'; }
+  /* add a generic configuration mode; LaTeX export needs an additional
+     (add-to-list 'org-latex-listings-langs '(conf " ")) in .emacs */
+  pre.src-conf:before { content: 'Configuration File'; }
 
   table { border-collapse:collapse; }
   caption.t-above { caption-side: top; }
   caption.t-bottom { caption-side: bottom; }
   td, th { vertical-align:top;  }
-  th.right  { text-align: center;  }
-  th.left   { text-align: center;   }
-  th.center { text-align: center; }
-  td.right  { text-align: right;  }
-  td.left   { text-align: left;   }
-  td.center { text-align: center; }
+  th.org-right  { text-align: center;  }
+  th.org-left   { text-align: center;   }
+  th.org-center { text-align: center; }
+  td.org-right  { text-align: right;  }
+  td.org-left   { text-align: left;   }
+  td.org-center { text-align: center; }
   dt { font-weight: bold; }
-  .footpara:nth-child(2) { display: inline; }
-  .footpara { display: block; }
+  .footpara { display: inline; }
   .footdef  { margin-bottom: 1em; }
   .figure { padding: 1em; }
   .figure p { text-align: center; }
+  .equation-container {
+    display: table;
+    text-align: center;
+    width: 100%;
+  }
+  .equation {
+    vertical-align: middle;
+  }
+  .equation-label {
+    display: table-cell;
+    text-align: right;
+    vertical-align: middle;
+  }
   .inlinetask {
     padding: 10px;
     border: 2px solid gray;
@@ -86,59 +190,36 @@
     { font-size: 10px; font-weight: bold; white-space: nowrap; }
   .org-info-js_search-highlight
     { background-color: #ffff00; color: #000000; font-weight: bold; }
+  .org-svg { width: 90%; }
   /*]]>*/-->
 </style>
-<link rel="stylesheet" type="text/css" href="http://www.pirilampo.org/styles/readtheorg/css/htmlize.css"/>
-<link rel="stylesheet" type="text/css" href="http://www.pirilampo.org/styles/readtheorg/css/readtheorg.css"/>
+<link rel="stylesheet" type="text/css" href="https://fniessen.github.io/org-html-themes/src/readtheorg_theme/css/htmlize.css"/>
+<link rel="stylesheet" type="text/css" href="https://fniessen.github.io/org-html-themes/src/readtheorg_theme/css/readtheorg.css"/>
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
 <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
-<script type="text/javascript" src="http://www.pirilampo.org/styles/lib/js/jquery.stickytableheaders.min.js"></script>
-<script type="text/javascript" src="http://www.pirilampo.org/styles/readtheorg/js/readtheorg.js"></script>
+<script type="text/javascript" src="https://fniessen.github.io/org-html-themes/src/lib/js/jquery.stickytableheaders.min.js"></script>
+<script type="text/javascript" src="https://fniessen.github.io/org-html-themes/src/readtheorg_theme/js/readtheorg.js"></script>
 <script type="text/javascript">
-/*
-@licstart  The following is the entire license notice for the
-JavaScript code in this tag.
-
-Copyright (C) 2012-2013 Free Software Foundation, Inc.
-
-The JavaScript code in this tag is free software: you can
-redistribute it and/or modify it under the terms of the GNU
-General Public License (GNU GPL) as published by the Free Software
-Foundation, either version 3 of the License, or (at your option)
-any later version.  The code is distributed WITHOUT ANY WARRANTY;
-without even the implied warranty of MERCHANTABILITY or FITNESS
-FOR A PARTICULAR PURPOSE.  See the GNU GPL for more details.
-
-As additional permission under GNU GPL version 3 section 7, you
-may distribute non-source (e.g., minimized or compacted) forms of
-that code without the copy of the GNU GPL normally required by
-section 4, provided you include this license notice and a URL
-through which recipients can access the Corresponding Source.
-
-
-@licend  The above is the entire license notice
-for the JavaScript code in this tag.
-*/
+// @license magnet:?xt=urn:btih:e95b018ef3580986a04669f1b5879592219e2a7a&dn=public-domain.txt Public Domain
 <!--/*--><![CDATA[/*><!--*/
- function CodeHighlightOn(elem, id)
- {
-   var target = document.getElementById(id);
-   if(null != target) {
-     elem.cacheClassElem = elem.className;
-     elem.cacheClassTarget = target.className;
-     target.className = "code-highlighted";
-     elem.className   = "code-highlighted";
-   }
- }
- function CodeHighlightOff(elem, id)
- {
-   var target = document.getElementById(id);
-   if(elem.cacheClassElem)
-     elem.className = elem.cacheClassElem;
-   if(elem.cacheClassTarget)
-     target.className = elem.cacheClassTarget;
- }
-/*]]>*///-->
+     function CodeHighlightOn(elem, id)
+     {
+       var target = document.getElementById(id);
+       if(null != target) {
+         elem.classList.add("code-highlighted");
+         target.classList.add("code-highlighted");
+       }
+     }
+     function CodeHighlightOff(elem, id)
+     {
+       var target = document.getElementById(id);
+       if(null != target) {
+         elem.classList.remove("code-highlighted");
+         target.classList.remove("code-highlighted");
+       }
+     }
+    /*]]>*///-->
+// @license-end
 </script>
 </head>
 <body>
@@ -148,75 +229,74 @@ for the JavaScript code in this tag.
 <h2>Table of Contents</h2>
 <div id="text-table-of-contents">
 <ul>
-<li><a href="#sec-1">1. Getting Started</a>
+<li><a href="#org60b23b7">1. Getting Started</a>
 <ul>
-<li><a href="#sec-1-1">1.1. Chez Scheme</a>
+<li><a href="#orgae7fbf2">1.1. Chez Scheme</a>
 <ul>
-<li><a href="#sec-1-1-1">1.1.1. Clone Chez Scheme repository</a></li>
-<li><a href="#sec-1-1-2">1.1.2. Exclude X11 from dependencies</a></li>
-<li><a href="#sec-1-1-3">1.1.3. Configure, build and install Chez Scheme</a></li>
-<li><a href="#sec-1-1-4">1.1.4. Test it's working</a></li>
+<li><a href="#org832873b">1.1.1. Clone Chez Scheme repository</a></li>
+<li><a href="#orgef9f628">1.1.2. Configure, build and install Chez Scheme</a></li>
+<li><a href="#orgf5c310f">1.1.3. Test it's working</a></li>
 </ul>
 </li>
-<li><a href="#sec-1-2">1.2. libsoundio</a></li>
-<li><a href="#sec-1-3">1.3. PortMidi</a></li>
-<li><a href="#sec-1-4">1.4. Ad Libitum itself</a>
+<li><a href="#orga38fa2c">1.2. libsoundio</a></li>
+<li><a href="#org4470dca">1.3. PortMidi</a></li>
+<li><a href="#org4b5d8e8">1.4. Ad Libitum itself</a>
 <ul>
-<li><a href="#sec-1-4-1">1.4.1. Install</a></li>
-<li><a href="#sec-1-4-2">1.4.2. Test</a></li>
-<li><a href="#sec-1-4-3">1.4.3. Play</a></li>
-</ul>
-</li>
-</ul>
-</li>
-<li><a href="#sec-2">2. Contribution</a></li>
-<li><a href="#sec-3">3. Kernel</a>
-<ul>
-<li><a href="#sec-3-1">3.1. Sound I/O</a></li>
-<li><a href="#sec-3-2">3.2. Scheduler</a>
-<ul>
-<li><a href="#sec-3-2-1">3.2.1. Pairing Heap</a></li>
-</ul>
-</li>
-<li><a href="#sec-3-3">3.3. Remote REPL</a>
-<ul>
-<li><a href="#sec-3-3-1">3.3.1. <span class="todo TODO">TODO</span> Ensure that protocol is TCP</a></li>
-<li><a href="#sec-3-3-2">3.3.2. Blocking vs Async sockets</a></li>
-<li><a href="#sec-3-3-3">3.3.3. Open socket</a></li>
-<li><a href="#sec-3-3-4">3.3.4. Accept connections</a></li>
-<li><a href="#sec-3-3-5">3.3.5. Spawn remote REPL</a></li>
-<li><a href="#sec-3-3-6">3.3.6. <span class="todo TODO">TODO</span> Stop loop and close socket on disconnect</a></li>
-<li><a href="#sec-3-3-7">3.3.7. Start REPL server</a></li>
+<li><a href="#orgd5db719">1.4.1. Install</a></li>
+<li><a href="#orgb9f4620">1.4.2. Test</a></li>
+<li><a href="#orgad169ed">1.4.3. Play</a></li>
 </ul>
 </li>
 </ul>
 </li>
-<li><a href="#sec-4">4. Core</a>
+<li><a href="#orgeaf5b92">2. Contribution</a></li>
+<li><a href="#org59a8a4c">3. Kernel</a>
 <ul>
-<li><a href="#sec-4-1">4.1. Math</a></li>
-<li><a href="#sec-4-2">4.2. Generators</a></li>
-<li><a href="#sec-4-3">4.3. Envelopes</a>
+<li><a href="#orgb79f8fd">3.1. Sound I/O</a></li>
+<li><a href="#orgd311c09">3.2. Scheduler</a>
 <ul>
-<li><a href="#sec-4-3-1">4.3.1. ADSR</a></li>
-<li><a href="#sec-4-3-2">4.3.2. Impulse</a></li>
-<li><a href="#sec-4-3-3">4.3.3. Transition</a></li>
+<li><a href="#orgd112e7d">3.2.1. Pairing Heap</a></li>
 </ul>
 </li>
-<li><a href="#sec-4-4">4.4. Metronome</a></li>
-<li><a href="#sec-4-5">4.5. Control signals</a></li>
-</ul>
-</li>
-<li><a href="#sec-5">5. Std</a>
+<li><a href="#org5d93302">3.3. Remote REPL</a>
 <ul>
-<li><a href="#sec-5-1">5.1. FFT</a></li>
-<li><a href="#sec-5-2">5.2. Filters</a></li>
-<li><a href="#sec-5-3">5.3. Instruments</a></li>
-<li><a href="#sec-5-4">5.4. Scales</a></li>
-<li><a href="#sec-5-5">5.5. Rhythm</a></li>
-<li><a href="#sec-5-6">5.6. MIDI</a></li>
+<li><a href="#org6c1f1b3">3.3.1. <span class="todo TODO">TODO</span> Ensure that protocol is TCP</a></li>
+<li><a href="#org481e5de">3.3.2. Blocking vs Async sockets</a></li>
+<li><a href="#org4b9a40d">3.3.3. Open socket</a></li>
+<li><a href="#org3582e09">3.3.4. Accept connections</a></li>
+<li><a href="#org934036f">3.3.5. Spawn remote REPL</a></li>
+<li><a href="#org95ee76d">3.3.6. <span class="todo TODO">TODO</span> Stop loop and close socket on disconnect</a></li>
+<li><a href="#orga58e6d9">3.3.7. Start REPL server</a></li>
 </ul>
 </li>
-<li><a href="#sec-6">6. Misc</a></li>
+</ul>
+</li>
+<li><a href="#orge80390d">4. Core</a>
+<ul>
+<li><a href="#orga3cec52">4.1. Math</a></li>
+<li><a href="#org7ec6f54">4.2. Generators</a></li>
+<li><a href="#org131663f">4.3. Envelopes</a>
+<ul>
+<li><a href="#org5684e44">4.3.1. ADSR</a></li>
+<li><a href="#org1517c56">4.3.2. Impulse</a></li>
+<li><a href="#org9c0711a">4.3.3. Transition</a></li>
+</ul>
+</li>
+<li><a href="#org006427d">4.4. Metronome</a></li>
+<li><a href="#orge56cf93">4.5. Control signals</a></li>
+</ul>
+</li>
+<li><a href="#orgd4e35bd">5. Std</a>
+<ul>
+<li><a href="#orgac328ce">5.1. FFT</a></li>
+<li><a href="#orgecc153e">5.2. Filters</a></li>
+<li><a href="#orgbac777e">5.3. Instruments</a></li>
+<li><a href="#orgb22d8bc">5.4. Scales</a></li>
+<li><a href="#orgf4ede71">5.5. Rhythm</a></li>
+<li><a href="#org5e66f64">5.6. MIDI</a></li>
+</ul>
+</li>
+<li><a href="#org499e186">6. Misc</a></li>
 </ul>
 </div>
 </div>
@@ -228,8 +308,8 @@ The Scheme Live Coding Environment. Built on Chez Scheme and libsoundio.
 You might want to read this file here <a href="http://ul.mantike.pro/ad-libitum/README.html">http://ul.mantike.pro/ad-libitum/README.html</a>
 </p>
 
-<div id="outline-container-sec-1" class="outline-2">
-<h2 id="sec-1"><span class="section-number-2">1</span> Getting Started</h2>
+<div id="outline-container-org60b23b7" class="outline-2">
+<h2 id="org60b23b7"><span class="section-number-2">1</span> Getting Started</h2>
 <div class="outline-text-2" id="text-1">
 <p>
 This guide describes initial setup required to produce your first piece of
@@ -241,79 +321,61 @@ moderately hard (but possible) to Windows.
 </p>
 </div>
 
-<div id="outline-container-sec-1-1" class="outline-3">
-<h3 id="sec-1-1"><span class="section-number-3">1.1</span> Chez Scheme</h3>
+<div id="outline-container-orgae7fbf2" class="outline-3">
+<h3 id="orgae7fbf2"><span class="section-number-3">1.1</span> Chez Scheme</h3>
 <div class="outline-text-3" id="text-1-1">
 <p>
 First, you need Chez Scheme itself. Ad Libitum requires threaded version and
 you probably don't want to install x11 dependency, that's why better to do it
-from source, not brew.
+from source, not brew. Also we are using Racket's fork to be able to build on M1
+while <a href="https://github.com/cisco/ChezScheme/issues/544">https://github.com/cisco/ChezScheme/issues/544</a> is in progress.
 </p>
 </div>
 
-<div id="outline-container-sec-1-1-1" class="outline-4">
-<h4 id="sec-1-1-1"><span class="section-number-4">1.1.1</span> Clone Chez Scheme repository</h4>
+<div id="outline-container-org832873b" class="outline-4">
+<h4 id="org832873b"><span class="section-number-4">1.1.1</span> Clone Chez Scheme repository</h4>
 <div class="outline-text-4" id="text-1-1-1">
 <div class="org-src-container">
-
-<pre class="src src-shell">git clone https://github.com/cisco/ChezScheme.git
-cd ChezScheme
+<pre class="src src-shell">git clone https://github.com/racket/ChezScheme.git
+<span style="font-weight: bold;">cd</span> ChezScheme
 </pre>
 </div>
 </div>
 </div>
 
-<div id="outline-container-sec-1-1-2" class="outline-4">
-<h4 id="sec-1-1-2"><span class="section-number-4">1.1.2</span> Exclude X11 from dependencies</h4>
+<div id="outline-container-orgef9f628" class="outline-4">
+<h4 id="orgef9f628"><span class="section-number-4">1.1.2</span> Configure, build and install Chez Scheme</h4>
 <div class="outline-text-4" id="text-1-1-2">
-<p>
-Open <code>c/version.h</code> file in your favorite text editor and comment out line
-containing <code>libX11.dylib</code> reference:
-</p>
-
 <div class="org-src-container">
-
-<pre class="src src-diff">modified   c/version.h
-<span style="font-weight: bold;">@@ -280,7 +280,7 @@</span><span style="font-weight: bold;"> typedef char *memcpy_t;</span>
- typedef int tputsputcchar;
- #define LOCKF
- #define DIRMARKERP(c) ((c) == '/')
--#define LIBX11 "/usr/X11R6/lib/libX11.dylib"
-+/* #define LIBX11 "/usr/X11R6/lib/libX11.dylib" */
- #define _DARWIN_USE_64_BIT_INODE
- #define SECATIME(sb) (sb).st_atimespec.tv_sec
- #define SECCTIME(sb) (sb).st_ctimespec.tv_sec
-</pre>
-</div>
-</div>
-</div>
-
-<div id="outline-container-sec-1-1-3" class="outline-4">
-<h4 id="sec-1-1-3"><span class="section-number-4">1.1.3</span> Configure, build and install Chez Scheme</h4>
-<div class="outline-text-4" id="text-1-1-3">
-<div class="org-src-container">
-
-<pre class="src src-shell">./configure --threads
+<pre class="src src-shell">./configure --disable-x11
 make
 sudo make install
 </pre>
 </div>
+
+<p>
+The first command may suggest you to build boot image first, e.g. on M1:
+</p>
+<div class="org-src-container">
+<pre class="src src-shell">./configure --pb
+make tarm64osx.bootquick
+</pre>
+</div>
 </div>
 </div>
 
-<div id="outline-container-sec-1-1-4" class="outline-4">
-<h4 id="sec-1-1-4"><span class="section-number-4">1.1.4</span> Test it's working</h4>
-<div class="outline-text-4" id="text-1-1-4">
+<div id="outline-container-orgf5c310f" class="outline-4">
+<h4 id="orgf5c310f"><span class="section-number-4">1.1.3</span> Test it's working</h4>
+<div class="outline-text-4" id="text-1-1-3">
 <p>
 Run <code>scheme</code> from terminal and try to evaluate simple expression:
 </p>
 
 <div class="org-src-container">
-
 <pre class="src src-shell">~/ChezScheme&gt; scheme
 
-Chez Scheme Version 9.5.1
-Copyright 1984-2017 Cisco Systems, Inc.
+Chez Scheme Version 9.5.5.5
+Copyright 1984-2020 Cisco Systems, Inc.
 
 &gt; (+ 1 2 3)
 6
@@ -324,8 +386,8 @@ Copyright 1984-2017 Cisco Systems, Inc.
 </div>
 </div>
 
-<div id="outline-container-sec-1-2" class="outline-3">
-<h3 id="sec-1-2"><span class="section-number-3">1.2</span> libsoundio</h3>
+<div id="outline-container-orga38fa2c" class="outline-3">
+<h3 id="orga38fa2c"><span class="section-number-3">1.2</span> libsoundio</h3>
 <div class="outline-text-3" id="text-1-2">
 <p>
 This is library used by Ad Libitum for communication with your computer's
@@ -333,51 +395,51 @@ sound system.
 </p>
 
 <div class="org-src-container">
-
 <pre class="src src-shell">brew install libsoundio
 </pre>
 </div>
 </div>
 </div>
 
-<div id="outline-container-sec-1-3" class="outline-3">
-<h3 id="sec-1-3"><span class="section-number-3">1.3</span> PortMidi</h3>
+<div id="outline-container-org4470dca" class="outline-3">
+<h3 id="org4470dca"><span class="section-number-3">1.3</span> PortMidi</h3>
 <div class="outline-text-3" id="text-1-3">
 <p>
 You need it if you plan to use MIDI controller.
 </p>
 
 <div class="org-src-container">
-
 <pre class="src src-shell">brew install portmidi
 </pre>
 </div>
 </div>
 </div>
 
-<div id="outline-container-sec-1-4" class="outline-3">
-<h3 id="sec-1-4"><span class="section-number-3">1.4</span> Ad Libitum itself</h3>
+<div id="outline-container-org4b5d8e8" class="outline-3">
+<h3 id="org4b5d8e8"><span class="section-number-3">1.4</span> Ad Libitum itself</h3>
 <div class="outline-text-3" id="text-1-4">
-</div><div id="outline-container-sec-1-4-1" class="outline-4">
-<h4 id="sec-1-4-1"><span class="section-number-4">1.4.1</span> Install</h4>
+</div>
+<div id="outline-container-orgd5db719" class="outline-4">
+<h4 id="orgd5db719"><span class="section-number-4">1.4.1</span> Install</h4>
 <div class="outline-text-4" id="text-1-4-1">
 <p>
-You need to clone repository and build several helping libraries.
+You need to clone repository and build several helping libraries. You may
+need to set <code>SCHEMEH</code> environment variable to your platform-specific
+location (default value is <code>/usr/local/lib/csv9.5.5.5/tarm64osx/</code>).
 </p>
 
 <div class="org-src-container">
-
 <pre class="src src-shell">git clone https://github.com/ul/ad-libitum.git
-cd ad-libitum
+<span style="font-weight: bold;">cd</span> ad-libitum
 git submodule update --init --recursive --remote
-make
+make libs
 </pre>
 </div>
 </div>
 </div>
 
-<div id="outline-container-sec-1-4-2" class="outline-4">
-<h4 id="sec-1-4-2"><span class="section-number-4">1.4.2</span> Test</h4>
+<div id="outline-container-orgb9f4620" class="outline-4">
+<h4 id="orgb9f4620"><span class="section-number-4">1.4.2</span> Test</h4>
 <div class="outline-text-4" id="text-1-4-2">
 <p>
 Fire up <code>scheme ad-libitum.ss</code> and play 440Hz tuner (beware of loud sound!
@@ -386,7 +448,6 @@ livecoded your first Ad Libitum piece!
 </p>
 
 <div class="org-src-container">
-
 <pre class="src src-scheme">~/ad-libitum&gt; scheme ad-libitum.ss
 
 Chez Scheme Version 9.5.1
@@ -399,15 +460,14 @@ Copyright 1984-2017 Cisco Systems, Inc.
 </div>
 </div>
 
-<div id="outline-container-sec-1-4-3" class="outline-4">
-<h4 id="sec-1-4-3"><span class="section-number-4">1.4.3</span> Play</h4>
+<div id="outline-container-orgad169ed" class="outline-4">
+<h4 id="orgad169ed"><span class="section-number-4">1.4.3</span> Play</h4>
 <div class="outline-text-4" id="text-1-4-3">
 <p>
 Run &amp; <code>geiser-connect</code>
 </p>
 
 <div class="org-src-container">
-
 <pre class="src src-shell">scheme --optimize-level 2 violet.ss
 </pre>
 </div>
@@ -415,8 +475,8 @@ Run &amp; <code>geiser-connect</code>
 </div>
 </div>
 </div>
-<div id="outline-container-sec-2" class="outline-2">
-<h2 id="sec-2"><span class="section-number-2">2</span> Contribution</h2>
+<div id="outline-container-orgeaf5b92" class="outline-2">
+<h2 id="orgeaf5b92"><span class="section-number-2">2</span> Contribution</h2>
 <div class="outline-text-2" id="text-2">
 <p>
 Contribution is more than welcome and highly appreciated! Any small or non-code
@@ -426,11 +486,12 @@ licensing.
 </div>
 </div>
 
-<div id="outline-container-sec-3" class="outline-2">
-<h2 id="sec-3"><span class="section-number-2">3</span> Kernel</h2>
+<div id="outline-container-org59a8a4c" class="outline-2">
+<h2 id="org59a8a4c"><span class="section-number-2">3</span> Kernel</h2>
 <div class="outline-text-2" id="text-3">
-</div><div id="outline-container-sec-3-1" class="outline-3">
-<h3 id="sec-3-1"><span class="section-number-3">3.1</span> Sound I/O</h3>
+</div>
+<div id="outline-container-orgb79f8fd" class="outline-3">
+<h3 id="orgb79f8fd"><span class="section-number-3">3.1</span> Sound I/O</h3>
 <div class="outline-text-3" id="text-3-1">
 <p>
 Ad Libitum relies on <code>chez-soundio</code> bindings and high-level wrapper. We are
@@ -452,8 +513,7 @@ it from <code>now</code> function which is passed to scheduler later.
 </p>
 
 <div class="org-src-container">
-
-<pre class="src src-scheme" id="sound"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;sound&gt;</span>
+<pre class="src src-scheme" id="org034ab78"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;sound&gt;</span>
 (<span style="font-weight: bold;">define</span> <span style="font-weight: bold;">*time*</span> 0.0)
 (<span style="font-weight: bold;">define</span> (<span style="font-weight: bold;">now</span>) *time*)
 
@@ -464,7 +524,7 @@ it from <code>now</code> function which is passed to scheduler later.
 
 (<span style="font-weight: bold;">define</span> (<span style="font-weight: bold;">write-callback</span> time channel)
   (set! *time* time)
-  (guard (_ [else 0.0])
+  (<span style="font-weight: bold;">guard</span> (_ [else 0.0])
     (*dsp* time channel)))
 
 (<span style="font-weight: bold;">define</span> <span style="font-weight: bold;">*sound-out*</span> (soundio:open-default-out-stream write-callback))
@@ -479,8 +539,8 @@ it from <code>now</code> function which is passed to scheduler later.
 </div>
 </div>
 
-<div id="outline-container-sec-3-2" class="outline-3">
-<h3 id="sec-3-2"><span class="section-number-3">3.2</span> Scheduler</h3>
+<div id="outline-container-orgd311c09" class="outline-3">
+<h3 id="orgd311c09"><span class="section-number-3">3.2</span> Scheduler</h3>
 <div class="outline-text-3" id="text-3-2">
 <p>
 Much of music is about time. Before we produce any single sample of wave, we
@@ -502,8 +562,7 @@ execution at some point in future.
 </p>
 
 <div class="org-src-container">
-
-<pre class="src src-scheme" id="scheduler-interface"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;scheduler-interface&gt;</span>
+<pre class="src src-scheme" id="org360784b"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;scheduler-interface&gt;</span>
 <span style="font-weight: bold; text-decoration: underline;">&lt;&lt;now&gt;&gt;</span>
 <span style="font-weight: bold; text-decoration: underline;">&lt;&lt;schedule&gt;&gt;</span>
 <span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;/scheduler-interface&gt;</span>
@@ -516,8 +575,7 @@ have two other basic methods:
 </p>
 
 <div class="org-src-container">
-
-<pre class="src src-scheme" id="scheduler-interface"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;scheduler-interface&gt;</span>
+<pre class="src src-scheme" id="org1a7e54e"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;scheduler-interface&gt;</span>
 <span style="font-weight: bold; text-decoration: underline;">&lt;&lt;start-scheduler&gt;&gt;</span>
 <span style="font-weight: bold; text-decoration: underline;">&lt;&lt;stop-scheduler&gt;&gt;</span>
 <span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;/scheduler-interface&gt;</span>
@@ -545,9 +603,8 @@ clock.
 </p>
 
 <div class="org-src-container">
-
-<pre class="src src-scheme" id="scheduler-record"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;scheduler-record&gt;</span>
-(define-record-type scheduler
+<pre class="src src-scheme" id="org97e9a1d"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;scheduler-record&gt;</span>
+(<span style="font-weight: bold;">define-record-type</span> scheduler
   (fields now (mutable queue) resolution (mutable thread) mutex))
 
 (<span style="font-weight: bold;">define</span> (<span style="font-weight: bold;">simple-scheduler</span> now)
@@ -571,8 +628,7 @@ Let's implement scheduler interface.
 </p>
 
 <div class="org-src-container">
-
-<pre class="src src-scheme" id="now"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;now&gt;</span>
+<pre class="src src-scheme" id="org6048cb2"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;now&gt;</span>
 (<span style="font-weight: bold;">define</span> (<span style="font-weight: bold;">now</span> scheduler) ((scheduler-now scheduler)))
 <span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;/now&gt;</span>
 </pre>
@@ -584,16 +640,15 @@ Event queue accepts events which must have <code>f</code> with its
 </p>
 
 <div class="org-src-container">
-
-<pre class="src src-scheme" id="event-record"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;event-record&gt;</span>
-(define-record-type event
+<pre class="src src-scheme" id="org187760b"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;event-record&gt;</span>
+(<span style="font-weight: bold;">define-record-type</span> event
   (fields time f args))
 <span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;/event-record&gt;</span>
 </pre>
 </div>
 
 <p>
-For <code>queue</code> we need some heap implementation, I'm going to jump into <a href="#sec-3-2-1">3.2.1</a>!
+For <code>queue</code> we need some heap implementation, I'm going to jump into <a href="#orgd112e7d">3.2.1</a>!
 </p>
 
 <p>
@@ -607,10 +662,9 @@ record by itself) to unclutter user code.
 </p>
 
 <div class="org-src-container">
-
-<pre class="src src-scheme" id="schedule"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;schedule&gt;</span>
+<pre class="src src-scheme" id="org17a53cd"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;schedule&gt;</span>
 (<span style="font-weight: bold;">define</span> <span style="font-weight: bold;">schedule</span>
-  (case-lambda
+  (<span style="font-weight: bold;">case-lambda</span>
     [(scheduler event)
      (with-mutex (scheduler-mutex scheduler)
                  (scheduler-queue-set! scheduler (heap/insert event-time event (scheduler-queue scheduler))))]
@@ -636,18 +690,17 @@ entire thread. Thus <code>f</code> execution is secured with <code>guard</code>.
 </p>
 
 <div class="org-src-container">
-
-<pre class="src src-scheme" id="scheduler-process-events"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;scheduler-process-events&gt;</span>
+<pre class="src src-scheme" id="orgefc1c8b"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;scheduler-process-events&gt;</span>
 (<span style="font-weight: bold;">define</span> (<span style="font-weight: bold;">process-events</span> scheduler time)
   (with-mutex
    (scheduler-mutex scheduler)
    (<span style="font-weight: bold;">let</span> <span style="font-weight: bold;">next-event</span> ()
      (<span style="font-weight: bold;">let</span> ([event (heap/find-min (scheduler-queue scheduler))])
-       (when (<span style="font-weight: bold;">and</span> event (&lt;= (event-time event) time))
+       (<span style="font-weight: bold;">when</span> (<span style="font-weight: bold;">and</span> event (&lt;= (event-time event) time))
          (scheduler-queue-set!
           scheduler
           (heap/delete-min event-time (scheduler-queue scheduler)))
-         (guard (_ [else #f])
+         (<span style="font-weight: bold;">guard</span> (_ [else #f])
            (<span style="font-weight: bold;">let</span> ([f (event-f event)])
              (apply (<span style="font-weight: bold;">if</span> (symbol? f)
                         (top-level-value f)
@@ -664,8 +717,7 @@ flag which I used to call "poison pill".
 </p>
 
 <div class="org-src-container">
-
-<pre class="src src-scheme" id="stop-scheduler"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;stop-scheduler&gt;</span>
+<pre class="src src-scheme" id="org508b692"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;stop-scheduler&gt;</span>
 (<span style="font-weight: bold;">define</span> (<span style="font-weight: bold;">stop-scheduler</span> scheduler)
   (scheduler-thread-set! scheduler #f))
 <span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;/stop-scheduler&gt;</span>
@@ -682,8 +734,7 @@ available again).
 </p>
 
 <div class="org-src-container">
-
-<pre class="src src-scheme" id="start-scheduler"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;start-scheduler&gt;</span>
+<pre class="src src-scheme" id="orgee84bde"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;start-scheduler&gt;</span>
 (<span style="font-weight: bold;">define</span> (<span style="font-weight: bold;">start-scheduler</span> scheduler)
   (fork-thread
    (<span style="font-weight: bold;">lambda</span> ()
@@ -692,7 +743,7 @@ available again).
             [expired-horizon (/ 0.5 resolution)]
             [microseconds-to-sleep (exact (floor (/ 1e6 resolution)))])
        (<span style="font-weight: bold;">let</span> <span style="font-weight: bold;">loop</span> ()
-         (when (scheduler-thread scheduler)
+         (<span style="font-weight: bold;">when</span> (scheduler-thread scheduler)
            (process-events scheduler (+ (now scheduler) expired-horizon))
            (usleep 0 microseconds-to-sleep)
            (loop)))))))
@@ -701,8 +752,7 @@ available again).
 </div>
 
 <div class="org-src-container">
-
-<pre class="src src-scheme" id="scheduler"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;scheduler&gt;</span>
+<pre class="src src-scheme" id="org29a49b9"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;scheduler&gt;</span>
 <span style="font-weight: bold; text-decoration: underline;">&lt;&lt;scheduler-record&gt;&gt;</span>
 <span style="font-weight: bold; text-decoration: underline;">&lt;&lt;event-record&gt;&gt;</span>
 <span style="font-weight: bold; text-decoration: underline;">&lt;&lt;scheduler-process-events&gt;&gt;</span>
@@ -716,8 +766,7 @@ We need just a simple default scheduler at hand for Ad Libitum needs:
 </p>
 
 <div class="org-src-container">
-
-<pre class="src src-scheme" id="easy-scheduler">(<span style="font-weight: bold;">define</span> <span style="font-weight: bold;">*scheduler*</span> #f)
+<pre class="src src-scheme" id="org525c2fd">(<span style="font-weight: bold;">define</span> <span style="font-weight: bold;">*scheduler*</span> #f)
 (<span style="font-weight: bold;">define</span> (<span style="font-weight: bold;">init</span> now) (set! *scheduler* (simple-scheduler now)))
 (<span style="font-weight: bold;">define</span> (<span style="font-weight: bold;">start</span>) (start-scheduler *scheduler*))
 (<span style="font-weight: bold;">define</span> (<span style="font-weight: bold;">stop</span>) (stop-scheduler *scheduler*))
@@ -727,8 +776,8 @@ We need just a simple default scheduler at hand for Ad Libitum needs:
 </div>
 </div>
 
-<div id="outline-container-sec-3-2-1" class="outline-4">
-<h4 id="sec-3-2-1"><span class="section-number-4">3.2.1</span> Pairing Heap</h4>
+<div id="outline-container-orgd112e7d" class="outline-4">
+<h4 id="orgd112e7d"><span class="section-number-4">3.2.1</span> Pairing Heap</h4>
 <div class="outline-text-4" id="text-3-2-1">
 <p>
 Wikipedia's type definition for pairing heap structure looks like Scheme's
@@ -736,8 +785,7 @@ pairs (surprise =) ). Using them implementation is quite straightforward.
 </p>
 
 <div class="org-src-container">
-
-<pre class="src src-scheme" id="pairing-heap"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;pairing-heap&gt;</span>
+<pre class="src src-scheme" id="orgf3d5ad9"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;pairing-heap&gt;</span>
 <span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">we do some #f-punning and don't throw on empty heaps</span>
 
 (<span style="font-weight: bold;">define</span> <span style="font-weight: bold;">heap/empty</span> '())
@@ -778,9 +826,14 @@ pairs (surprise =) ). Using them implementation is quite straightforward.
 </div>
 </div>
 
-<div id="outline-container-sec-3-3" class="outline-3">
-<h3 id="sec-3-3"><span class="section-number-3">3.3</span> Remote REPL</h3>
+<div id="outline-container-org5d93302" class="outline-3">
+<h3 id="org5d93302"><span class="section-number-3">3.3</span> Remote REPL</h3>
 <div class="outline-text-3" id="text-3-3">
+<p>
+NB. REPL is currently disabled as sockets library doesn't work on M1.
+To enable it back uncomment <code>(repl:start-repl-server)</code> in <code>ad-libitum-init</code>.
+</p>
+
 <p>
 We need own repl server because music doesn't work in geiser repl for
 somewhat reason. The most universal solution would be to have REPL over
@@ -803,12 +856,12 @@ protocol is TCP.
 </p>
 </div>
 
-<div id="outline-container-sec-3-3-1" class="outline-4">
-<h4 id="sec-3-3-1"><span class="section-number-4">3.3.1</span> <span class="todo TODO">TODO</span> Ensure that protocol is TCP</h4>
+<div id="outline-container-org6c1f1b3" class="outline-4">
+<h4 id="org6c1f1b3"><span class="section-number-4">3.3.1</span> <span class="todo TODO">TODO</span> Ensure that protocol is TCP</h4>
 </div>
 
-<div id="outline-container-sec-3-3-2" class="outline-4">
-<h4 id="sec-3-3-2"><span class="section-number-4">3.3.2</span> Blocking vs Async sockets</h4>
+<div id="outline-container-org481e5de" class="outline-4">
+<h4 id="org481e5de"><span class="section-number-4">3.3.2</span> Blocking vs Async sockets</h4>
 <div class="outline-text-4" id="text-3-3-2">
 <p>
 Though Aaron doesn't recommend using blocking sockets, they are so much
@@ -824,12 +877,11 @@ then.
 </div>
 </div>
 
-<div id="outline-container-sec-3-3-3" class="outline-4">
-<h4 id="sec-3-3-3"><span class="section-number-4">3.3.3</span> Open socket</h4>
+<div id="outline-container-org4b9a40d" class="outline-4">
+<h4 id="org4b9a40d"><span class="section-number-4">3.3.3</span> Open socket</h4>
 <div class="outline-text-4" id="text-3-3-3">
 <div class="org-src-container">
-
-<pre class="src src-scheme" id="open-socket"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;open-socket&gt;</span>
+<pre class="src src-scheme" id="orgc2bdb05"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;open-socket&gt;</span>
 (<span style="font-weight: bold;">define</span> (<span style="font-weight: bold;">open-socket</span>)
   (<span style="font-weight: bold;">let</span> ([socket (sock:create-socket
                  sock:socket-domain/internet
@@ -850,8 +902,7 @@ configurable later, let's provide some sensible hardcoded defaults for now.
 </p>
 
 <div class="org-src-container">
-
-<pre class="src src-scheme" id="bind-socket"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;bind-socket&gt;</span>
+<pre class="src src-scheme" id="org833e011"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;bind-socket&gt;</span>
 (sock:bind-socket socket (sock:string-&gt;internet-address <span style="font-style: italic;">"127.0.0.1:37146"</span>))
 <span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;/bind-socket&gt;</span>
 </pre>
@@ -862,8 +913,7 @@ And then let's listen for new connections!
 </p>
 
 <div class="org-src-container">
-
-<pre class="src src-scheme" id="listen-socket"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;listen-socket&gt;</span>
+<pre class="src src-scheme" id="orgdeb8006"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;listen-socket&gt;</span>
 (sock:listen-socket socket 1024)
 <span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;/listen-socket&gt;</span>
 </pre>
@@ -871,8 +921,8 @@ And then let's listen for new connections!
 </div>
 </div>
 
-<div id="outline-container-sec-3-3-4" class="outline-4">
-<h4 id="sec-3-3-4"><span class="section-number-4">3.3.4</span> Accept connections</h4>
+<div id="outline-container-org3582e09" class="outline-4">
+<h4 id="org3582e09"><span class="section-number-4">3.3.4</span> Accept connections</h4>
 <div class="outline-text-4" id="text-3-3-4">
 <p>
 To actually accept new connections we are going to create new thread and
@@ -882,15 +932,14 @@ After accepting new connection we'll proceed it in new thread.
 </p>
 
 <div class="org-src-container">
-
-<pre class="src src-scheme" id="accept-connections"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;accept-connections&gt;</span>
+<pre class="src src-scheme" id="orge22f54e"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;accept-connections&gt;</span>
 (<span style="font-weight: bold;">define</span> (<span style="font-weight: bold;">accept-connections</span> repl-server-socket)
   (fork-thread
    (<span style="font-weight: bold;">lambda</span> ()
      (<span style="font-weight: bold;">let</span> <span style="font-weight: bold;">loop</span> ()
        (usleep 0 polling-microseconds)
        (<span style="font-weight: bold;">let-values</span> ([(socket address) (sock:accept-socket repl-server-socket)])
-         (when socket
+         (<span style="font-weight: bold;">when</span> socket
            (printf <span style="font-style: italic;">"New REPL @ ~s\r\n"</span> (sock:internet-address-&gt;string address))
            (spawn-remote-repl socket address)))
        (loop)))))
@@ -900,8 +949,8 @@ After accepting new connection we'll proceed it in new thread.
 </div>
 </div>
 
-<div id="outline-container-sec-3-3-5" class="outline-4">
-<h4 id="sec-3-3-5"><span class="section-number-4">3.3.5</span> Spawn remote REPL</h4>
+<div id="outline-container-org934036f" class="outline-4">
+<h4 id="org934036f"><span class="section-number-4">3.3.5</span> Spawn remote REPL</h4>
 <div class="outline-text-4" id="text-3-3-5">
 <p>
 Every new connection accepted would spawn new thread with a REPL loop inside
@@ -915,8 +964,7 @@ them back and forth. Let's put all these requirements to values:
 </p>
 
 <div class="org-src-container">
-
-<pre class="src src-scheme" id="spawn-remote-repl-options"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;spawn-remote-repl-options&gt;</span>
+<pre class="src src-scheme" id="org3518c0b"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;spawn-remote-repl-options&gt;</span>
 (<span style="font-weight: bold;">define</span> <span style="font-weight: bold;">polling-microseconds</span> 50000)
 (<span style="font-weight: bold;">define</span> <span style="font-weight: bold;">max-chunk-length</span> 65536)
 (<span style="font-weight: bold;">define</span> <span style="font-weight: bold;">code-tx</span> (make-transcoder (utf-8-codec) (eol-style lf) (error-handling-mode replace)))
@@ -930,8 +978,7 @@ and start loop.
 </p>
 
 <div class="org-src-container">
-
-<pre class="src src-scheme" id="spawn-remote-repl"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;spawn-remote-repl&gt;</span>
+<pre class="src src-scheme" id="org7619b37"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;spawn-remote-repl&gt;</span>
 <span style="font-weight: bold; text-decoration: underline;">&lt;&lt;spawn-remote-repl-options&gt;&gt;</span>
 (<span style="font-weight: bold;">define</span> (<span style="font-weight: bold;">spawn-remote-repl</span> socket address)
   (fork-thread
@@ -952,8 +999,7 @@ tedious, let's write a couple of helpers:
 </p>
 
 <div class="org-src-container">
-
-<pre class="src src-scheme" id="repl-send-helpers"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;repl-send-helpers&gt;</span>
+<pre class="src src-scheme" id="orgd7b7b17"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;repl-send-helpers&gt;</span>
 [call-with-send-port
  (<span style="font-weight: bold;">lambda</span> (f)
    (<span style="font-weight: bold;">let</span> ([response (call-with-bytevector-output-port f code-tx)])
@@ -974,8 +1020,7 @@ documentation for more info.
 </p>
 
 <div class="org-src-container">
-
-<pre class="src src-scheme" id="repl-loop"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;repl-loop&gt;</span>
+<pre class="src src-scheme" id="orgd5e0816"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;repl-loop&gt;</span>
 (<span style="font-weight: bold;">let</span> <span style="font-weight: bold;">loop</span> ()
   (usleep 0 polling-microseconds)
   (<span style="font-weight: bold;">let-values</span> ([(request address)
@@ -996,8 +1041,7 @@ read and process them one by one.
 </p>
 
 <div class="org-src-container">
-
-<pre class="src src-scheme" id="repl-read-eval-print"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;repl-read-eval-print&gt;</span>
+<pre class="src src-scheme" id="org50ed6cc"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;repl-read-eval-print&gt;</span>
 (<span style="font-weight: bold;">lambda</span> (p)
   (<span style="font-weight: bold;">do</span> ([x (read p) (read p)])
       ((eof-object? x))
@@ -1016,8 +1060,7 @@ Eval and send result back, easy, huh?
 </p>
 
 <div class="org-src-container">
-
-<pre class="src src-scheme" id="repl-eval-print"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;repl-eval-print&gt;</span>
+<pre class="src src-scheme" id="orgc47a4d3"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;repl-eval-print&gt;</span>
 (<span style="font-weight: bold;">lambda</span> (p)
   (<span style="font-weight: bold;">let*</span> (
          <span style="font-weight: bold; text-decoration: underline;">&lt;&lt;repl-eval&gt;&gt;</span>
@@ -1034,12 +1077,9 @@ Tricky part is that we want to:
 </p>
 
 <ul class="org-ul">
-<li>capture output performed by evaluated form
-</li>
-<li>capture result of form evaluated
-</li>
-<li>don't blow up on exception and capture its message
-</li>
+<li>capture output performed by evaluated form</li>
+<li>capture result of form evaluated</li>
+<li>don't blow up on exception and capture its message</li>
 </ul>
 
 <p>
@@ -1047,13 +1087,12 @@ That's why we can't just call <code>eval</code>
 </p>
 
 <div class="org-src-container">
-
-<pre class="src src-scheme" id="repl-eval"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;repl-eval&gt;</span>
+<pre class="src src-scheme" id="org17d7b49"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;repl-eval&gt;</span>
 [result #f]
 [output
  (with-output-to-string
    (<span style="font-weight: bold;">lambda</span> ()
-     (set! result (guard (x [else (display-condition x)]) (eval x)))))]
+     (set! result (<span style="font-weight: bold;">guard</span> (x [else (display-condition x)]) (eval x)))))]
 <span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;/repl-eval&gt;</span>
 </pre>
 </div>
@@ -1064,8 +1103,7 @@ write to port provided by <code>call-with-send-port</code>
 </p>
 
 <div class="org-src-container">
-
-<pre class="src src-scheme" id="repl-print"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;repl-print&gt;</span>
+<pre class="src src-scheme" id="org1595ed5"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;repl-print&gt;</span>
 (printf <span style="font-style: italic;">"| ~s\r\n"</span> output)
 (printf <span style="font-style: italic;">"&lt; ~s\r\n"</span> result)
 (display output p)
@@ -1077,16 +1115,15 @@ write to port provided by <code>call-with-send-port</code>
 </div>
 </div>
 
-<div id="outline-container-sec-3-3-6" class="outline-4">
-<h4 id="sec-3-3-6"><span class="section-number-4">3.3.6</span> <span class="todo TODO">TODO</span> Stop loop and close socket on disconnect</h4>
+<div id="outline-container-org95ee76d" class="outline-4">
+<h4 id="org95ee76d"><span class="section-number-4">3.3.6</span> <span class="todo TODO">TODO</span> Stop loop and close socket on disconnect</h4>
 </div>
 
-<div id="outline-container-sec-3-3-7" class="outline-4">
-<h4 id="sec-3-3-7"><span class="section-number-4">3.3.7</span> Start REPL server</h4>
+<div id="outline-container-orga58e6d9" class="outline-4">
+<h4 id="orga58e6d9"><span class="section-number-4">3.3.7</span> Start REPL server</h4>
 <div class="outline-text-4" id="text-3-3-7">
 <div class="org-src-container">
-
-<pre class="src src-scheme" id="start-repl-server"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;start-repl-server&gt;</span>
+<pre class="src src-scheme" id="org8a991c6"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;start-repl-server&gt;</span>
 (<span style="font-weight: bold;">define</span> (<span style="font-weight: bold;">start-repl-server</span>)
   (accept-connections (open-socket)))
 <span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;/start-repl-server&gt;</span>
@@ -1097,11 +1134,11 @@ write to port provided by <code>call-with-send-port</code>
 </div>
 </div>
 
-<div id="outline-container-sec-4" class="outline-2">
-<h2 id="sec-4"><span class="section-number-2">4</span> Core</h2>
+<div id="outline-container-orge80390d" class="outline-2">
+<h2 id="orge80390d"><span class="section-number-2">4</span> Core</h2>
 <div class="outline-text-2" id="text-4">
 <p>
-Woohoo! Naive <a href="#sec-3">3</a> draft is here and we could start to explore Core basics
+Woohoo! Naive <a href="#org59a8a4c">3</a> draft is here and we could start to explore Core basics
 of Sound. At this point Ad Libitum splits into into interwinded parts: the
 framework and the book. In the framework we are going to grow all necessary
 instruments for live coding. In the book we are going to use those instruments
@@ -1116,8 +1153,8 @@ librettos.
 </p>
 </div>
 
-<div id="outline-container-sec-4-1" class="outline-3">
-<h3 id="sec-4-1"><span class="section-number-3">4.1</span> Math</h3>
+<div id="outline-container-orga3cec52" class="outline-3">
+<h3 id="orga3cec52"><span class="section-number-3">4.1</span> Math</h3>
 <div class="outline-text-3" id="text-4-1">
 <p>
 Before diving into the abyss of digital music let's define several useful
@@ -1125,8 +1162,7 @@ basic math constants and functions.
 </p>
 
 <div class="org-src-container">
-
-<pre class="src src-scheme" id="basic-math"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;basic-math&gt;</span>
+<pre class="src src-scheme" id="orge5c693e"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;basic-math&gt;</span>
 (<span style="font-weight: bold;">define</span> <span style="font-weight: bold;">pi</span> (inexact (* (asin 1.0) 2)))
 (<span style="font-weight: bold;">define</span> <span style="font-weight: bold;">two-pi</span> (* 2.0 pi))
 (alias &#960; pi)
@@ -1146,8 +1182,8 @@ basic math constants and functions.
 </div>
 </div>
 
-<div id="outline-container-sec-4-2" class="outline-3">
-<h3 id="sec-4-2"><span class="section-number-3">4.2</span> Generators</h3>
+<div id="outline-container-org7ec6f54" class="outline-3">
+<h3 id="org7ec6f54"><span class="section-number-3">4.2</span> Generators</h3>
 <div class="outline-text-3" id="text-4-2">
 <p>
 Sound is about motion. About our mean of sensing somewhat periodic motion
@@ -1178,8 +1214,7 @@ want to hear and its derivatives.
 </p>
 
 <div class="org-src-container">
-
-<pre class="src src-scheme" id="tuner-constants"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;tuner-constants&gt;</span>
+<pre class="src src-scheme" id="org326c63d"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;tuner-constants&gt;</span>
 (<span style="font-weight: bold;">define</span> <span style="font-weight: bold;">tuner-frequency</span> 440.0)
 (<span style="font-weight: bold;">define</span> <span style="font-weight: bold;">tuner-period</span> (/ tuner-frequency))
 (<span style="font-weight: bold;">define</span> <span style="font-weight: bold;">tuner-half-period</span> (* 0.5 tuner-period))
@@ -1188,8 +1223,7 @@ want to hear and its derivatives.
 </div>
 
 <div class="org-src-container">
-
-<pre class="src src-scheme" id="simplest-oscillator"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;simplest-oscillator&gt;</span>
+<pre class="src src-scheme" id="org29b0a4e"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;simplest-oscillator&gt;</span>
 (<span style="font-weight: bold;">define</span> (<span style="font-weight: bold;">simplest-oscillator</span> time channel)
   (<span style="font-weight: bold;">if</span> (&gt; (mod time tuner-period) tuner-half-period)
       1.0
@@ -1237,8 +1271,7 @@ small helper:
 </p>
 
 <div class="org-src-container">
-
-<pre class="src src-scheme" id="signal"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;signal&gt;</span>
+<pre class="src src-scheme" id="org6bf8fff"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;signal&gt;</span>
 (<span style="font-weight: bold;">define-syntax</span> (<span style="font-weight: bold; font-style: italic;">signal</span> stx)
   (syntax-case stx ()
     [(k body ...)
@@ -1274,8 +1307,7 @@ function is useful for composition matters:
 </p>
 
 <div class="org-src-container">
-
-<pre class="src src-scheme" id="constant"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;constant&gt;</span>
+<pre class="src src-scheme" id="orgb626d47"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;constant&gt;</span>
 (define~ (constant amplitude) amplitude)
 <span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;/constant&gt;</span>
 </pre>
@@ -1286,8 +1318,7 @@ Then we are able to define <code>silence</code> as follows:
 </p>
 
 <div class="org-src-container">
-
-<pre class="src src-scheme" id="silence"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;silence&gt;</span>
+<pre class="src src-scheme" id="org264e9c5"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;silence&gt;</span>
 (define~ silence 0.0)
 (alias &#8709; silence)
 <span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;/silence&gt;</span>
@@ -1303,8 +1334,7 @@ Though it's still very useful signal, let give it a separate name:
 </p>
 
 <div class="org-src-container">
-
-<pre class="src src-scheme" id="unit">(define~ unit 1.0)
+<pre class="src src-scheme" id="orgea3d73f">(define~ unit 1.0)
 </pre>
 </div>
 
@@ -1315,8 +1345,7 @@ signal state in vector on per-channel basis.
 </p>
 
 <div class="org-src-container">
-
-<pre class="src src-scheme" id="channel"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;channel&gt;</span>
+<pre class="src src-scheme" id="orgca6063b"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;channel&gt;</span>
 (<span style="font-weight: bold;">define-syntax</span> (<span style="font-weight: bold; font-style: italic;">make-channel-vector</span> stx)
   (syntax-case stx ()
     [(k)
@@ -1347,8 +1376,7 @@ function composition!
 </p>
 
 <div class="org-src-container">
-
-<pre class="src src-scheme" id="compose"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;compose&gt;</span>
+<pre class="src src-scheme" id="org69c1f6b"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;compose&gt;</span>
 (<span style="font-weight: bold;">define</span> (<span style="font-weight: bold;">compose</span> . fns)
   (<span style="font-weight: bold;">define</span> (<span style="font-weight: bold;">make-chain</span> fn chain)
     (<span style="font-weight: bold;">&#955;</span> args (call-with-values (cut apply fn args) chain)))
@@ -1378,8 +1406,7 @@ current scope is very common. Let's create a special syntax for it.
 </p>
 
 <div class="org-src-container">
-
-<pre class="src src-scheme" id="deref-signal">(<span style="font-weight: bold;">define-syntax</span> (<span style="font-weight: bold; font-style: italic;">&lt;~</span> stx)
+<pre class="src src-scheme" id="org890a0cc">(<span style="font-weight: bold;">define-syntax</span> (<span style="font-weight: bold; font-style: italic;">&lt;~</span> stx)
   (syntax-case stx ()
     [(k signal)
      (with-syntax ([time (datum-&gt;syntax #'k 'time)]
@@ -1396,12 +1423,11 @@ in the end to reduce load.
 </p>
 
 <div class="org-src-container">
-
-<pre class="src src-scheme" id="mono"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;mono&gt;</span>
+<pre class="src src-scheme" id="orge8dce38"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;mono&gt;</span>
 (<span style="font-weight: bold;">define</span> (<span style="font-weight: bold;">mono</span> signal)
   (<span style="font-weight: bold;">let</span> ([x 0.0])
     (~&lt;
-     (when (zero? channel)
+     (<span style="font-weight: bold;">when</span> (zero? channel)
        (set! x (&lt;~ signal)))
      x)))
 <span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;/mono&gt;</span>
@@ -1422,8 +1448,7 @@ check to protect it.
 </p>
 
 <div class="org-src-container">
-
-<pre class="src src-scheme" id="phasor"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;phasor&gt;</span>
+<pre class="src src-scheme" id="org4265027"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;phasor&gt;</span>
 (<span style="font-weight: bold;">define</span> (<span style="font-weight: bold;">dynamic-phasor</span> frequency phase0)
   (<span style="font-weight: bold;">let</span> ([previous-times (make-channel-vector 0.0)]
         [previous-phases (make-channel-vector 0.0)])
@@ -1445,7 +1470,7 @@ check to protect it.
   (-&gt; time (* frequency) (+ phase0) (mod 1.0)))
 
 (<span style="font-weight: bold;">define</span> <span style="font-weight: bold;">phasor</span>
-  (case-lambda
+  (<span style="font-weight: bold;">case-lambda</span>
     [(frequency phase0)
      (<span style="font-weight: bold;">if</span> (number? frequency)
          (static-phasor frequency phase0)
@@ -1465,8 +1490,7 @@ Then basic waveforms are defined in very clean way:
 </p>
 
 <div class="org-src-container">
-
-<pre class="src src-scheme" id="waveforms"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;waveforms&gt;</span>
+<pre class="src src-scheme" id="org3fbc3fb"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;waveforms&gt;</span>
 (define~ (sine phase)
   (sin (* 2&#960; (&lt;~ phase))))
 
@@ -1526,7 +1550,7 @@ Then basic waveforms are defined in very clean way:
 (<span style="font-weight: bold;">define</span> <span style="font-weight: bold;">cosine///</span> (&#8728; cosine phasor))
 (<span style="font-weight: bold;">define</span> <span style="font-weight: bold;">square///</span> (&#8728; square phasor))
 (<span style="font-weight: bold;">define</span> <span style="font-weight: bold;">pulse///</span>
-  (case-lambda
+  (<span style="font-weight: bold;">case-lambda</span>
     [(pulse-width frequency phase0)
      (pulse pulse-width (phasor frequency phase0))]
     [(pulse-width frequency)
@@ -1534,7 +1558,7 @@ Then basic waveforms are defined in very clean way:
 (<span style="font-weight: bold;">define</span> <span style="font-weight: bold;">tri///</span> (&#8728; tri phasor))
 (<span style="font-weight: bold;">define</span> <span style="font-weight: bold;">saw///</span> (&#8728; saw phasor))
 (<span style="font-weight: bold;">define</span> <span style="font-weight: bold;">sampler///</span>
-  (case-lambda
+  (<span style="font-weight: bold;">case-lambda</span>
     [(table frequency) (sampler table (phasor frequency))]
     [(table frequency phase0) (sampler table (phasor frequency phase0))]))
 <span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;/waveforms&gt;</span>
@@ -1551,8 +1575,7 @@ which will look for given signal's symbol on every invocation:
 </p>
 
 <div class="org-src-container">
-
-<pre class="src src-scheme" id="live-signal"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;live-signal&gt;</span>
+<pre class="src src-scheme" id="orge845c87"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;live-signal&gt;</span>
 (define~ (live-signal symbol) (&lt;~ (top-level-value symbol)))
 <span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;/live-signal&gt;</span>
 </pre>
@@ -1563,8 +1586,7 @@ Also useful to have live value counterpart:
 </p>
 
 <div class="org-src-container">
-
-<pre class="src src-scheme" id="live-value"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;live-value&gt;</span>
+<pre class="src src-scheme" id="org4b6afa0"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;live-value&gt;</span>
 (define~ (live-value symbol) (top-level-value symbol))
 <span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;/live-value&gt;</span>
 </pre>
@@ -1576,8 +1598,7 @@ matching.
 </p>
 
 <div class="org-src-container">
-
-<pre class="src src-scheme" id="signal-operators"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;signal-operators&gt;</span>
+<pre class="src src-scheme" id="org41cb0eb"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;signal-operators&gt;</span>
 (define~ (signal-sum* x y)
   (+ (&lt;~ x) (&lt;~ y)))
 
@@ -1631,11 +1652,12 @@ matching.
 </div>
 </div>
 
-<div id="outline-container-sec-4-3" class="outline-3">
-<h3 id="sec-4-3"><span class="section-number-3">4.3</span> Envelopes</h3>
+<div id="outline-container-org131663f" class="outline-3">
+<h3 id="org131663f"><span class="section-number-3">4.3</span> Envelopes</h3>
 <div class="outline-text-3" id="text-4-3">
-</div><div id="outline-container-sec-4-3-1" class="outline-4">
-<h4 id="sec-4-3-1"><span class="section-number-4">4.3.1</span> ADSR</h4>
+</div>
+<div id="outline-container-org5684e44" class="outline-4">
+<h4 id="org5684e44"><span class="section-number-4">4.3.1</span> ADSR</h4>
 <div class="outline-text-4" id="text-4-3-1">
 <p>
 ADSR envelope shapes signal with polyline described with 4 parameters:
@@ -1643,17 +1665,13 @@ ADSR envelope shapes signal with polyline described with 4 parameters:
 
 <ul class="org-ul">
 <li>Attack time is the time taken for initial run-up of level from nil to peak,
-beginning when the key is first pressed.
-</li>
+beginning when the key is first pressed.</li>
 <li>Decay time is the time taken for the subsequent run down from the attack
-level to the designated sustain level.
-</li>
+level to the designated sustain level.</li>
 <li>Sustain level is the level during the main sequence of the sound's
-duration, until the key is released.
-</li>
+duration, until the key is released.</li>
 <li>Release time is the time taken for the level to decay from the sustain
-level to zero after the key is released.
-</li>
+level to zero after the key is released.</li>
 </ul>
 
 <p>
@@ -1667,8 +1685,7 @@ experiments all 6 parameters are going to be signals:
 </p>
 
 <div class="org-src-container">
-
-<pre class="src src-scheme" id="adsr"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;adsr&gt;</span>
+<pre class="src src-scheme" id="org52e7a2c"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;adsr&gt;</span>
 (define~ (adsr start end attack decay sustain release)
   (<span style="font-weight: bold;">let</span> ([end (&lt;~ end)])
     (<span style="font-weight: bold;">if</span> (&lt;= end time)
@@ -1704,8 +1721,7 @@ Let's test it with simple note play:
 </p>
 
 <div class="org-src-container">
-
-<pre class="src src-scheme" id="play-note"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;play-note&gt;</span>
+<pre class="src src-scheme" id="org5c8de06"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;play-note&gt;</span>
 (<span style="font-weight: bold;">define</span> (<span style="font-weight: bold;">simple-instrument</span> start end freq a d s r)
   (<span style="font-weight: bold;">let*</span> ([start (live-value start)]
          [end (live-value end)]
@@ -1739,16 +1755,15 @@ We return to instrument concept later and come up with better design for it.
 </div>
 </div>
 
-<div id="outline-container-sec-4-3-2" class="outline-4">
-<h4 id="sec-4-3-2"><span class="section-number-4">4.3.2</span> Impulse</h4>
+<div id="outline-container-org1517c56" class="outline-4">
+<h4 id="org1517c56"><span class="section-number-4">4.3.2</span> Impulse</h4>
 <div class="outline-text-4" id="text-4-3-2">
 <p>
 Another simple though useful envelope is impulse.
 </p>
 
 <div class="org-src-container">
-
-<pre class="src src-scheme" id="impulse"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;impulse&gt;</span>
+<pre class="src src-scheme" id="org1fc7b3b"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;impulse&gt;</span>
 (define~ (impulse start apex)
   (<span style="font-weight: bold;">let</span> ([start (&lt;~ start)])
     (<span style="font-weight: bold;">if</span> (&lt;= start time)
@@ -1762,12 +1777,11 @@ Another simple though useful envelope is impulse.
 </div>
 </div>
 
-<div id="outline-container-sec-4-3-3" class="outline-4">
-<h4 id="sec-4-3-3"><span class="section-number-4">4.3.3</span> Transition</h4>
+<div id="outline-container-org9c0711a" class="outline-4">
+<h4 id="org9c0711a"><span class="section-number-4">4.3.3</span> Transition</h4>
 <div class="outline-text-4" id="text-4-3-3">
 <div class="org-src-container">
-
-<pre class="src src-scheme" id="transition"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;transition&gt;</span>
+<pre class="src src-scheme" id="org1ac2587"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;transition&gt;</span>
 (<span style="font-weight: bold;">define</span> (<span style="font-weight: bold;">transition</span> curve &#916;t signal)
   (<span style="font-weight: bold;">let</span> ([starts (make-channel-vector (now))]
         [previous-values (make-channel-vector 0.0)]
@@ -1777,7 +1791,7 @@ Another simple though useful envelope is impulse.
      (<span style="font-weight: bold;">let</span> ([&#916;t (&lt;~ &#916;t)]
            [current-value (&lt;~ signal)]
            [next-value (channel-ref next-values)])
-       (unless (= current-value next-value)
+       (<span style="font-weight: bold;">unless</span> (= current-value next-value)
          (channel-set! previous-values (channel-ref current-values))
          (channel-set! next-values current-value)
          (channel-set! starts time))
@@ -1810,16 +1824,15 @@ Another simple though useful envelope is impulse.
 </div>
 </div>
 
-<div id="outline-container-sec-4-4" class="outline-3">
-<h3 id="sec-4-4"><span class="section-number-3">4.4</span> Metronome</h3>
+<div id="outline-container-org006427d" class="outline-3">
+<h3 id="org006427d"><span class="section-number-3">4.4</span> Metronome</h3>
 <div class="outline-text-3" id="text-4-4">
 <p>
 Metronome is a mean to align scheduling with some periodic beat.
 </p>
 
 <div class="org-src-container">
-
-<pre class="src src-scheme" id="beat"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;beat&gt;</span>
+<pre class="src src-scheme" id="org2937f2b"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;beat&gt;</span>
 (<span style="font-weight: bold;">define</span> (<span style="font-weight: bold;">time-&gt;beat</span> time bpm)
   (-&gt; time (* bpm) (/ 60) (round)))
 
@@ -1848,12 +1861,11 @@ Metronome is a mean to align scheduling with some periodic beat.
 </div>
 </div>
 
-<div id="outline-container-sec-4-5" class="outline-3">
-<h3 id="sec-4-5"><span class="section-number-3">4.5</span> Control signals</h3>
+<div id="outline-container-orge56cf93" class="outline-3">
+<h3 id="orge56cf93"><span class="section-number-3">4.5</span> Control signals</h3>
 <div class="outline-text-3" id="text-4-5">
 <div class="org-src-container">
-
-<pre class="src src-scheme" id="control-signal"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;control-signal&gt;</span>
+<pre class="src src-scheme" id="org0454920"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;control-signal&gt;</span>
 (<span style="font-weight: bold;">define</span> (<span style="font-weight: bold;">make-control</span> x)
   (<span style="font-weight: bold;">let</span> ([b (box x)])
     (values (~&lt; (unbox b)) b)))
@@ -1876,7 +1888,7 @@ Metronome is a mean to align scheduling with some periodic beat.
                    [ref (construct-name #'name #'name '-ref)]
                    [set (construct-name #'name #'name '-set!)])
        #'(<span style="font-weight: bold;">begin</span>
-           (define-values (s name) (make-control initial-value))
+           (<span style="font-weight: bold;">define-values</span> (s name) (make-control initial-value))
            (<span style="font-weight: bold;">define</span> (<span style="font-weight: bold;">ref</span>) (unbox name))
            (<span style="font-weight: bold;">define</span> (<span style="font-weight: bold;">set</span> value) (set-box! name value))))]))
 <span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;/control-signal&gt;</span>
@@ -1890,8 +1902,7 @@ input table for <code>osc:sampler</code>.
 </p>
 
 <div class="org-src-container">
-
-<pre class="src src-scheme" id="window"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;window&gt;</span>
+<pre class="src src-scheme" id="orgaec263f"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;window&gt;</span>
 (<span style="font-weight: bold;">define</span> (<span style="font-weight: bold;">window</span> width signal)
   (<span style="font-weight: bold;">let</span> ([windows (make-vector *channels*)]
         [N (-&gt; width (* *sample-rate*) (ceiling) (exact))]
@@ -1900,7 +1911,7 @@ input table for <code>osc:sampler</code>.
            (vector-set! windows i (make-vector N 0.0)))
     (values
      (~&lt;
-      (when (zero? channel)
+      (<span style="font-weight: bold;">when</span> (zero? channel)
         (set! cursor (mod (+ cursor 1) N)))
       (<span style="font-weight: bold;">let</span> ([sample (&lt;~ signal)]
             [window (channel-ref windows)])
@@ -1914,18 +1925,18 @@ input table for <code>osc:sampler</code>.
 </div>
 </div>
 
-<div id="outline-container-sec-5" class="outline-2">
-<h2 id="sec-5"><span class="section-number-2">5</span> Std</h2>
+<div id="outline-container-orgd4e35bd" class="outline-2">
+<h2 id="orgd4e35bd"><span class="section-number-2">5</span> Std</h2>
 <div class="outline-text-2" id="text-5">
-</div><div id="outline-container-sec-5-1" class="outline-3">
-<h3 id="sec-5-1"><span class="section-number-3">5.1</span> FFT</h3>
 </div>
-<div id="outline-container-sec-5-2" class="outline-3">
-<h3 id="sec-5-2"><span class="section-number-3">5.2</span> Filters</h3>
+<div id="outline-container-orgac328ce" class="outline-3">
+<h3 id="orgac328ce"><span class="section-number-3">5.1</span> FFT</h3>
+</div>
+<div id="outline-container-orgecc153e" class="outline-3">
+<h3 id="orgecc153e"><span class="section-number-3">5.2</span> Filters</h3>
 <div class="outline-text-3" id="text-5-2">
 <div class="org-src-container">
-
-<pre class="src src-scheme" id="delay"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;delay&gt;</span>
+<pre class="src src-scheme" id="orgcc23667"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;delay&gt;</span>
 (define~ (<span style="font-weight: bold;">delay</span> &#916;t f)
   (f (- time (&lt;~ &#916;t)) channel))
 <span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;/delay&gt;</span>
@@ -1933,8 +1944,7 @@ input table for <code>osc:sampler</code>.
 </div>
 
 <div class="org-src-container">
-
-<pre class="src src-scheme" id="echo"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;echo&gt;</span>
+<pre class="src src-scheme" id="orgbb4a2b0"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;echo&gt;</span>
 (<span style="font-weight: bold;">define</span> <span style="font-weight: bold;">*max-line-duration-slow*</span> 10)
 (<span style="font-weight: bold;">define</span> <span style="font-weight: bold;">*max-line-duration-fast*</span> 1)
 
@@ -1947,7 +1957,7 @@ input table for <code>osc:sampler</code>.
           ((= channel *channels*) 0)
         (channel-set! lines (make-vector line-size 0.0)))
       (~&lt;
-       (when(zero? channel)
+       (<span style="font-weight: bold;">when</span>(zero? channel)
          (set! cursor (mod (+ cursor 1) line-size)))
        (<span style="font-weight: bold;">let</span> ([line (channel-ref lines)]
              [x (&lt;~ signal)]
@@ -1966,8 +1976,7 @@ input table for <code>osc:sampler</code>.
 </div>
 
 <div class="org-src-container">
-
-<pre class="src src-scheme" id="lpf"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;lpf&gt;</span>
+<pre class="src src-scheme" id="org7176f17"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;lpf&gt;</span>
 (<span style="font-weight: bold;">define</span> (<span style="font-weight: bold;">lpf-frequency-&gt;&#945;</span> frequency)
   (<span style="font-weight: bold;">let</span> ([k (* frequency *sample-angular-period*)])
     (/ k (+ k 1))))
@@ -1985,8 +1994,7 @@ input table for <code>osc:sampler</code>.
 </div>
 
 <div class="org-src-container">
-
-<pre class="src src-scheme" id="hpf"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;hpf&gt;</span>
+<pre class="src src-scheme" id="orga3e45ab"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;hpf&gt;</span>
 (<span style="font-weight: bold;">define</span> (<span style="font-weight: bold;">hpf-frequency-&gt;&#945;</span> frequency)
   (<span style="font-weight: bold;">let</span> ([k (* frequency *sample-angular-period*)])
     (/ (+ k 1))))
@@ -2008,8 +2016,7 @@ input table for <code>osc:sampler</code>.
 </div>
 
 <div class="org-src-container">
-
-<pre class="src src-scheme" id="make-biquad-filter"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;make-biquad-filter&gt;</span>
+<pre class="src src-scheme" id="orga78d73d"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;make-biquad-filter&gt;</span>
 (<span style="font-weight: bold;">define</span> (<span style="font-weight: bold;">make-biquad-filter</span> make-coefficients)
   (<span style="font-weight: bold;">&#955;</span> (Q frequency x)
     (<span style="font-weight: bold;">let</span> ([xs-1 (make-channel-vector 0.0)]
@@ -2046,8 +2053,7 @@ input table for <code>osc:sampler</code>.
 </div>
 
 <div class="org-src-container">
-
-<pre class="src src-scheme" id="biquad-lpf"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;biquad-lpf&gt;</span>
+<pre class="src src-scheme" id="orgaedbe1e"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;biquad-lpf&gt;</span>
 (<span style="font-weight: bold;">define</span> (<span style="font-weight: bold;">make-lpf-coefficients</span> sin-&#969; cos-&#969; &#945;)
   (<span style="font-weight: bold;">let</span> ([b0 (* 0.5 (- 1.0 cos-&#969;))])
     (values
@@ -2065,8 +2071,7 @@ input table for <code>osc:sampler</code>.
 </div>
 
 <div class="org-src-container">
-
-<pre class="src src-scheme" id="biquad-hpf"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;biquad-hpf&gt;</span>
+<pre class="src src-scheme" id="org9376b39"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;biquad-hpf&gt;</span>
 (<span style="font-weight: bold;">define</span> (<span style="font-weight: bold;">make-hpf-coefficients</span> sin-&#969; cos-&#969; &#945;)
   (<span style="font-weight: bold;">let</span> ([b0 (* 0.5 (+ 1.0 cos-&#969;))])
     (values
@@ -2085,12 +2090,11 @@ input table for <code>osc:sampler</code>.
 </div>
 </div>
 
-<div id="outline-container-sec-5-3" class="outline-3">
-<h3 id="sec-5-3"><span class="section-number-3">5.3</span> Instruments</h3>
+<div id="outline-container-orgbac777e" class="outline-3">
+<h3 id="orgbac777e"><span class="section-number-3">5.3</span> Instruments</h3>
 <div class="outline-text-3" id="text-5-3">
 <div class="org-src-container">
-
-<pre class="src src-scheme" id="polyphony"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;polyphony&gt;</span>
+<pre class="src src-scheme" id="org047e853"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;polyphony&gt;</span>
 (<span style="font-weight: bold;">define</span> (<span style="font-weight: bold;">make-polyphony</span> n make-voice)
   (<span style="font-weight: bold;">let</span> ([voices (make-vector n &#8709;)]
         [cursor 0])
@@ -2121,8 +2125,8 @@ input table for <code>osc:sampler</code>.
 </div>
 
 
-<div id="outline-container-sec-5-4" class="outline-3">
-<h3 id="sec-5-4"><span class="section-number-3">5.4</span> Scales</h3>
+<div id="outline-container-orgb22d8bc" class="outline-3">
+<h3 id="orgb22d8bc"><span class="section-number-3">5.4</span> Scales</h3>
 <div class="outline-text-3" id="text-5-4">
 <p>
 We are going to represent scales with Scheme's basic data structure, list.
@@ -2131,8 +2135,7 @@ note from it without worrying about falling out of range:
 </p>
 
 <div class="org-src-container">
-
-<pre class="src src-scheme" id="choice"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;choice&gt;</span>
+<pre class="src src-scheme" id="orgf4c3b5e"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;choice&gt;</span>
 (<span style="font-weight: bold;">define</span> (<span style="font-weight: bold;">choice</span> list n)
   (list-ref list (mod n (length list))))
 
@@ -2147,8 +2150,7 @@ Basic intervals from Western music.
 </p>
 
 <div class="org-src-container">
-
-<pre class="src src-scheme" id="intervals"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;intervals&gt;</span>
+<pre class="src src-scheme" id="org5a8b4a3"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;intervals&gt;</span>
 (<span style="font-weight: bold;">define</span> <span style="font-weight: bold;">chromatic-scale-half-step</span>
   (expt 2 1/12))
 
@@ -2173,8 +2175,7 @@ Some basic scales from Western music.
 </p>
 
 <div class="org-src-container">
-
-<pre class="src src-scheme" id="scales"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;scales&gt;</span>
+<pre class="src src-scheme" id="org1b7fb35"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;scales&gt;</span>
 (<span style="font-weight: bold;">define</span> <span style="font-weight: bold;">chromatic-scale</span> '(1 2 3 4 5 6 7 8 9 10 11 12))
 (<span style="font-weight: bold;">define</span> <span style="font-weight: bold;">pentatonic-scale</span> '(1 3 5 8 10))
 (<span style="font-weight: bold;">define</span> <span style="font-weight: bold;">major-scale</span> '(1 3 5 6 8 10 12))
@@ -2188,15 +2189,14 @@ Some basic scales from Western music.
 </div>
 </div>
 
-<div id="outline-container-sec-5-5" class="outline-3">
-<h3 id="sec-5-5"><span class="section-number-3">5.5</span> Rhythm</h3>
+<div id="outline-container-orgf4ede71" class="outline-3">
+<h3 id="orgf4ede71"><span class="section-number-3">5.5</span> Rhythm</h3>
 <div class="outline-text-3" id="text-5-5">
 <div class="org-src-container">
-
-<pre class="src src-scheme" id="pattern"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;pattern&gt;</span>
+<pre class="src src-scheme" id="org57ad369"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;pattern&gt;</span>
 (<span style="font-weight: bold;">define</span> (<span style="font-weight: bold;">play-pattern</span> pattern sound beat)
   (<span style="font-weight: bold;">let</span> ([n (length pattern)])
-    (when (positive? (choice pattern (exact beat)))
+    (<span style="font-weight: bold;">when</span> (positive? (choice pattern (exact beat)))
       (sound))))
 <span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;/pattern&gt;</span>
 </pre>
@@ -2204,12 +2204,11 @@ Some basic scales from Western music.
 </div>
 </div>
 
-<div id="outline-container-sec-5-6" class="outline-3">
-<h3 id="sec-5-6"><span class="section-number-3">5.6</span> MIDI</h3>
+<div id="outline-container-org5e66f64" class="outline-3">
+<h3 id="org5e66f64"><span class="section-number-3">5.6</span> MIDI</h3>
 <div class="outline-text-3" id="text-5-6">
 <div class="org-src-container">
-
-<pre class="src src-scheme" id="midi"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;midi&gt;</span>
+<pre class="src src-scheme" id="org387e454"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;midi&gt;</span>
 (<span style="font-weight: bold;">define</span> (<span style="font-weight: bold;">*on-note-on*</span> timestamp data1 data2 channel)
   (printf <span style="font-style: italic;">"~s:~s:~s:~s\r\n"</span> timestamp data1 data2 channel))
 
@@ -2237,18 +2236,18 @@ Some basic scales from Western music.
 
 (<span style="font-weight: bold;">define</span> (<span style="font-weight: bold;">make-safe-process-event</span> timestamp)
   (<span style="font-weight: bold;">lambda</span> args
-    (guard (_ [else #f]) (apply process-event timestamp args))))
+    (<span style="font-weight: bold;">guard</span> (_ [else #f]) (apply process-event timestamp args))))
 
 (<span style="font-weight: bold;">define</span> (<span style="font-weight: bold;">process-events</span>)
   (<span style="font-weight: bold;">let</span> ([timestamp (scheduler:now *scheduler*)])
-    (when (pm:poll *stream*)
+    (<span style="font-weight: bold;">when</span> (pm:poll *stream*)
       (pm:read *stream* (make-safe-process-event timestamp)))
     (scheduler:schedule *scheduler*
                         (+ timestamp *polling-cycle*)
                         process-events)))
 
 (<span style="font-weight: bold;">define</span> (<span style="font-weight: bold;">start</span> now)
-  (unless *stream*
+  (<span style="font-weight: bold;">unless</span> *stream*
     (pm:init)
     (set! *stream* (pm:open-input 0))
     (set! *scheduler* (scheduler:simple-scheduler now))
@@ -2256,7 +2255,7 @@ Some basic scales from Western music.
     (process-events)))
 
 (<span style="font-weight: bold;">define</span> (<span style="font-weight: bold;">stop</span>)
-  (when *stream*
+  (<span style="font-weight: bold;">when</span> *stream*
     (scheduler:stop-scheduler *scheduler*)
     (pm:close *stream*)
     (pm:terminate)
@@ -2268,8 +2267,8 @@ Some basic scales from Western music.
 </div>
 </div>
 </div>
-<div id="outline-container-sec-6" class="outline-2">
-<h2 id="sec-6"><span class="section-number-2">6</span> Misc</h2>
+<div id="outline-container-org499e186" class="outline-2">
+<h2 id="org499e186"><span class="section-number-2">6</span> Misc</h2>
 <div class="outline-text-2" id="text-6">
 <p>
 To import <code>chez-soundio</code> and <code>chez-sockets</code> we must add respective folders to
@@ -2277,14 +2276,13 @@ To import <code>chez-soundio</code> and <code>chez-sockets</code> we must add re
 </p>
 
 <div class="org-src-container">
-
-<pre class="src src-scheme" id="add-library-directories"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;add-library-directories&gt;</span>
+<pre class="src src-scheme" id="orgc5775b4"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;add-library-directories&gt;</span>
 (<span style="font-weight: bold;">define</span> (<span style="font-weight: bold;">add-library-directory</span> dir)
   (library-directories
    (cons dir (library-directories))))
 
 (<span style="font-weight: bold;">define</span> (<span style="font-weight: bold;">add-library-directories</span> . dirs)
-  (unless (null? dirs)
+  (<span style="font-weight: bold;">unless</span> (null? dirs)
     (add-library-directory (car dirs))
     (apply add-library-directories (cdr dirs))))
 
@@ -2301,8 +2299,7 @@ Also let's define several useful aliases and finally start our services:
 </p>
 
 <div class="org-src-container">
-
-<pre class="src src-scheme" id="ad-libitum-init"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;ad-libitum-init&gt;</span>
+<pre class="src src-scheme" id="org12ea47d"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;ad-libitum-init&gt;</span>
 (alias now sound:now)
 (alias schedule scheduler:*schedule*)
 (alias callback schedule)
@@ -2316,7 +2313,7 @@ Also let's define several useful aliases and finally start our services:
 (sound:start)
 (scheduler:init now)
 (scheduler:start)
-(repl:start-repl-server)
+<span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">(repl:start-repl-server)</span>
 <span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;/ad-libitum-init&gt;</span>
 </pre>
 </div>
@@ -2326,8 +2323,7 @@ Tuner stuff to test everything is working:
 </p>
 
 <div class="org-src-container">
-
-<pre class="src src-scheme" id="test-tuner"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;test-tuner&gt;</span>
+<pre class="src src-scheme" id="orgf87602c"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;test-tuner&gt;</span>
 (<span style="font-weight: bold;">define</span> (<span style="font-weight: bold;">tuner</span> time channel)
   (sin (* 2&#960; time tuner-frequency)))
 
@@ -2344,8 +2340,7 @@ Some useful conversions, see TTEM.org for more details.
 </p>
 
 <div class="org-src-container">
-
-<pre class="src src-scheme" id="unit-conversion">(<span style="font-weight: bold;">define</span> (<span style="font-weight: bold;">amp-&gt;dB</span> x)
+<pre class="src src-scheme" id="orga5f71d2">(<span style="font-weight: bold;">define</span> (<span style="font-weight: bold;">amp-&gt;dB</span> x)
   (* 20.0 (log x 10.0)))
 
 (<span style="font-weight: bold;">define</span> (<span style="font-weight: bold;">dB-&gt;amp</span> x)
@@ -2365,8 +2360,7 @@ we'll come to them:
 </p>
 
 <div class="org-src-container">
-
-<pre class="src src-scheme" id="sandbox"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;sandbox&gt;</span>
+<pre class="src src-scheme" id="org266d4bf"><span style="font-weight: bold; font-style: italic;">;; </span><span style="font-weight: bold; font-style: italic;">&lt;sandbox&gt;</span>
 (<span style="font-weight: bold;">define</span> (<span style="font-weight: bold;">make-overtone</span> amplitudes wave frequency phase0)
   (&#8721; (<span style="font-weight: bold;">map</span>
       (<span style="font-weight: bold;">&#955;</span> (amplitude factor)
@@ -2388,9 +2382,8 @@ we'll come to them:
 </div>
 <div id="postamble" class="status">
 <p class="author">Author: Ruslan Prakapchuk</p>
-<p class="date">Created: 2017-11-01 Wed 09:04</p>
-<p class="creator"><a href="http://www.gnu.org/software/emacs/">Emacs</a> 25.3.1 (<a href="http://orgmode.org">Org</a> mode 8.2.10)</p>
-<p class="validation"><a href="http://validator.w3.org/check?uri=referer">Validate</a></p>
+<p class="date">Created: 2021-09-20 Mon 09:10</p>
+<p class="validation"><a href="https://validator.w3.org/check?uri=referer">Validate</a></p>
 </div>
 </body>
 </html>

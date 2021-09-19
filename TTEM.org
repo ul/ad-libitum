@@ -1,5 +1,5 @@
 #+TITLE: The Theory and Technique of Electronic Music Exercises in Ad Libitum
-#+SETUPFILE: org-html-themes/setup/theme-readtheorg.setup
+#+SETUPFILE: org-html-themes/org/theme-readtheorg.setup
 
   It's my exercise book for studying "The Theory and Technique of Electronic
   Music" by Miller Puckette. Work is done in Ad Libitum instead of PureData, and
